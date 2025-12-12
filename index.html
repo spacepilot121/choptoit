@@ -15,13 +15,190 @@
       margin: auto;
       background: #000;
     }
+    #settings-toggle {
+      position: absolute;
+      top: 12px;
+      right: 12px;
+      background: rgba(0, 0, 0, 0.75);
+      color: #fff;
+      border: 1px solid #555;
+      padding: 8px 12px;
+      border-radius: 4px;
+      font-family: monospace;
+      cursor: pointer;
+      z-index: 2;
+    }
+    #settings-panel {
+      position: absolute;
+      top: 50px;
+      right: 12px;
+      width: 320px;
+      background: rgba(0, 0, 0, 0.9);
+      color: #fff;
+      border: 1px solid #555;
+      border-radius: 6px;
+      padding: 12px;
+      font-family: monospace;
+      display: none;
+      z-index: 2;
+      box-shadow: 0 4px 12px rgba(0, 0, 0, 0.4);
+    }
+    #settings-panel h3 {
+      margin: 0 0 8px;
+      font-size: 16px;
+    }
+    #settings-panel label {
+      display: block;
+      margin: 6px 0 4px;
+      font-size: 13px;
+    }
+    #settings-panel input[type="text"] {
+      width: 100%;
+      padding: 6px;
+      border-radius: 4px;
+      border: 1px solid #666;
+      background: #111;
+      color: #0f0;
+      font-family: monospace;
+    }
+    #settings-panel .buttons {
+      margin-top: 10px;
+      display: flex;
+      gap: 8px;
+    }
+    #settings-panel button {
+      flex: 1;
+      padding: 8px 10px;
+      border-radius: 4px;
+      border: 1px solid #555;
+      background: #222;
+      color: #fff;
+      cursor: pointer;
+    }
+    #settings-panel button:hover {
+      background: #333;
+    }
+    #settings-panel .note {
+      margin-top: 8px;
+      font-size: 12px;
+      color: #aaa;
+      line-height: 1.4;
+    }
+    #settings-status {
+      margin-top: 6px;
+      font-size: 12px;
+      color: #0f0;
+    }
   </style>
   <script src="https://cdn.jsdelivr.net/npm/phaser@3.55.2/dist/phaser.js"></script>
   <script src="dayNightCycle.js"></script>
 </head>
 <body>
+  <button id="settings-toggle" aria-expanded="false">Settings</button>
+  <div id="settings-panel" role="dialog" aria-modal="false" aria-labelledby="settings-title">
+    <h3 id="settings-title">Local Settings</h3>
+    <label for="openai-key-input">OpenAI API key (stored locally)</label>
+    <input id="openai-key-input" type="text" autocomplete="off" spellcheck="false" placeholder="sk-..." />
+    <label for="google-api-input">Google API key (stored locally)</label>
+    <input id="google-api-input" type="text" autocomplete="off" spellcheck="false" placeholder="AIza..." />
+    <label for="google-cse-id">Google CSE ID (stored locally)</label>
+    <input id="google-cse-id" type="text" autocomplete="off" spellcheck="false" placeholder="search-engine id" />
+    <div id="settings-status" aria-live="polite"></div>
+    <div class="buttons">
+      <button id="save-settings">Save</button>
+      <button id="clear-settings">Clear</button>
+      <button id="close-settings">Close</button>
+    </div>
+    <div class="note">
+      Stored only in your browser using localStorage. Not sent online; paste or update any time. Current build doesn’t call Google or OpenAI directly—these fields are just here so you can keep your keys handy locally.
+    </div>
+  </div>
 
 <script>
+const SettingsManager = {
+  key: 'choptoit-user-settings',
+  data: { openaiApiKey: '', googleApiKey: '', googleCseId: '' },
+  load() {
+    try {
+      const raw = localStorage.getItem(this.key);
+      if (!raw) return;
+      const parsed = JSON.parse(raw);
+      if (parsed && typeof parsed === 'object') {
+        if (typeof parsed.openaiApiKey === 'string') this.data.openaiApiKey = parsed.openaiApiKey;
+        if (typeof parsed.googleApiKey === 'string') this.data.googleApiKey = parsed.googleApiKey;
+        if (typeof parsed.googleCseId === 'string') this.data.googleCseId = parsed.googleCseId;
+      }
+    } catch (e) {
+      console.warn('Settings unavailable; localStorage blocked.', e);
+    }
+  },
+  save() {
+    try {
+      localStorage.setItem(this.key, JSON.stringify(this.data));
+    } catch (e) {
+      console.warn('Unable to save settings.', e);
+    }
+  },
+  clear() {
+    this.data.openaiApiKey = '';
+    this.data.googleApiKey = '';
+    this.data.googleCseId = '';
+    try { localStorage.removeItem(this.key); } catch (e) {}
+  }
+};
+
+function initSettingsUI() {
+  const toggle = document.getElementById('settings-toggle');
+  const panel = document.getElementById('settings-panel');
+  const openaiInput = document.getElementById('openai-key-input');
+  const googleApiInput = document.getElementById('google-api-input');
+  const googleCseIdInput = document.getElementById('google-cse-id');
+  const saveBtn = document.getElementById('save-settings');
+  const clearBtn = document.getElementById('clear-settings');
+  const closeBtn = document.getElementById('close-settings');
+  const status = document.getElementById('settings-status');
+
+  const setVisible = (visible) => {
+    panel.style.display = visible ? 'block' : 'none';
+    toggle.setAttribute('aria-expanded', visible ? 'true' : 'false');
+  };
+
+  const showStatus = (msg) => {
+    status.textContent = msg;
+    if (msg) setTimeout(() => { status.textContent = ''; }, 1500);
+  };
+
+  SettingsManager.load();
+  openaiInput.value = SettingsManager.data.openaiApiKey;
+  googleApiInput.value = SettingsManager.data.googleApiKey;
+  googleCseIdInput.value = SettingsManager.data.googleCseId;
+
+  toggle.addEventListener('click', () => {
+    const visible = panel.style.display === 'block';
+    setVisible(!visible);
+  });
+
+  saveBtn.addEventListener('click', () => {
+    SettingsManager.data.openaiApiKey = openaiInput.value.trim();
+    SettingsManager.data.googleApiKey = googleApiInput.value.trim();
+    SettingsManager.data.googleCseId = googleCseIdInput.value.trim();
+    SettingsManager.save();
+    showStatus('Saved locally.');
+  });
+
+  clearBtn.addEventListener('click', () => {
+    openaiInput.value = '';
+    googleApiInput.value = '';
+    googleCseIdInput.value = '';
+    SettingsManager.clear();
+    showStatus('Cleared.');
+  });
+
+  closeBtn.addEventListener('click', () => setVisible(false));
+}
+
+initSettingsUI();
+
 const config = {
   type: Phaser.AUTO,
   width: 800,
