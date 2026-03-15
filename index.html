@@ -3531,7 +3531,7 @@ function savePrisoner(scene) {
   scene.tweens.add({
     targets: prisoner,
     x: 850,
-    y: 460,
+    y: CHARACTER_BASE_Y,
     duration: 2000,
     ease: 'Linear'
   });
@@ -3749,7 +3749,7 @@ function introExecutioner(scene, onComplete) {
   // scene.tweens.killTweensOf(backOverlay);
   // Darken the scene as the executioner arrives for dramatic effect
   fadeBackgroundOverlay(scene, 0.6, 800);
-  executioner.setPosition(850, 460);
+  executioner.setPosition(850, CHARACTER_BASE_Y);
   executioner.setAlpha(0);
   executioner.setVisible(true);
   // backOverlay.setAlpha(0);
@@ -3861,9 +3861,9 @@ function spawnPrisoner(scene, fromRight, withTarget = true) {
   prisonerBody.y = 50;
   
   const startX = -50;
-  prisoner.setPosition(startX, 460);
-  leftEscort.setPosition(startX - 50, 460);
-  rightEscort.setPosition(startX + 50, 460);
+  prisoner.setPosition(startX, CHARACTER_BASE_Y);
+  leftEscort.setPosition(startX - 50, CHARACTER_BASE_Y);
+  rightEscort.setPosition(startX + 50, CHARACTER_BASE_Y);
   leftEscort.setVisible(true);
   rightEscort.setVisible(true);
   cursor.setVisible(false);
@@ -4195,7 +4195,7 @@ function handleTargetHit(scene, target, head) {
 function spawnHolyMonk(scene) {
   const fromRight = Phaser.Math.Between(0, 1) === 1;
   const startX = fromRight ? 850 : -50;
-  const monk = scene.add.container(startX, 460).setDepth(20);
+  const monk = scene.add.container(startX, CHARACTER_BASE_Y).setDepth(20);
   monk.targetType = 'holyMonk';
   createTargetAppearance(scene, monk, 'holyMonk');
   scene.physics.world.enable(monk);
@@ -4235,7 +4235,7 @@ function spawnRoyal(scene) {
   const fromRight = Phaser.Math.Between(0, 1) === 1;
   const startX = fromRight ? 850 : -50;
   const stopX = fromRight ? 500 : 300;
-  const royal = scene.add.container(startX, 460).setDepth(20);
+  const royal = scene.add.container(startX, CHARACTER_BASE_Y).setDepth(20);
   royal.targetType = 'royal';
   createTargetAppearance(scene, royal, 'royal');
   scene.physics.world.enable(royal);
@@ -4316,7 +4316,7 @@ function spawnTarget(scene) {
   const poleHeight = Phaser.Math.Between(80, 180);
 
   // Ensure jesters render above the lighting overlay and other background elements.
-  const jester = scene.add.container(startX, 460).setDepth(20);
+  const jester = scene.add.container(startX, CHARACTER_BASE_Y).setDepth(20);
   jester.startFromRight = fromRight;
   const body = scene.add.image(0, 50, 'jesterBody1').setOrigin(0.5, 1);
   const pole = scene.add.rectangle(0, -20, 6, poleHeight, 0x8b4513)
@@ -4324,7 +4324,7 @@ function spawnTarget(scene) {
   const head = scene.add.image(0, -20, 'jesterHead1').setOrigin(0.5);
   jester.add([body, pole, head]);
 
-  const target = scene.add.container(startX, 460 - 20 - poleHeight).setDepth(20);
+  const target = scene.add.container(startX, CHARACTER_BASE_Y - 20 - poleHeight).setDepth(20);
   target.targetType = type;
   createTargetAppearance(scene, target, type);
 
@@ -4677,7 +4677,7 @@ class TravelScene extends Phaser.Scene {
     const grassFarParts = this.add.particles('grassTuft').setDepth(0);
     grassFarParts.createEmitter({
       x: { min: 0, max: GAME_WIDTH },
-      y: { min: 520, max: 560 },
+      y: { min: STAGE_Y, max: STAGE_Y + 40 },
       lifespan: 5000,
       speedX: { min: -80, max: -40 },
       speedY: { min: -20, max: 20 },
@@ -4689,7 +4689,7 @@ class TravelScene extends Phaser.Scene {
     const grassNearParts = this.add.particles('grassTuft').setDepth(2);
     grassNearParts.createEmitter({
       x: { min: 0, max: GAME_WIDTH },
-      y: { min: 570, max: 600 },
+      y: { min: legacyY(570), max: GROUND_Y },
       lifespan: 3000,
       speedX: { min: -200, max: -120 },
       speedY: { min: -30, max: 30 },
