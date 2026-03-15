@@ -181,6 +181,7 @@ let missStreak = 0;
 let betweenSwings = false;
 let menuOpen = false;
 const VERSION = 'Alpha - V1.2';
+const VERSION_LINK = inferGitHubCommitsUrl();
 let versionText;
 let inputEnabled = true;
 let killCount = 0;
@@ -247,6 +248,27 @@ let backgroundRect;
 let stage;
 let travelList;
 let introContainer;
+
+function inferGitHubCommitsUrl() {
+  const { hostname, pathname } = window.location;
+  const cleanPath = pathname.replace(/^\/+|\/+$/g, '');
+  const parts = cleanPath ? cleanPath.split('/') : [];
+
+  // GitHub Pages pattern: https://<owner>.github.io/<repo>/
+  if (hostname.endsWith('.github.io') && parts.length >= 1) {
+    const owner = hostname.split('.')[0];
+    const repo = parts[0];
+    return `https://github.com/${owner}/${repo}/commits`;
+  }
+
+  // Repo page pattern: https://github.com/<owner>/<repo>/...
+  if (hostname === 'github.com' && parts.length >= 2) {
+    const [owner, repo] = parts;
+    return `https://github.com/${owner}/${repo}/commits`;
+  }
+
+  return null;
+}
 let introTimer;
 let skipIntroHandler;
 let logoContainer;
@@ -2048,7 +2070,13 @@ function create() {
   versionText = scene.add.text(790, 590, VERSION, { font: '14px monospace', fill: '#ffffff' })
     .setOrigin(1, 1)
     .setDepth(11);
-
+  if (VERSION_LINK) {
+    versionText.setInteractive({ useHandCursor: true });
+    versionText.setStyle({ color: '#8ec5ff' });
+    versionText.on('pointerdown', () => {
+      window.open(VERSION_LINK, '_blank', 'noopener,noreferrer');
+    });
+  }
 
   // Logo drop animation before showing the intro
   // Ensure the logo appears above the intro
