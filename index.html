@@ -15,12 +15,17 @@
       overflow: hidden;
       font-family: "Trebuchet MS", "Segoe UI", sans-serif;
     }
+    :root {
+      --iphone-canvas-width: 430px;
+      --iphone-canvas-height: 932px;
+    }
     #game-shell {
       position: fixed;
-      inset: 0;
-      width: min(100vw, 430px);
-      height: 100dvh;
-      margin: 0 auto;
+      top: 0;
+      left: 50%;
+      transform: translateX(-50%);
+      width: min(100vw, var(--iphone-canvas-width));
+      height: min(100dvh, var(--iphone-canvas-height));
       background: #000;
       display: flex;
       align-items: flex-start;
