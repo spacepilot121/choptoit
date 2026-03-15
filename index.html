@@ -175,9 +175,21 @@ const FEATURES = {
   clouds: true,
 };
 
-const CLOUD_AREA_HEIGHT = SAFE_TOP + 320;
-const EFFECT_AREA_HEIGHT = GAME_HEIGHT;
+const ATMOS_TOP_Y = SAFE_TOP;
+const ATMOS_BOTTOM_Y = SAFE_BOTTOM;
+const CLOUD_MIN_Y = ATMOS_TOP_Y + 20;
+const CLOUD_MAX_Y = Math.floor(ATMOS_TOP_Y + ((ATMOS_BOTTOM_Y - ATMOS_TOP_Y) * 0.6));
+const WEATHER_MIN_Y = ATMOS_TOP_Y;
+const WEATHER_MAX_Y = ATMOS_BOTTOM_Y;
+const FOG_MIN_Y = ATMOS_TOP_Y + 80;
+const FOG_MAX_Y = ATMOS_BOTTOM_Y;
+const WIND_MIN_Y = ATMOS_TOP_Y - 20;
+const WIND_MAX_Y = ATMOS_BOTTOM_Y;
 const MAX_COIN_ANIMS = 150;
+
+function createWindEmitZone() {
+  return new Phaser.Geom.Rectangle(-20, WIND_MIN_Y, GAME_WIDTH + 40, (WIND_MAX_Y - WIND_MIN_Y) + 40);
+}
 
 function setBackdropCover(image, width = GAME_WIDTH, height = GAME_HEIGHT, alignBottom = false) {
   const src = image.texture?.getSourceImage?.();
@@ -1501,7 +1513,7 @@ function applyRandomWeather(scene) {
     if (windEmitter) {
       windEmitter.setSpeedX({ min: windForce.x - 20, max: windForce.x + 20 });
       windEmitter.setSpeedY({ min: windForce.y - 20, max: windForce.y + 20 });
-      const zone = new Phaser.Geom.Rectangle(-20, -20, GAME_WIDTH + 40, 180);
+      const zone = createWindEmitZone();
       windEmitter.setEmitZone({ type: 'random', source: zone });
       windEmitter.start();
     }
@@ -1892,10 +1904,10 @@ function create() {
     cloudLayerFar = scene.add.group();
     cloudLayerNear = scene.add.group();
 
-    for (let i = 0; i < 5; i++) {
+    for (let i = 0; i < 11; i++) {
       const cloud = scene.add.image(
         Phaser.Math.Between(0, config.width),
-        Phaser.Math.Between(20, CLOUD_AREA_HEIGHT),
+        Phaser.Math.Between(CLOUD_MIN_Y, CLOUD_MAX_Y),
         'cloud-small'
       );
       cloud.setDepth(-3);
@@ -1905,10 +1917,10 @@ function create() {
       cloudLayerFar.add(cloud);
     }
 
-    for (let i = 0; i < 3; i++) {
+    for (let i = 0; i < 7; i++) {
       const cloud = scene.add.image(
         Phaser.Math.Between(0, config.width),
-        Phaser.Math.Between(40, CLOUD_AREA_HEIGHT),
+        Phaser.Math.Between(CLOUD_MIN_Y + 20, CLOUD_MAX_Y),
         'cloud-big'
       );
       cloud.setDepth(-1);
@@ -2421,21 +2433,21 @@ function create() {
   rainParts = scene.add.particles('raindrop').setDepth(28);
   rainEmitter = rainParts.createEmitter({
     x: { min: 0, max: GAME_WIDTH },
-    y: { min: 0, max: EFFECT_AREA_HEIGHT },
+    y: { min: WEATHER_MIN_Y, max: WEATHER_MAX_Y },
     lifespan: 800,
     speedY: { min: 400, max: 600 },
-    quantity: 15,
-    frequency: 100,
+    quantity: 24,
+    frequency: 80,
     on: false
   });
   fogParts = scene.add.particles('fog').setDepth(28);
   fogEmitter = fogParts.createEmitter({
     x: { min: -50, max: GAME_WIDTH + 50 },
-    y: { min: legacyY(260), max: GROUND_Y },
+    y: { min: FOG_MIN_Y, max: FOG_MAX_Y },
     lifespan: 6000,
     speedX: { min: -20, max: 20 },
     speedY: { min: -5, max: 5 },
-    quantity: 6,
+    quantity: 10,
     alpha: { start: 0.8, end: 0.1 },
     on: false
   });
@@ -2449,8 +2461,8 @@ function create() {
   windEmitter = windParts.createEmitter({
     lifespan: 4000,
     // Increase particle output dramatically so the wind effect is visible
-    quantity: 10,
-    frequency: 20,
+    quantity: 14,
+    frequency: 16,
     speedY: { min: 20, max: 140 },
     scale: { start: 1, end: 0 },
     rotate: { min: -180, max: 180 },
@@ -4490,7 +4502,7 @@ function update(time, delta) {
       cloud.x -= 0.2;
       if (cloud.x < -cloud.width / 2) {
         cloud.x = config.width + cloud.width / 2;
-        cloud.y = Phaser.Math.Between(20, CLOUD_AREA_HEIGHT);
+        cloud.y = Phaser.Math.Between(CLOUD_MIN_Y, CLOUD_MAX_Y);
         cloud.setAlpha(Phaser.Math.FloatBetween(0.6, 0.9));
         cloud.setScale(Phaser.Math.FloatBetween(0.8, 1.2));
       }
@@ -4499,7 +4511,7 @@ function update(time, delta) {
       cloud.x -= 0.4;
       if (cloud.x < -cloud.width / 2) {
         cloud.x = config.width + cloud.width / 2;
-        cloud.y = Phaser.Math.Between(40, CLOUD_AREA_HEIGHT);
+        cloud.y = Phaser.Math.Between(CLOUD_MIN_Y + 20, CLOUD_MAX_Y);
         cloud.setAlpha(Phaser.Math.FloatBetween(0.6, 0.9));
         cloud.setScale(Phaser.Math.FloatBetween(0.8, 1.2));
       }
@@ -4578,27 +4590,27 @@ class TravelScene extends Phaser.Scene {
     // Simple particle emitters to visualize travel weather
     const rainEmitter = this.add.particles('raindrop').createEmitter({
       x: { min: 0, max: GAME_WIDTH },
-      y: { min: 0, max: EFFECT_AREA_HEIGHT },
+      y: { min: WEATHER_MIN_Y, max: WEATHER_MAX_Y },
       lifespan: 800,
       speedY: { min: 400, max: 600 },
-      quantity: 15,
-      frequency: 100,
+      quantity: 24,
+      frequency: 80,
       on: false
     });
     const fogEmitter = this.add.particles('fog').createEmitter({
       x: { min: -50, max: GAME_WIDTH + 50 },
-      y: { min: legacyY(260), max: GROUND_Y },
+      y: { min: FOG_MIN_Y, max: FOG_MAX_Y },
       lifespan: 6000,
       speedX: { min: -20, max: 20 },
       speedY: { min: -5, max: 5 },
-      quantity: 6,
+      quantity: 10,
       alpha: { start: 0.8, end: 0.1 },
       on: false
     });
     const windEmitter = this.add.particles('leaf').createEmitter({
       lifespan: 4000,
-      quantity: 10,
-      frequency: 20,
+      quantity: 14,
+      frequency: 16,
       scale: { start: 1, end: 0 },
       rotate: { min: -180, max: 180 },
       on: false
@@ -4631,10 +4643,10 @@ class TravelScene extends Phaser.Scene {
       }
       this.travelCloudLayerFar = this.add.group();
       this.travelCloudLayerNear = this.add.group();
-      for (let i = 0; i < 1; i++) {
+      for (let i = 0; i < 4; i++) {
         const cloud = this.add.image(
           Phaser.Math.Between(0, config.width),
-          Phaser.Math.Between(20, CLOUD_AREA_HEIGHT),
+          Phaser.Math.Between(CLOUD_MIN_Y, CLOUD_MAX_Y),
           'cloud-small'
         );
         cloud.setDepth(-3);
@@ -4643,10 +4655,10 @@ class TravelScene extends Phaser.Scene {
         cloud.setScale(Phaser.Math.FloatBetween(0.8, 1.2));
         this.travelCloudLayerFar.add(cloud);
       }
-      for (let i = 0; i < 1; i++) {
+      for (let i = 0; i < 3; i++) {
         const cloud = this.add.image(
           Phaser.Math.Between(0, config.width),
-          Phaser.Math.Between(40, CLOUD_AREA_HEIGHT),
+          Phaser.Math.Between(CLOUD_MIN_Y + 20, CLOUD_MAX_Y),
           'cloud-big'
         );
         cloud.setDepth(-1);
@@ -4709,7 +4721,7 @@ class TravelScene extends Phaser.Scene {
       } else if (w === 'Wind') {
         windEmitter.setSpeedX({ min: -50, max: 50 });
         windEmitter.setSpeedY({ min: 30, max: 140 });
-        const zone = new Phaser.Geom.Rectangle(-20, -20, GAME_WIDTH + 40, 180);
+        const zone = createWindEmitZone();
         windEmitter.setEmitZone({ type: 'random', source: zone });
         windEmitter.start();
       }
@@ -4759,7 +4771,7 @@ class TravelScene extends Phaser.Scene {
         cloud.x -= 0.2 * speedMult;
         if (cloud.x < -cloud.width / 2) {
           cloud.x = config.width + cloud.width / 2;
-          cloud.y = Phaser.Math.Between(20, CLOUD_AREA_HEIGHT);
+          cloud.y = Phaser.Math.Between(CLOUD_MIN_Y, CLOUD_MAX_Y);
           cloud.setAlpha(Phaser.Math.FloatBetween(0.6, 0.9));
           cloud.setScale(Phaser.Math.FloatBetween(0.8, 1.2));
         }
@@ -4768,7 +4780,7 @@ class TravelScene extends Phaser.Scene {
         cloud.x -= 0.4 * speedMult;
         if (cloud.x < -cloud.width / 2) {
           cloud.x = config.width + cloud.width / 2;
-          cloud.y = Phaser.Math.Between(40, CLOUD_AREA_HEIGHT);
+          cloud.y = Phaser.Math.Between(CLOUD_MIN_Y + 20, CLOUD_MAX_Y);
           cloud.setAlpha(Phaser.Math.FloatBetween(0.6, 0.9));
           cloud.setScale(Phaser.Math.FloatBetween(0.8, 1.2));
         }
