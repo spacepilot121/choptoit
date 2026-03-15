@@ -2,23 +2,17 @@
 <html>
 <head>
   <meta charset="utf-8">
-  <meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no, viewport-fit=cover">
+  <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
   <title>Chop To It!</title>
   <link rel="icon" type="image/png" href="favicon256.png">
   <style>
     html, body {
-      margin: 0;
-      padding: 0;
       width: 100%;
       height: 100%;
+      margin: 0;
       background: #000;
       color: #fff;
       overflow: hidden;
-      touch-action: none;
-      overscroll-behavior: none;
-      user-select: none;
-      -webkit-user-select: none;
-      -webkit-touch-callout: none;
       font-family: "Trebuchet MS", "Segoe UI", sans-serif;
     }
     :root {
@@ -27,21 +21,24 @@
     }
     #game-shell {
       position: fixed;
-      inset: 0;
-      width: 100vw;
-      height: 100dvh;
-      padding: env(safe-area-inset-top) env(safe-area-inset-right) env(safe-area-inset-bottom) env(safe-area-inset-left);
-      box-sizing: border-box;
+      top: 0;
+      left: 50%;
+      transform: translateX(-50%);
+      width: min(100vw, var(--iphone-canvas-width));
+      height: min(100dvh, var(--iphone-canvas-height));
       background: #000;
       display: flex;
-      align-items: center;
+      align-items: flex-start;
       justify-content: center;
       overflow: hidden;
     }
-    #game-shell canvas {
+    canvas {
       display: block;
-      touch-action: none;
-      image-rendering: auto;
+      width: 100% !important;
+      height: auto !important;
+      max-width: 100%;
+      max-height: none;
+      touch-action: manipulation;
     }
     #start-overlay {
       position: fixed;
@@ -98,28 +95,15 @@
   <div id="game-shell"></div>
 
 <script>
-const GAME_WIDTH = 430;
-const GAME_HEIGHT = 932;
-const BG_ART_WIDTH = 1290;
-const BG_ART_HEIGHT = 2796;
-const CENTER_X = GAME_WIDTH / 2;
-const CENTER_Y = GAME_HEIGHT / 2;
-const SAFE_TOP = 44;
-const SAFE_BOTTOM = GAME_HEIGHT - 34;
-const HUD_TOP = SAFE_TOP + 20;
-const HUD_BOTTOM = SAFE_BOTTOM - 20;
-const LEFT_MARGIN = 20;
-const RIGHT_MARGIN = GAME_WIDTH - 20;
-
 const config = {
   type: Phaser.AUTO,
   parent: 'game-shell',
-  width: GAME_WIDTH,
-  height: GAME_HEIGHT,
+  width: 800,
+  height: 600,
   backgroundColor: '#000',
   scale: {
     mode: Phaser.Scale.FIT,
-    autoCenter: Phaser.Scale.CENTER_BOTH,
+    autoCenter: Phaser.Scale.NO_CENTER,
   },
   physics: { default: 'arcade', arcade: { gravity: { y: 400 } } },
   scene: {
@@ -141,32 +125,6 @@ const startGame = () => {
 
 startOverlay.addEventListener('click', startGame, { once: true });
 
-function getShellViewportSize() {
-  const vv = window.visualViewport;
-  return {
-    width: Math.floor(vv?.width || window.innerWidth || document.documentElement.clientWidth),
-    height: Math.floor(vv?.height || window.innerHeight || document.documentElement.clientHeight),
-  };
-}
-
-function resizeGameShell() {
-  const shell = document.getElementById('game-shell');
-  if (!shell) return;
-  const viewport = getShellViewportSize();
-  shell.style.width = `${viewport.width}px`;
-  shell.style.height = `${viewport.height}px`;
-  if (game && game.scale) {
-    game.scale.refresh();
-  }
-}
-
-window.addEventListener('resize', resizeGameShell, { passive: true });
-window.addEventListener('orientationchange', resizeGameShell, { passive: true });
-if (window.visualViewport) {
-  window.visualViewport.addEventListener('resize', resizeGameShell, { passive: true });
-}
-resizeGameShell();
-
 // Feature toggles for easy testing
 const FEATURES = {
   birds: true,
@@ -176,22 +134,14 @@ const FEATURES = {
   clouds: true,
 };
 
-const CLOUD_AREA_HEIGHT = Math.floor(GAME_HEIGHT * 0.33);
-const EFFECT_AREA_HEIGHT = Math.floor(GAME_HEIGHT * 0.45);
+const CLOUD_AREA_HEIGHT = 300;
+const EFFECT_AREA_HEIGHT = 420;
 const MAX_COIN_ANIMS = 150;
 
-function setBackdropCover(image, width = GAME_WIDTH, height = GAME_HEIGHT, alignBottom = false) {
+function setBackdropCover(image, width = 800, height = 600, alignBottom = false) {
   const src = image.texture?.getSourceImage?.();
   if (!src || !src.width || !src.height) {
-    // Fallback to the intended portrait export ratio (1290x2796) when texture
-    // metadata is unavailable.
-    const artRatio = BG_ART_WIDTH / BG_ART_HEIGHT;
-    const targetRatio = width / height;
-    if (artRatio > targetRatio) {
-      image.setDisplaySize(height * artRatio, height);
-    } else {
-      image.setDisplaySize(width, width / artRatio);
-    }
+    image.setDisplaySize(width, height);
     return image;
   }
   const scale = Math.max(width / src.width, height / src.height);
@@ -1861,13 +1811,13 @@ function create() {
   const scene = this;
 
   // Background and stage art
-  skyRect = scene.add.image(CENTER_X, CENTER_Y, 'backgroundSky');
-  skyRect.setDisplaySize(GAME_WIDTH, GAME_HEIGHT);
+  skyRect = scene.add.image(400, 300, 'backgroundSky');
+  skyRect.setDisplaySize(800, 600);
   // Render sky behind celestial bodies
   skyRect.setDepth(-5);
 
-  backgroundRect = scene.add.image(CENTER_X, CENTER_Y, 'background');
-  setBackdropCover(backgroundRect, GAME_WIDTH, GAME_HEIGHT, true);
+  backgroundRect = scene.add.image(400, 300, 'background');
+  setBackdropCover(backgroundRect, 800, 600, true);
   backgroundRect.setDepth(-2);
   // Apply the initial background for the starting city
   updateBackground(scene);
@@ -1951,13 +1901,13 @@ function create() {
     .setVisible(false)
     .setDepth(0.4);
   // Overlay that only dims the background behind characters
-  backgroundFadeOverlay = scene.add.rectangle(CENTER_X, CENTER_Y, GAME_WIDTH, GAME_HEIGHT, 0x000000, 1)
+  backgroundFadeOverlay = scene.add.rectangle(400, 300, 800, 600, 0x000000, 1)
     .setDepth(-1)
     .setAlpha(0)
     .setVisible(false);
 
   // Overlay used for fading the entire screen during menus and transitions.
-  screenFadeOverlay = scene.add.rectangle(CENTER_X, CENTER_Y, GAME_WIDTH, GAME_HEIGHT, 0x000000, 1)
+  screenFadeOverlay = scene.add.rectangle(400, 300, 800, 600, 0x000000, 1)
     .setDepth(29)
     .setAlpha(0)
     .setVisible(false);
@@ -2040,7 +1990,7 @@ function create() {
     .setVisible(false);
   killText.setY(killText.y + 50);
   // Hide the old weather label at the top
-  weatherText = scene.add.text(CENTER_X, 96, '', { font: '20px monospace', fill: '#ffffff' })
+  weatherText = scene.add.text(400, 96, '', { font: '20px monospace', fill: '#ffffff' })
     .setOrigin(0.5, 0)
     .setDepth(50)
     .setVisible(false);
@@ -2061,7 +2011,7 @@ function create() {
     .setInteractive()
     .on('pointerdown', () => { toggleSaveMenu(scene); });
 
-  saveMenuContainer = scene.add.container(CENTER_X, CENTER_Y).setDepth(1001).setVisible(false);
+  saveMenuContainer = scene.add.container(400, 300).setDepth(1001).setVisible(false);
   const saveMenuBg = scene.add.rectangle(0, 0, 200, 100, 0x000000, 0.8).setOrigin(0.5);
   const saveBtn = scene.add.text(0, -20, 'Save', { font: '24px monospace', fill: '#ffffff' })
     .setOrigin(0.5)
@@ -2129,7 +2079,7 @@ function create() {
     icon.on('pointerup', cancelWeatherHold);
     icon.on('pointerout', cancelWeatherHold);
   });
-  locationText = scene.add.text(CENTER_X, HUD_TOP, currentCity, { font: '20px monospace', fill: '#ffffff' })
+  locationText = scene.add.text(400, 16, currentCity, { font: '20px monospace', fill: '#ffffff' })
     .setOrigin(0.5, 0)
     .setVisible(false);
   locationText.setY(locationText.y + 50);
@@ -2138,12 +2088,12 @@ function create() {
     .setDepth(49)
     .setVisible(false);
   dateBg.setY(dateBg.y + 50);
-  dateText = scene.add.text(CENTER_X, HUD_TOP + 36, getDateString(), { font: '16px monospace', fill: '#000000' })
+  dateText = scene.add.text(400, 52, getDateString(), { font: '16px monospace', fill: '#000000' })
     .setOrigin(0.5)
     .setDepth(50)
     .setVisible(false);
   dateText.setY(dateText.y + 50);
-  xpText = scene.add.text(CENTER_X, HUD_BOTTOM, 'Level 1 - 0/10 XP', { font: '20px monospace', fill: '#88ff88' })
+  xpText = scene.add.text(400, 580, 'Level 1 - 0/10 XP', { font: '20px monospace', fill: '#88ff88' })
     .setOrigin(0.5, 1)
     .setDepth(100)
     .setScrollFactor(0)
@@ -2171,8 +2121,8 @@ function create() {
 
   // Logo drop animation before showing the intro
   // Ensure the logo appears above the intro
-  logoBg = scene.add.rectangle(CENTER_X, CENTER_Y, GAME_WIDTH, GAME_HEIGHT, 0x000000).setDepth(199);
-  logoContainer = scene.add.container(CENTER_X, -260).setDepth(200);
+  logoBg = scene.add.rectangle(400, 300, 800, 600, 0x000000).setDepth(199);
+  logoContainer = scene.add.container(400, -260).setDepth(200);
   const rope = scene.add.rectangle(0, -300, 12, 680, 0xffffff)
     .setOrigin(0.5, 0);
   const logo = scene.add.image(0, 380, 'logo')
@@ -2273,12 +2223,12 @@ function create() {
     ];
     let index = 0;
     introContainer = scene.add.container(0, 0).setDepth(10000);
-    const img = scene.add.image(CENTER_X, CENTER_Y, 'intro1');
-    setBackdropCover(img, GAME_WIDTH, GAME_HEIGHT);
+    const img = scene.add.image(400, 300, 'intro1');
+    setBackdropCover(img, 800, 600);
     const introTextBg = scene.add.rectangle(400, 420, 760, 160, 0x000000, 0.5)
       .setOrigin(0.5, 0)
       .setDepth(1);
-    const introText = scene.add.text(CENTER_X, 500, '', {
+    const introText = scene.add.text(400, 500, '', {
       font: '20px serif',
       fill: '#ff0000',
       stroke: '#000000',
@@ -2332,7 +2282,7 @@ function create() {
   cursor = scene.add.rectangle(250, meterY, 10, 20, 0xffffff).setVisible(false);
 
   // Blood pool
-  bloodPool = scene.add.rectangle(CENTER_X, GAME_HEIGHT, GAME_WIDTH, 1, 0x770000)
+  bloodPool = scene.add.rectangle(400, 600, 800, 1, 0x770000)
     .setOrigin(0.5, 1)
     .setVisible(false)
     // Render in front of heads so they appear to sink into the pool
@@ -2435,7 +2385,7 @@ function create() {
   // Place weather effects behind UI overlays so menus appear on top
   rainParts = scene.add.particles('raindrop').setDepth(28);
   rainEmitter = rainParts.createEmitter({
-    x: { min: 0, max: GAME_WIDTH },
+    x: { min: 0, max: 800 },
     y: { min: 0, max: EFFECT_AREA_HEIGHT },
     lifespan: 800,
     speedY: { min: 400, max: 600 },
@@ -2445,8 +2395,8 @@ function create() {
   });
   fogParts = scene.add.particles('fog').setDepth(28);
   fogEmitter = fogParts.createEmitter({
-    x: { min: -40, max: GAME_WIDTH + 40 },
-    y: { min: Math.floor(GAME_HEIGHT * 0.3), max: Math.floor(GAME_HEIGHT * 0.75) },
+    x: { min: -50, max: 850 },
+    y: { min: 260, max: 600 },
     lifespan: 6000,
     speedX: { min: -20, max: 20 },
     speedY: { min: -5, max: 5 },
@@ -2566,7 +2516,7 @@ function create() {
 
   // Shop button
   // Move the shop button slightly right to make room for the travel sign
-  shopButton = scene.add.image(GAME_WIDTH, 0, 'shop')
+  shopButton = scene.add.image(800, 0, 'shop')
     .setOrigin(1, 0)
     .setDisplaySize(107, 71)
     .setInteractive()
@@ -2584,17 +2534,17 @@ function create() {
   travelButton.setVisible(false).disableInteractive();
 
   // Storage upgrade container and overlay
-  storageOverlay = scene.add.rectangle(CENTER_X, CENTER_Y, GAME_WIDTH, GAME_HEIGHT, 0x000000, 0)
+  storageOverlay = scene.add.rectangle(400, 300, 800, 600, 0x000000, 0)
     .setVisible(false)
     .setDepth(30);
   storageContainer = scene.add.container(0, 0).setVisible(false).setDepth(31);
-  const storageSky = scene.add.image(CENTER_X, CENTER_Y, 'backgroundSky')
-    .setDisplaySize(GAME_WIDTH, GAME_HEIGHT);
-  const storageBg = scene.add.image(CENTER_X, CENTER_Y, 'backgroundStorage')
-    .setDisplaySize(GAME_WIDTH, GAME_HEIGHT);
+  const storageSky = scene.add.image(400, 300, 'backgroundSky')
+    .setDisplaySize(800, 600);
+  const storageBg = scene.add.image(400, 300, 'backgroundStorage')
+    .setDisplaySize(800, 600);
   storageImage = scene.add.image(400, 560, `storage${player.storageLevel}`)
     .setOrigin(0.5, 1);
-  storageCostText = scene.add.text(CENTER_X, 250, '', { font: '24px monospace', fill: '#ffd700' })
+  storageCostText = scene.add.text(400, 250, '', { font: '24px monospace', fill: '#ffd700' })
     .setOrigin(0.5)
     .setStroke('#000000', 3);
   storageQuoteText = scene.add.text(0, 0, '', {
@@ -2631,18 +2581,18 @@ function create() {
   updateStorageUI();
 
   // Weapons upgrade container and overlay
-  weaponsOverlay = scene.add.rectangle(CENTER_X, CENTER_Y, GAME_WIDTH, GAME_HEIGHT, 0x000000, 0)
+  weaponsOverlay = scene.add.rectangle(400, 300, 800, 600, 0x000000, 0)
     .setVisible(false)
     .setDepth(30);
   weaponsContainer = scene.add.container(0, 0).setVisible(false).setDepth(31);
-  const weaponsSky = scene.add.image(CENTER_X, CENTER_Y, 'backgroundSky')
-    .setDisplaySize(GAME_WIDTH, GAME_HEIGHT);
-  const weaponsBg = scene.add.image(CENTER_X, CENTER_Y, 'backgroundWeapons')
-    .setDisplaySize(GAME_WIDTH, GAME_HEIGHT);
+  const weaponsSky = scene.add.image(400, 300, 'backgroundSky')
+    .setDisplaySize(800, 600);
+  const weaponsBg = scene.add.image(400, 300, 'backgroundWeapons')
+    .setDisplaySize(800, 600);
   // Raise weapon image, cost text, and upgrade button for better layout
   weaponsImage = scene.add.image(400, 250, `weapons${player.weaponLevel}`)
     .setOrigin(0.5);
-  weaponsCostText = scene.add.text(CENTER_X, 310, '', { font: '24px monospace', fill: '#ffd700' })
+  weaponsCostText = scene.add.text(400, 310, '', { font: '24px monospace', fill: '#ffd700' })
     .setOrigin(0.5)
     .setStroke('#000000', 3);
   weaponUpgradeButton = scene.add.image(400, 320, 'upgradeButton')
@@ -2679,14 +2629,14 @@ function create() {
   updateWeaponsUI();
 
   // Travel container and overlay
-  travelOverlay = scene.add.rectangle(CENTER_X, CENTER_Y, GAME_WIDTH, GAME_HEIGHT, 0x000000, 0)
+  travelOverlay = scene.add.rectangle(400, 300, 800, 600, 0x000000, 0)
     .setVisible(false)
     .setDepth(200);
   travelContainer = scene.add.container(0, 0).setVisible(false).setDepth(201);
-  const travelSky = scene.add.image(CENTER_X, CENTER_Y, 'backgroundSky')
-    .setDisplaySize(GAME_WIDTH, GAME_HEIGHT);
-  const travelBg = scene.add.image(CENTER_X, CENTER_Y, 'backgroundTravelMenu')
-    .setDisplaySize(GAME_WIDTH, GAME_HEIGHT);
+  const travelSky = scene.add.image(400, 300, 'backgroundSky')
+    .setDisplaySize(800, 600);
+  const travelBg = scene.add.image(400, 300, 'backgroundTravelMenu')
+    .setDisplaySize(800, 600);
   travelList = scene.add.container(0, 0);
   travelContainer.add([travelSky, travelBg, travelList]);
   travelRegion = null;
@@ -2700,14 +2650,14 @@ function create() {
   updateTravelUI(scene);
 
   // Shop container and overlay
-  shopOverlay = scene.add.rectangle(CENTER_X, CENTER_Y, GAME_WIDTH, GAME_HEIGHT, 0x000000, 0)
+  shopOverlay = scene.add.rectangle(400, 300, 800, 600, 0x000000, 0)
     .setVisible(false)
     .setDepth(200);
   shopContainer = scene.add.container(0, 0).setVisible(false).setDepth(201);
-  const shopSky = scene.add.image(CENTER_X, CENTER_Y, 'backgroundSky')
-    .setDisplaySize(GAME_WIDTH, GAME_HEIGHT);
-  const shopBg = scene.add.image(CENTER_X, CENTER_Y, 'backgroundTravel')
-    .setDisplaySize(GAME_WIDTH, GAME_HEIGHT);
+  const shopSky = scene.add.image(400, 300, 'backgroundSky')
+    .setDisplaySize(800, 600);
+  const shopBg = scene.add.image(400, 300, 'backgroundTravel')
+    .setDisplaySize(800, 600);
   // Position the market items list a bit higher so all entries are visible
   const marketList = scene.add.container(60, 130);
   shopContainer.add([shopSky, shopBg, marketList]);
@@ -2788,7 +2738,7 @@ function create() {
   shopContainer.add(closeBtn);
 
   // Trade menu overlay for buying and selling quantities
-  tradeOverlay = scene.add.rectangle(CENTER_X, CENTER_Y, GAME_WIDTH, GAME_HEIGHT, 0x000000, 0)
+  tradeOverlay = scene.add.rectangle(400, 300, 800, 600, 0x000000, 0)
     .setVisible(false)
     // Use a depth above the shop container so this overlay appears on top
     .setDepth(202);
@@ -2862,7 +2812,7 @@ function create() {
   updateUnlockButtons(scene);
 
   // Text popup
-  scene.popupText = scene.add.text(CENTER_X, 250, '', { font: '24px serif', fill: '#ffffff' })
+  scene.popupText = scene.add.text(400, 250, '', { font: '24px serif', fill: '#ffffff' })
     .setOrigin(0.5)
     .setVisible(false);
 
@@ -3102,12 +3052,12 @@ function showTravelMenu(scene, region = travelRegion) {
       .setInteractive()
       .on('pointerdown', () => showTravelMenu(scene, 'north'));
     const southPlaceholder = scene.add
-      .image(CENTER_X, CENTER_Y, 'mapSouth')
+      .image(600, 300, 'mapSouth')
       .setOrigin(0.5)
       .setDisplaySize(250, 400)
       .setInteractive()
       .on('pointerdown', () => showTravelMenu(scene, 'south'));
-    const prompt = scene.add.text(CENTER_X, 560, 'Where would you like to go?', { font: '24px monospace', fill: '#ffd700' })
+    const prompt = scene.add.text(400, 560, 'Where would you like to go?', { font: '24px monospace', fill: '#ffd700' })
       .setOrigin(0.5)
       .setStroke('#000000', 3);
     travelList.add([northPlaceholder, southPlaceholder, prompt]);
@@ -3510,7 +3460,7 @@ function updateBackground(scene) {
   } else {
     backgroundRect.setTexture('background');
   }
-  setBackdropCover(backgroundRect, GAME_WIDTH, GAME_HEIGHT, true);
+  setBackdropCover(backgroundRect, 800, 600, true);
 }
 
 function selectCity(scene, city) {
@@ -4440,7 +4390,7 @@ function updateXPUI() {
 }
 
 function onLevelUp(scene) {
-  const msg = scene.add.text(CENTER_X, 300, 'LEVEL UP!', { font: '48px monospace', fill: '#ffff00' })
+  const msg = scene.add.text(400, 300, 'LEVEL UP!', { font: '48px monospace', fill: '#ffff00' })
     .setOrigin(0.5)
     .setDepth(25);
   scene.cameras.main.flash(250, 255, 255, 255);
@@ -4456,7 +4406,7 @@ function onLevelUp(scene) {
 
 function showUnlockMessage(scene, text, delay = 0) {
   scene.time.delayedCall(delay, () => {
-    const msg = scene.add.text(CENTER_X, 300, text, { font: '48px monospace', fill: '#ff0000' })
+    const msg = scene.add.text(400, 300, text, { font: '48px monospace', fill: '#ff0000' })
       .setOrigin(0.5)
       .setDepth(25);
     scene.tweens.add({
@@ -4572,13 +4522,13 @@ class TravelScene extends Phaser.Scene {
     const keys = travelBackgrounds.map((_, i) => `background-travel${i + 1}`);
     let bgKey = Phaser.Utils.Array.GetRandom(keys);
     if (!this.textures.exists(bgKey)) bgKey = 'background';
-    this.add.image(CENTER_X, CENTER_Y, 'backgroundSky').setDisplaySize(GAME_WIDTH, GAME_HEIGHT).setDepth(-5);
-    const travelBg = this.add.image(CENTER_X, CENTER_Y, bgKey).setDepth(-2);
-    setBackdropCover(travelBg, GAME_WIDTH, GAME_HEIGHT, true);
-    this.add.text(CENTER_X, 40, `Travelling to ${this.city.name}`, { font: '32px serif', fill: '#ffff00' }).setOrigin(0.5);
+    this.add.image(400, 300, 'backgroundSky').setDisplaySize(800, 600).setDepth(-5);
+    const travelBg = this.add.image(400, 300, bgKey).setDepth(-2);
+    setBackdropCover(travelBg, 800, 600, true);
+    this.add.text(400, 40, `Travelling to ${this.city.name}`, { font: '32px serif', fill: '#ffff00' }).setOrigin(0.5);
     let d = currentDay;
     let m = currentMonth;
-    const date = this.add.text(CENTER_X, 80, `${d} ${months[m]}`, { font: '28px monospace', fill: '#ffffff' }).setOrigin(0.5);
+    const date = this.add.text(400, 80, `${d} ${months[m]}`, { font: '28px monospace', fill: '#ffffff' }).setOrigin(0.5);
     const duration = this.days * 700;
     // Accelerate the day/night cycle so it completes one full day for each
     // travel day, keeping the visuals in sync with the journey length.
@@ -4592,7 +4542,7 @@ class TravelScene extends Phaser.Scene {
 
     // Simple particle emitters to visualize travel weather
     const rainEmitter = this.add.particles('raindrop').createEmitter({
-      x: { min: 0, max: GAME_WIDTH },
+      x: { min: 0, max: 800 },
       y: { min: 0, max: EFFECT_AREA_HEIGHT },
       lifespan: 800,
       speedY: { min: 400, max: 600 },
@@ -4601,8 +4551,8 @@ class TravelScene extends Phaser.Scene {
       on: false
     });
     const fogEmitter = this.add.particles('fog').createEmitter({
-      x: { min: -40, max: GAME_WIDTH + 40 },
-      y: { min: Math.floor(GAME_HEIGHT * 0.3), max: Math.floor(GAME_HEIGHT * 0.75) },
+      x: { min: -50, max: 850 },
+      y: { min: 260, max: 600 },
       lifespan: 6000,
       speedX: { min: -20, max: 20 },
       speedY: { min: -5, max: 5 },
@@ -4691,8 +4641,8 @@ class TravelScene extends Phaser.Scene {
 
     const grassFarParts = this.add.particles('grassTuft').setDepth(0);
     grassFarParts.createEmitter({
-      x: { min: 0, max: GAME_WIDTH },
-      y: { min: Math.floor(GAME_HEIGHT * 0.82), max: Math.floor(GAME_HEIGHT * 0.88) },
+      x: { min: 0, max: 800 },
+      y: { min: 520, max: 560 },
       lifespan: 5000,
       speedX: { min: -80, max: -40 },
       speedY: { min: -20, max: 20 },
@@ -4703,8 +4653,8 @@ class TravelScene extends Phaser.Scene {
     });
     const grassNearParts = this.add.particles('grassTuft').setDepth(2);
     grassNearParts.createEmitter({
-      x: { min: 0, max: GAME_WIDTH },
-      y: { min: GAME_HEIGHT - 70, max: GAME_HEIGHT },
+      x: { min: 0, max: 800 },
+      y: { min: 570, max: 600 },
       lifespan: 3000,
       speedX: { min: -200, max: -120 },
       speedY: { min: -30, max: 30 },
@@ -4802,9 +4752,6 @@ class TravelScene extends Phaser.Scene {
 
 // Inject styled gameplay instructions beneath the Phaser canvas once the page loads
 window.addEventListener('load', () => {
-  const isTouchOrMobile = window.matchMedia('(pointer: coarse)').matches || window.innerWidth <= 900;
-  if (isTouchOrMobile) return;
-
   const instructions = document.createElement('div');
   instructions.id = 'game-instructions';
   instructions.style.padding = '30px';
