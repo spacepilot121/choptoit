@@ -16,15 +16,16 @@
       font-family: "Trebuchet MS", "Segoe UI", sans-serif;
     }
     #game-shell {
+      position: fixed;
+      inset: 0;
       width: 100vw;
       height: 100vh;
-      display: flex;
-      align-items: center;
-      justify-content: center;
       background: #000;
     }
     canvas {
       display: block;
+      width: 100% !important;
+      height: 100% !important;
       touch-action: manipulation;
     }
     #start-overlay {
@@ -90,7 +91,7 @@ const config = {
   backgroundColor: '#000',
   scale: {
     mode: Phaser.Scale.FIT,
-    autoCenter: Phaser.Scale.CENTER_BOTH,
+    autoCenter: Phaser.Scale.NO_CENTER,
   },
   physics: { default: 'arcade', arcade: { gravity: { y: 400 } } },
   scene: {
@@ -121,7 +122,7 @@ const FEATURES = {
   clouds: true,
 };
 
-const CLOUD_AREA_HEIGHT = 200;
+const CLOUD_AREA_HEIGHT = 300;
 const MAX_COIN_ANIMS = 150;
 
 // Core player state: gold, storage level, and carrying capacity
@@ -1420,7 +1421,7 @@ function applyRandomWeather(scene) {
     if (windEmitter) {
       windEmitter.setSpeedX({ min: windForce.x - 20, max: windForce.x + 20 });
       windEmitter.setSpeedY({ min: windForce.y - 20, max: windForce.y + 20 });
-      const zone = new Phaser.Geom.Rectangle(-20, 0, 840, 600);
+      const zone = new Phaser.Geom.Rectangle(-20, -20, 840, 180);
       windEmitter.setEmitZone({ type: 'random', source: zone });
       windEmitter.start();
     }
@@ -2082,10 +2083,10 @@ function create() {
   // Logo drop animation before showing the intro
   // Ensure the logo appears above the intro
   logoBg = scene.add.rectangle(400, 300, 800, 600, 0x000000).setDepth(199);
-  logoContainer = scene.add.container(400, -200).setDepth(200);
-  const rope = scene.add.rectangle(0, 0, 12, 125, 0xffffff)
+  logoContainer = scene.add.container(400, -260).setDepth(200);
+  const rope = scene.add.rectangle(0, 0, 12, 280, 0xffffff)
     .setOrigin(0.5, 0);
-  const logo = scene.add.image(0, 125, 'logo')
+  const logo = scene.add.image(0, 280, 'logo')
     .setOrigin(513 / 1024, 127 / 1024)
     .setScale(0.5);
   logoContainer.add([rope, logo]);
@@ -2375,6 +2376,7 @@ function create() {
     // Increase particle output dramatically so the wind effect is visible
     quantity: 10,
     frequency: 20,
+    speedY: { min: 20, max: 140 },
     scale: { start: 1, end: 0 },
     rotate: { min: -180, max: 180 },
     on: false
@@ -4629,7 +4631,9 @@ class TravelScene extends Phaser.Scene {
         fogEmitter.start();
       } else if (w === 'Wind') {
         windEmitter.setSpeedX({ min: -50, max: 50 });
-        windEmitter.setSpeedY({ min: 0, max: 0 });
+        windEmitter.setSpeedY({ min: 30, max: 140 });
+        const zone = new Phaser.Geom.Rectangle(-20, -20, 840, 180);
+        windEmitter.setEmitZone({ type: 'random', source: zone });
         windEmitter.start();
       }
     };
