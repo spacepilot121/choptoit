@@ -21,11 +21,16 @@
       width: 100vw;
       height: 100vh;
       background: #000;
+      display: flex;
+      align-items: center;
+      justify-content: center;
     }
     canvas {
       display: block;
-      width: 100% !important;
-      height: 100% !important;
+      width: auto !important;
+      height: auto !important;
+      max-width: 100%;
+      max-height: 100%;
       touch-action: manipulation;
     }
     #start-overlay {
@@ -141,6 +146,14 @@ function setBackdropCover(image, width = 800, height = 600, alignBottom = false)
     image.setOrigin(0.5, 0.5);
     image.setPosition(width / 2, height / 2);
   }
+  return image;
+}
+
+function setImageScaleToFit(image, maxWidth, maxHeight) {
+  const src = image.texture?.getSourceImage?.();
+  if (!src || !src.width || !src.height) return image;
+  const scale = Math.min(maxWidth / src.width, maxHeight / src.height);
+  image.setScale(scale);
   return image;
 }
 
@@ -2106,8 +2119,8 @@ function create() {
   const rope = scene.add.rectangle(0, 0, 12, 380, 0xffffff)
     .setOrigin(0.5, 0);
   const logo = scene.add.image(0, 380, 'logo')
-    .setOrigin(513 / 1024, 127 / 1024)
-    .setScale(0.5);
+    .setOrigin(513 / 1024, 127 / 1024);
+  setImageScaleToFit(logo, 360, 220);
   logoContainer.add([rope, logo]);
   scene.tweens.add({
     targets: logoContainer,
