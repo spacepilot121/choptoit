@@ -4312,6 +4312,24 @@ function spawnBird(scene) {
   });
 }
 
+function syncTargetHitbox(target) {
+  if (!target || !target.body) return;
+  // Targets can define custom hitbox offsets (e.g. barrels include fuse area).
+  // Never recenter these with halfWidth/halfHeight math, or the hitbox drifts.
+  const hitboxOffsetX = target.hitboxOffsetX ?? -target.body.halfWidth;
+  const hitboxOffsetY = target.hitboxOffsetY ?? -target.body.halfHeight;
+  target.body.x = target.x + hitboxOffsetX;
+  target.body.y = target.y + hitboxOffsetY;
+}
+
+function syncTargetPole(target) {
+  if (!target || !target.jester || !target.jester.pole) return;
+  // Keep the pole top attached to the moving target by stretching it each frame.
+  const poleTopY = target.jester.y - 20;
+  const poleHeight = Math.max(20, poleTopY - target.y);
+  target.jester.pole.height = poleHeight;
+}
+
 function spawnTarget(scene) {
   const type = chooseTargetType();
   if (type === 'holyMonk') {
@@ -4334,6 +4352,8 @@ function spawnTarget(scene) {
   const pole = scene.add.rectangle(0, -20, 6, poleHeight, 0x8b4513)
     .setOrigin(0.5, 1);
   const head = scene.add.image(0, -20, 'jesterHead1').setOrigin(0.5);
+  jester.pole = pole;
+  jester.basePoleHeight = poleHeight;
   jester.add([body, pole, head]);
 
   const target = scene.add.container(startX, CHARACTER_BASE_Y - 20 - poleHeight).setDepth(20);
@@ -4397,12 +4417,15 @@ function spawnTarget(scene) {
           // so the barrels are a bit easier to hit.
           target.body.setSize(40, 56);
           target.body.setOffset(-20, -30);
+          target.hitboxOffsetX = -20;
+          target.hitboxOffsetY = -30;
         } else {
           target.body.setCircle(20);
           target.body.setOffset(-20, -20);
-          target.body.x = target.x - target.body.halfWidth;
-          target.body.y = target.y - target.body.halfHeight;
+          target.hitboxOffsetX = -20;
+          target.hitboxOffsetY = -20;
         }
+      syncTargetHitbox(target);
       target.body.setAllowGravity(false);
       target.body.setImmovable(true);
       if (FEATURES.birds && Phaser.Math.Between(1, 10) === 1) {
@@ -4410,10 +4433,8 @@ function spawnTarget(scene) {
       }
     },
     onUpdate: () => {
-      if (target.body) {
-        target.body.x = target.x - target.body.halfWidth;
-        target.body.y = target.y - target.body.halfHeight;
-      }
+      syncTargetHitbox(target);
+      syncTargetPole(target);
     }
   });
 }
@@ -4533,6 +4554,13 @@ function update(time, delta) {
         obj.body.setGravityY(300);
         obj.rainGravityApplied = true;
       }
+    });
+  }
+
+  if (targetGroup) {
+    targetGroup.getChildren().forEach(target => {
+      syncTargetHitbox(target);
+      syncTargetPole(target);
     });
   }
 
