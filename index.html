@@ -18,19 +18,21 @@
     #game-shell {
       position: fixed;
       inset: 0;
-      width: 100vw;
-      height: 100vh;
+      width: min(100vw, 430px);
+      height: 100dvh;
+      margin: 0 auto;
       background: #000;
       display: flex;
-      align-items: center;
+      align-items: flex-start;
       justify-content: center;
+      overflow: hidden;
     }
     canvas {
       display: block;
-      width: auto !important;
+      width: 100% !important;
       height: auto !important;
       max-width: 100%;
-      max-height: 100%;
+      max-height: none;
       touch-action: manipulation;
     }
     #start-overlay {
