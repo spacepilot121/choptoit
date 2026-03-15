@@ -2,7 +2,7 @@
 <html>
 <head>
   <meta charset="utf-8">
-  <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+  <meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no, viewport-fit=cover">
   <title>Chop To It!</title>
   <link rel="icon" type="image/png" href="favicon256.png">
   <style>
@@ -10,35 +10,47 @@
       width: 100%;
       height: 100%;
       margin: 0;
+      padding: 0;
       background: #000;
       color: #fff;
       overflow: hidden;
+      touch-action: none;
+      overscroll-behavior: none;
+      user-select: none;
+      -webkit-user-select: none;
+      -webkit-touch-callout: none;
       font-family: "Trebuchet MS", "Segoe UI", sans-serif;
     }
     :root {
-      --iphone-canvas-width: 430px;
-      --iphone-canvas-height: 932px;
+      --safe-top: env(safe-area-inset-top, 0px);
+      --safe-right: env(safe-area-inset-right, 0px);
+      --safe-bottom: env(safe-area-inset-bottom, 0px);
+      --safe-left: env(safe-area-inset-left, 0px);
+      --shell-vh: 100dvh;
     }
     #game-shell {
       position: fixed;
-      top: 0;
-      left: 50%;
-      transform: translateX(-50%);
-      width: min(100vw, var(--iphone-canvas-width));
-      height: min(100dvh, var(--iphone-canvas-height));
+      inset: 0;
+      width: 100vw;
+      height: var(--shell-vh);
+      padding: var(--safe-top) var(--safe-right) var(--safe-bottom) var(--safe-left);
+      box-sizing: border-box;
       background: #000;
       display: flex;
-      align-items: flex-start;
+      align-items: stretch;
       justify-content: center;
       overflow: hidden;
     }
     canvas {
       display: block;
-      width: 100% !important;
-      height: auto !important;
-      max-width: 100%;
-      max-height: none;
-      touch-action: manipulation;
+      touch-action: none;
+    }
+
+    @media (hover: none), (pointer: coarse), (max-width: 900px) {
+      #game-instructions,
+      #visitor-counter {
+        display: none !important;
+      }
     }
     #start-overlay {
       position: fixed;
@@ -95,11 +107,26 @@
   <div id="game-shell"></div>
 
 <script>
+const GAME_WIDTH = 800;
+const GAME_HEIGHT = 1734;
+const CENTER_X = GAME_WIDTH / 2;
+const CENTER_Y = GAME_HEIGHT / 2;
+const SAFE_TOP = 60;
+const SAFE_BOTTOM = GAME_HEIGHT - 60;
+const LEFT_MARGIN = 16;
+const RIGHT_MARGIN = GAME_WIDTH - 16;
+const PORTRAIT_HEADROOM = GAME_HEIGHT - 600;
+const GROUND_Y = GAME_HEIGHT;
+const STAGE_Y = 520 + PORTRAIT_HEADROOM;
+const CHARACTER_BASE_Y = 460 + PORTRAIT_HEADROOM;
+const HUD_TOP_Y = SAFE_TOP;
+const HUD_BOTTOM_Y = GAME_HEIGHT - 30;
+
 const config = {
   type: Phaser.AUTO,
   parent: 'game-shell',
-  width: 800,
-  height: 600,
+  width: GAME_WIDTH,
+  height: GAME_HEIGHT,
   backgroundColor: '#000',
   scale: {
     mode: Phaser.Scale.FIT,
@@ -114,6 +141,20 @@ const config = {
 };
 
 let game = null;
+const shell = document.getElementById('game-shell');
+
+function legacyY(oldY) {
+  return oldY + PORTRAIT_HEADROOM;
+}
+
+function updateShellHeight() {
+  const vh = window.visualViewport?.height || window.innerHeight;
+  document.documentElement.style.setProperty('--shell-vh', `${vh}px`);
+}
+updateShellHeight();
+window.addEventListener('resize', updateShellHeight);
+window.visualViewport?.addEventListener('resize', updateShellHeight);
+window.visualViewport?.addEventListener('scroll', updateShellHeight);
 
 const startOverlay = document.getElementById('start-overlay');
 const startGame = () => {
@@ -134,11 +175,11 @@ const FEATURES = {
   clouds: true,
 };
 
-const CLOUD_AREA_HEIGHT = 300;
-const EFFECT_AREA_HEIGHT = 420;
+const CLOUD_AREA_HEIGHT = SAFE_TOP + 320;
+const EFFECT_AREA_HEIGHT = GAME_HEIGHT;
 const MAX_COIN_ANIMS = 150;
 
-function setBackdropCover(image, width = 800, height = 600, alignBottom = false) {
+function setBackdropCover(image, width = GAME_WIDTH, height = GAME_HEIGHT, alignBottom = false) {
   const src = image.texture?.getSourceImage?.();
   if (!src || !src.width || !src.height) {
     image.setDisplaySize(width, height);
@@ -1460,7 +1501,7 @@ function applyRandomWeather(scene) {
     if (windEmitter) {
       windEmitter.setSpeedX({ min: windForce.x - 20, max: windForce.x + 20 });
       windEmitter.setSpeedY({ min: windForce.y - 20, max: windForce.y + 20 });
-      const zone = new Phaser.Geom.Rectangle(-20, -20, 840, 180);
+      const zone = new Phaser.Geom.Rectangle(-20, -20, GAME_WIDTH + 40, 180);
       windEmitter.setEmitZone({ type: 'random', source: zone });
       windEmitter.start();
     }
@@ -1811,13 +1852,13 @@ function create() {
   const scene = this;
 
   // Background and stage art
-  skyRect = scene.add.image(400, 300, 'backgroundSky');
-  skyRect.setDisplaySize(800, 600);
+  skyRect = scene.add.image(CENTER_X, CENTER_Y, 'backgroundSky');
+  skyRect.setDisplaySize(GAME_WIDTH, GAME_HEIGHT);
   // Render sky behind celestial bodies
   skyRect.setDepth(-5);
 
-  backgroundRect = scene.add.image(400, 300, 'background');
-  setBackdropCover(backgroundRect, 800, 600, true);
+  backgroundRect = scene.add.image(CENTER_X, CENTER_Y, 'background');
+  setBackdropCover(backgroundRect, GAME_WIDTH, GAME_HEIGHT, true);
   backgroundRect.setDepth(-2);
   // Apply the initial background for the starting city
   updateBackground(scene);
@@ -1895,19 +1936,19 @@ function create() {
     }
   });
 
-  stage = scene.add.image(400, 520, 'platform').setDepth(0);
-  stageBlood = scene.add.rectangle(400, 520, 1, 10, 0x770000)
+  stage = scene.add.image(CENTER_X, STAGE_Y, 'platform').setDepth(0);
+  stageBlood = scene.add.rectangle(CENTER_X, STAGE_Y, 1, 10, 0x770000)
     .setOrigin(0.5, 1)
     .setVisible(false)
     .setDepth(0.4);
   // Overlay that only dims the background behind characters
-  backgroundFadeOverlay = scene.add.rectangle(400, 300, 800, 600, 0x000000, 1)
+  backgroundFadeOverlay = scene.add.rectangle(CENTER_X, CENTER_Y, GAME_WIDTH, GAME_HEIGHT, 0x000000, 1)
     .setDepth(-1)
     .setAlpha(0)
     .setVisible(false);
 
   // Overlay used for fading the entire screen during menus and transitions.
-  screenFadeOverlay = scene.add.rectangle(400, 300, 800, 600, 0x000000, 1)
+  screenFadeOverlay = scene.add.rectangle(CENTER_X, CENTER_Y, GAME_WIDTH, GAME_HEIGHT, 0x000000, 1)
     .setDepth(29)
     .setAlpha(0)
     .setVisible(false);
@@ -1916,7 +1957,7 @@ function create() {
 
   // Executioner, starts off-screen and walks in on first spawn
   // Place him behind the prisoner but in front of the background
-  executioner = scene.add.container(400, 460).setDepth(0.5);
+  executioner = scene.add.container(CENTER_X, CHARACTER_BASE_Y).setDepth(0.5);
   executionerWeapon = scene.add.image(0, -20, `weapons${player.weaponLevel}`)
     .setOrigin(0.5)
     .setAngle(135);
@@ -1928,7 +1969,7 @@ function create() {
   executioner.setVisible(false);
 
   // Condemned figure with separate head and body
-  prisoner = scene.add.container(400, 460).setDepth(1);
+  prisoner = scene.add.container(CENTER_X, CHARACTER_BASE_Y).setDepth(1);
   // Pivot the body around the feet so it can topple realistically
   // Position it so the top still aligns with the neck
   prisonerBody = scene.add.image(0, 50, prisonerBodyKey)
@@ -1979,31 +2020,28 @@ function create() {
     .setScrollFactor(0)
     .setVisible(false);
   fameText.setStroke('#000000', 4);
-  missText = scene.add.text(16, 64, 'Misses: 0', { font: '20px monospace', fill: '#ff8888' })
+  missText = scene.add.text(LEFT_MARGIN, HUD_TOP_Y + 48, 'Misses: 0', { font: '20px monospace', fill: '#ff8888' })
     .setDepth(100)
     .setScrollFactor(0)
     .setVisible(false);
-  missText.setY(missText.y + 50);
-  killText = scene.add.text(16, 88, 'Kills: 0', { font: '20px monospace', fill: '#ffffff' })
+  killText = scene.add.text(LEFT_MARGIN, HUD_TOP_Y + 72, 'Kills: 0', { font: '20px monospace', fill: '#ffffff' })
     .setDepth(100)
     .setScrollFactor(0)
     .setVisible(false);
-  killText.setY(killText.y + 50);
   // Hide the old weather label at the top
-  weatherText = scene.add.text(400, 96, '', { font: '20px monospace', fill: '#ffffff' })
+  weatherText = scene.add.text(CENTER_X, HUD_TOP_Y + 80, '', { font: '20px monospace', fill: '#ffffff' })
     .setOrigin(0.5, 0)
     .setDepth(50)
     .setVisible(false);
-  weatherText.setY(weatherText.y + 50);
-  weatherIndicatorBg = scene.add.circle(25, 471, 24, 0x000000)
+  weatherIndicatorBg = scene.add.circle(LEFT_MARGIN + 9, HUD_BOTTOM_Y - 118, 24, 0x000000)
     .setOrigin(0.5)
     .setDepth(49)
     .setVisible(false);
-  weatherIndicator = scene.add.text(25, 471, '', { font: '20px monospace', fill: '#ffffff' })
+  weatherIndicator = scene.add.text(LEFT_MARGIN + 9, HUD_BOTTOM_Y - 118, '', { font: '20px monospace', fill: '#ffffff' })
     .setOrigin(0.5)
     .setDepth(50)
     .setVisible(false);
-  menuIcon = scene.add.text(25, 571, '\u2630', { font: '32px monospace', fill: '#ffffff' })
+  menuIcon = scene.add.text(LEFT_MARGIN + 9, HUD_BOTTOM_Y - 18, '\u2630', { font: '32px monospace', fill: '#ffffff' })
     .setOrigin(0.5)
     .setDepth(1000)
     .setScrollFactor(0)
@@ -2011,7 +2049,7 @@ function create() {
     .setInteractive()
     .on('pointerdown', () => { toggleSaveMenu(scene); });
 
-  saveMenuContainer = scene.add.container(400, 300).setDepth(1001).setVisible(false);
+  saveMenuContainer = scene.add.container(CENTER_X, CENTER_Y).setDepth(1001).setVisible(false);
   const saveMenuBg = scene.add.rectangle(0, 0, 200, 100, 0x000000, 0.8).setOrigin(0.5);
   const saveBtn = scene.add.text(0, -20, 'Save', { font: '24px monospace', fill: '#ffffff' })
     .setOrigin(0.5)
@@ -2079,36 +2117,33 @@ function create() {
     icon.on('pointerup', cancelWeatherHold);
     icon.on('pointerout', cancelWeatherHold);
   });
-  locationText = scene.add.text(400, 16, currentCity, { font: '20px monospace', fill: '#ffffff' })
+  locationText = scene.add.text(CENTER_X, HUD_TOP_Y, currentCity, { font: '20px monospace', fill: '#ffffff' })
     .setOrigin(0.5, 0)
     .setVisible(false);
-  locationText.setY(locationText.y + 50);
-  dateBg = scene.add.rectangle(400, 52, 80, 28, 0xffffff)
+  dateBg = scene.add.rectangle(CENTER_X, HUD_TOP_Y + 36, 80, 28, 0xffffff)
     .setOrigin(0.5)
     .setDepth(49)
     .setVisible(false);
-  dateBg.setY(dateBg.y + 50);
-  dateText = scene.add.text(400, 52, getDateString(), { font: '16px monospace', fill: '#000000' })
+  dateText = scene.add.text(CENTER_X, HUD_TOP_Y + 36, getDateString(), { font: '16px monospace', fill: '#000000' })
     .setOrigin(0.5)
     .setDepth(50)
     .setVisible(false);
-  dateText.setY(dateText.y + 50);
-  xpText = scene.add.text(400, 580, 'Level 1 - 0/10 XP', { font: '20px monospace', fill: '#88ff88' })
+  xpText = scene.add.text(CENTER_X, HUD_BOTTOM_Y, 'Level 1 - 0/10 XP', { font: '20px monospace', fill: '#88ff88' })
     .setOrigin(0.5, 1)
     .setDepth(100)
     .setScrollFactor(0)
     .setVisible(false);
-  xpBarFill = scene.add.rectangle(250, 584, 0, 12, 0x00ff00)
+  xpBarFill = scene.add.rectangle(CENTER_X - 150, HUD_BOTTOM_Y + 4, 0, 12, 0x00ff00)
     .setOrigin(0, 1)
     .setDepth(100)
     .setScrollFactor(0)
     .setVisible(false);
   updateXPUI();
-  streakMultiplierText = scene.add.text(460, 520, 'x0', { font: '48px monospace', fill: '#ff0000' })
+  streakMultiplierText = scene.add.text(CENTER_X + 60, STAGE_Y, 'x0', { font: '48px monospace', fill: '#ff0000' })
     .setOrigin(0.5, 1)
     .setDepth(2)
     .setStroke('#000000', 4);
-  versionText = scene.add.text(790, 590, VERSION, { font: '14px monospace', fill: '#ffffff' })
+  versionText = scene.add.text(RIGHT_MARGIN, HUD_BOTTOM_Y, VERSION, { font: '14px monospace', fill: '#ffffff' })
     .setOrigin(1, 1)
     .setDepth(11);
   if (VERSION_LINK) {
@@ -2121,8 +2156,8 @@ function create() {
 
   // Logo drop animation before showing the intro
   // Ensure the logo appears above the intro
-  logoBg = scene.add.rectangle(400, 300, 800, 600, 0x000000).setDepth(199);
-  logoContainer = scene.add.container(400, -260).setDepth(200);
+  logoBg = scene.add.rectangle(CENTER_X, CENTER_Y, GAME_WIDTH, GAME_HEIGHT, 0x000000).setDepth(199);
+  logoContainer = scene.add.container(CENTER_X, -260).setDepth(200);
   const rope = scene.add.rectangle(0, -300, 12, 680, 0xffffff)
     .setOrigin(0.5, 0);
   const logo = scene.add.image(0, 380, 'logo')
@@ -2223,8 +2258,8 @@ function create() {
     ];
     let index = 0;
     introContainer = scene.add.container(0, 0).setDepth(10000);
-    const img = scene.add.image(400, 300, 'intro1');
-    setBackdropCover(img, 800, 600);
+    const img = scene.add.image(CENTER_X, CENTER_Y, 'intro1');
+    setBackdropCover(img, GAME_WIDTH, GAME_HEIGHT);
     const introTextBg = scene.add.rectangle(400, 420, 760, 160, 0x000000, 0.5)
       .setOrigin(0.5, 0)
       .setDepth(1);
@@ -2274,15 +2309,15 @@ function create() {
   }
 
   // Swing meter base
-  const meterY = 550;
-  swingBar = scene.add.rectangle(400, meterY, 300, 20, 0x333333).setVisible(false);
-  redZone = scene.add.rectangle(400, meterY, baseSizes.red, 20, 0xff0000).setVisible(false);
-  yellowZone = scene.add.rectangle(400, meterY, baseSizes.yellow, 20, 0xffff00).setVisible(false);
-  greenZone = scene.add.rectangle(400, meterY, baseSizes.green, 20, 0x00ff00).setVisible(false);
+  const meterY = legacyY(550);
+  swingBar = scene.add.rectangle(CENTER_X, meterY, 300, 20, 0x333333).setVisible(false);
+  redZone = scene.add.rectangle(CENTER_X, meterY, baseSizes.red, 20, 0xff0000).setVisible(false);
+  yellowZone = scene.add.rectangle(CENTER_X, meterY, baseSizes.yellow, 20, 0xffff00).setVisible(false);
+  greenZone = scene.add.rectangle(CENTER_X, meterY, baseSizes.green, 20, 0x00ff00).setVisible(false);
   cursor = scene.add.rectangle(250, meterY, 10, 20, 0xffffff).setVisible(false);
 
   // Blood pool
-  bloodPool = scene.add.rectangle(400, 600, 800, 1, 0x770000)
+  bloodPool = scene.add.rectangle(CENTER_X, GROUND_Y, GAME_WIDTH, 1, 0x770000)
     .setOrigin(0.5, 1)
     .setVisible(false)
     // Render in front of heads so they appear to sink into the pool
@@ -2385,7 +2420,7 @@ function create() {
   // Place weather effects behind UI overlays so menus appear on top
   rainParts = scene.add.particles('raindrop').setDepth(28);
   rainEmitter = rainParts.createEmitter({
-    x: { min: 0, max: 800 },
+    x: { min: 0, max: GAME_WIDTH },
     y: { min: 0, max: EFFECT_AREA_HEIGHT },
     lifespan: 800,
     speedY: { min: 400, max: 600 },
@@ -2395,8 +2430,8 @@ function create() {
   });
   fogParts = scene.add.particles('fog').setDepth(28);
   fogEmitter = fogParts.createEmitter({
-    x: { min: -50, max: 850 },
-    y: { min: 260, max: 600 },
+    x: { min: -50, max: GAME_WIDTH + 50 },
+    y: { min: legacyY(260), max: GROUND_Y },
     lifespan: 6000,
     speedX: { min: -20, max: 20 },
     speedY: { min: -5, max: 5 },
@@ -2534,14 +2569,14 @@ function create() {
   travelButton.setVisible(false).disableInteractive();
 
   // Storage upgrade container and overlay
-  storageOverlay = scene.add.rectangle(400, 300, 800, 600, 0x000000, 0)
+  storageOverlay = scene.add.rectangle(CENTER_X, CENTER_Y, GAME_WIDTH, GAME_HEIGHT, 0x000000, 0)
     .setVisible(false)
     .setDepth(30);
   storageContainer = scene.add.container(0, 0).setVisible(false).setDepth(31);
-  const storageSky = scene.add.image(400, 300, 'backgroundSky')
-    .setDisplaySize(800, 600);
-  const storageBg = scene.add.image(400, 300, 'backgroundStorage')
-    .setDisplaySize(800, 600);
+  const storageSky = scene.add.image(CENTER_X, CENTER_Y, 'backgroundSky')
+    .setDisplaySize(GAME_WIDTH, GAME_HEIGHT);
+  const storageBg = scene.add.image(CENTER_X, CENTER_Y, 'backgroundStorage')
+    .setDisplaySize(GAME_WIDTH, GAME_HEIGHT);
   storageImage = scene.add.image(400, 560, `storage${player.storageLevel}`)
     .setOrigin(0.5, 1);
   storageCostText = scene.add.text(400, 250, '', { font: '24px monospace', fill: '#ffd700' })
@@ -2581,14 +2616,14 @@ function create() {
   updateStorageUI();
 
   // Weapons upgrade container and overlay
-  weaponsOverlay = scene.add.rectangle(400, 300, 800, 600, 0x000000, 0)
+  weaponsOverlay = scene.add.rectangle(CENTER_X, CENTER_Y, GAME_WIDTH, GAME_HEIGHT, 0x000000, 0)
     .setVisible(false)
     .setDepth(30);
   weaponsContainer = scene.add.container(0, 0).setVisible(false).setDepth(31);
-  const weaponsSky = scene.add.image(400, 300, 'backgroundSky')
-    .setDisplaySize(800, 600);
-  const weaponsBg = scene.add.image(400, 300, 'backgroundWeapons')
-    .setDisplaySize(800, 600);
+  const weaponsSky = scene.add.image(CENTER_X, CENTER_Y, 'backgroundSky')
+    .setDisplaySize(GAME_WIDTH, GAME_HEIGHT);
+  const weaponsBg = scene.add.image(CENTER_X, CENTER_Y, 'backgroundWeapons')
+    .setDisplaySize(GAME_WIDTH, GAME_HEIGHT);
   // Raise weapon image, cost text, and upgrade button for better layout
   weaponsImage = scene.add.image(400, 250, `weapons${player.weaponLevel}`)
     .setOrigin(0.5);
@@ -2629,14 +2664,14 @@ function create() {
   updateWeaponsUI();
 
   // Travel container and overlay
-  travelOverlay = scene.add.rectangle(400, 300, 800, 600, 0x000000, 0)
+  travelOverlay = scene.add.rectangle(CENTER_X, CENTER_Y, GAME_WIDTH, GAME_HEIGHT, 0x000000, 0)
     .setVisible(false)
     .setDepth(200);
   travelContainer = scene.add.container(0, 0).setVisible(false).setDepth(201);
-  const travelSky = scene.add.image(400, 300, 'backgroundSky')
-    .setDisplaySize(800, 600);
-  const travelBg = scene.add.image(400, 300, 'backgroundTravelMenu')
-    .setDisplaySize(800, 600);
+  const travelSky = scene.add.image(CENTER_X, CENTER_Y, 'backgroundSky')
+    .setDisplaySize(GAME_WIDTH, GAME_HEIGHT);
+  const travelBg = scene.add.image(CENTER_X, CENTER_Y, 'backgroundTravelMenu')
+    .setDisplaySize(GAME_WIDTH, GAME_HEIGHT);
   travelList = scene.add.container(0, 0);
   travelContainer.add([travelSky, travelBg, travelList]);
   travelRegion = null;
@@ -2650,14 +2685,14 @@ function create() {
   updateTravelUI(scene);
 
   // Shop container and overlay
-  shopOverlay = scene.add.rectangle(400, 300, 800, 600, 0x000000, 0)
+  shopOverlay = scene.add.rectangle(CENTER_X, CENTER_Y, GAME_WIDTH, GAME_HEIGHT, 0x000000, 0)
     .setVisible(false)
     .setDepth(200);
   shopContainer = scene.add.container(0, 0).setVisible(false).setDepth(201);
-  const shopSky = scene.add.image(400, 300, 'backgroundSky')
-    .setDisplaySize(800, 600);
-  const shopBg = scene.add.image(400, 300, 'backgroundTravel')
-    .setDisplaySize(800, 600);
+  const shopSky = scene.add.image(CENTER_X, CENTER_Y, 'backgroundSky')
+    .setDisplaySize(GAME_WIDTH, GAME_HEIGHT);
+  const shopBg = scene.add.image(CENTER_X, CENTER_Y, 'backgroundTravel')
+    .setDisplaySize(GAME_WIDTH, GAME_HEIGHT);
   // Position the market items list a bit higher so all entries are visible
   const marketList = scene.add.container(60, 130);
   shopContainer.add([shopSky, shopBg, marketList]);
@@ -2738,7 +2773,7 @@ function create() {
   shopContainer.add(closeBtn);
 
   // Trade menu overlay for buying and selling quantities
-  tradeOverlay = scene.add.rectangle(400, 300, 800, 600, 0x000000, 0)
+  tradeOverlay = scene.add.rectangle(CENTER_X, CENTER_Y, GAME_WIDTH, GAME_HEIGHT, 0x000000, 0)
     .setVisible(false)
     // Use a depth above the shop container so this overlay appears on top
     .setDepth(202);
@@ -3460,7 +3495,7 @@ function updateBackground(scene) {
   } else {
     backgroundRect.setTexture('background');
   }
-  setBackdropCover(backgroundRect, 800, 600, true);
+  setBackdropCover(backgroundRect, GAME_WIDTH, GAME_HEIGHT, true);
 }
 
 function selectCity(scene, city) {
@@ -4390,7 +4425,7 @@ function updateXPUI() {
 }
 
 function onLevelUp(scene) {
-  const msg = scene.add.text(400, 300, 'LEVEL UP!', { font: '48px monospace', fill: '#ffff00' })
+  const msg = scene.add.text(CENTER_X, CENTER_Y, 'LEVEL UP!', { font: '48px monospace', fill: '#ffff00' })
     .setOrigin(0.5)
     .setDepth(25);
   scene.cameras.main.flash(250, 255, 255, 255);
@@ -4406,7 +4441,7 @@ function onLevelUp(scene) {
 
 function showUnlockMessage(scene, text, delay = 0) {
   scene.time.delayedCall(delay, () => {
-    const msg = scene.add.text(400, 300, text, { font: '48px monospace', fill: '#ff0000' })
+    const msg = scene.add.text(CENTER_X, CENTER_Y, text, { font: '48px monospace', fill: '#ff0000' })
       .setOrigin(0.5)
       .setDepth(25);
     scene.tweens.add({
@@ -4522,13 +4557,13 @@ class TravelScene extends Phaser.Scene {
     const keys = travelBackgrounds.map((_, i) => `background-travel${i + 1}`);
     let bgKey = Phaser.Utils.Array.GetRandom(keys);
     if (!this.textures.exists(bgKey)) bgKey = 'background';
-    this.add.image(400, 300, 'backgroundSky').setDisplaySize(800, 600).setDepth(-5);
-    const travelBg = this.add.image(400, 300, bgKey).setDepth(-2);
-    setBackdropCover(travelBg, 800, 600, true);
-    this.add.text(400, 40, `Travelling to ${this.city.name}`, { font: '32px serif', fill: '#ffff00' }).setOrigin(0.5);
+    this.add.image(CENTER_X, CENTER_Y, 'backgroundSky').setDisplaySize(GAME_WIDTH, GAME_HEIGHT).setDepth(-5);
+    const travelBg = this.add.image(CENTER_X, CENTER_Y, bgKey).setDepth(-2);
+    setBackdropCover(travelBg, GAME_WIDTH, GAME_HEIGHT, true);
+    this.add.text(CENTER_X, SAFE_TOP, `Travelling to ${this.city.name}`, { font: '32px serif', fill: '#ffff00' }).setOrigin(0.5);
     let d = currentDay;
     let m = currentMonth;
-    const date = this.add.text(400, 80, `${d} ${months[m]}`, { font: '28px monospace', fill: '#ffffff' }).setOrigin(0.5);
+    const date = this.add.text(CENTER_X, SAFE_TOP + 40, `${d} ${months[m]}`, { font: '28px monospace', fill: '#ffffff' }).setOrigin(0.5);
     const duration = this.days * 700;
     // Accelerate the day/night cycle so it completes one full day for each
     // travel day, keeping the visuals in sync with the journey length.
@@ -4542,7 +4577,7 @@ class TravelScene extends Phaser.Scene {
 
     // Simple particle emitters to visualize travel weather
     const rainEmitter = this.add.particles('raindrop').createEmitter({
-      x: { min: 0, max: 800 },
+      x: { min: 0, max: GAME_WIDTH },
       y: { min: 0, max: EFFECT_AREA_HEIGHT },
       lifespan: 800,
       speedY: { min: 400, max: 600 },
@@ -4551,8 +4586,8 @@ class TravelScene extends Phaser.Scene {
       on: false
     });
     const fogEmitter = this.add.particles('fog').createEmitter({
-      x: { min: -50, max: 850 },
-      y: { min: 260, max: 600 },
+      x: { min: -50, max: GAME_WIDTH + 50 },
+      y: { min: legacyY(260), max: GROUND_Y },
       lifespan: 6000,
       speedX: { min: -20, max: 20 },
       speedY: { min: -5, max: 5 },
@@ -4641,7 +4676,7 @@ class TravelScene extends Phaser.Scene {
 
     const grassFarParts = this.add.particles('grassTuft').setDepth(0);
     grassFarParts.createEmitter({
-      x: { min: 0, max: 800 },
+      x: { min: 0, max: GAME_WIDTH },
       y: { min: 520, max: 560 },
       lifespan: 5000,
       speedX: { min: -80, max: -40 },
@@ -4653,7 +4688,7 @@ class TravelScene extends Phaser.Scene {
     });
     const grassNearParts = this.add.particles('grassTuft').setDepth(2);
     grassNearParts.createEmitter({
-      x: { min: 0, max: 800 },
+      x: { min: 0, max: GAME_WIDTH },
       y: { min: 570, max: 600 },
       lifespan: 3000,
       speedX: { min: -200, max: -120 },
@@ -4674,13 +4709,13 @@ class TravelScene extends Phaser.Scene {
       } else if (w === 'Wind') {
         windEmitter.setSpeedX({ min: -50, max: 50 });
         windEmitter.setSpeedY({ min: 30, max: 140 });
-        const zone = new Phaser.Geom.Rectangle(-20, -20, 840, 180);
+        const zone = new Phaser.Geom.Rectangle(-20, -20, GAME_WIDTH + 40, 180);
         windEmitter.setEmitZone({ type: 'random', source: zone });
         windEmitter.start();
       }
     };
     setWeather(weather);
-    const exec = this.add.container(-100, 460).setDepth(1);
+    const exec = this.add.container(-100, CHARACTER_BASE_Y).setDepth(1);
     const weapon = this.add.image(0, -20, `weapons${player.weaponLevel}`)
       .setOrigin(0.5)
       .setAngle(135);
@@ -4691,7 +4726,7 @@ class TravelScene extends Phaser.Scene {
 
     // Storage upgrade image trails 50px lower behind the executioner
     const upgrade = this.add
-      .image(-250, 510, `storage${player.storageLevel}`)
+      .image(-250, legacyY(510), `storage${player.storageLevel}`)
       .setOrigin(0.5, 1)
       .setDepth(0);
 
@@ -4802,6 +4837,7 @@ window.addEventListener('load', () => {
 
   document.body.appendChild(instructions);
   visitorCounterEl = document.createElement('div');
+  visitorCounterEl.id = 'visitor-counter';
   visitorCounterEl.style.textAlign = 'center';
   visitorCounterEl.style.margin = '40px 0';
   visitorCounterEl.style.fontFamily = 'Georgia, serif';
