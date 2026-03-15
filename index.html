@@ -123,7 +123,26 @@ const FEATURES = {
 };
 
 const CLOUD_AREA_HEIGHT = 300;
+const EFFECT_AREA_HEIGHT = 420;
 const MAX_COIN_ANIMS = 150;
+
+function setBackdropCover(image, width = 800, height = 600, alignBottom = false) {
+  const src = image.texture?.getSourceImage?.();
+  if (!src || !src.width || !src.height) {
+    image.setDisplaySize(width, height);
+    return image;
+  }
+  const scale = Math.max(width / src.width, height / src.height);
+  image.setScale(scale);
+  if (alignBottom) {
+    image.setOrigin(0.5, 1);
+    image.setPosition(width / 2, height);
+  } else {
+    image.setOrigin(0.5, 0.5);
+    image.setPosition(width / 2, height / 2);
+  }
+  return image;
+}
 
 // Core player state: gold, storage level, and carrying capacity
 const player = {
@@ -1778,7 +1797,7 @@ function create() {
   skyRect.setDepth(-5);
 
   backgroundRect = scene.add.image(400, 300, 'background');
-  backgroundRect.setDisplaySize(800, 600);
+  setBackdropCover(backgroundRect, 800, 600, true);
   backgroundRect.setDepth(-2);
   // Apply the initial background for the starting city
   updateBackground(scene);
@@ -2084,9 +2103,9 @@ function create() {
   // Ensure the logo appears above the intro
   logoBg = scene.add.rectangle(400, 300, 800, 600, 0x000000).setDepth(199);
   logoContainer = scene.add.container(400, -260).setDepth(200);
-  const rope = scene.add.rectangle(0, 0, 12, 280, 0xffffff)
+  const rope = scene.add.rectangle(0, 0, 12, 380, 0xffffff)
     .setOrigin(0.5, 0);
-  const logo = scene.add.image(0, 280, 'logo')
+  const logo = scene.add.image(0, 380, 'logo')
     .setOrigin(513 / 1024, 127 / 1024)
     .setScale(0.5);
   logoContainer.add([rope, logo]);
@@ -2184,7 +2203,8 @@ function create() {
     ];
     let index = 0;
     introContainer = scene.add.container(0, 0).setDepth(10000);
-    const img = scene.add.image(400, 300, 'intro1').setDisplaySize(800, 600);
+    const img = scene.add.image(400, 300, 'intro1');
+    setBackdropCover(img, 800, 600);
     const introTextBg = scene.add.rectangle(400, 420, 760, 160, 0x000000, 0.5)
       .setOrigin(0.5, 0)
       .setDepth(1);
@@ -2346,7 +2366,7 @@ function create() {
   rainParts = scene.add.particles('raindrop').setDepth(28);
   rainEmitter = rainParts.createEmitter({
     x: { min: 0, max: 800 },
-    y: 0,
+    y: { min: 0, max: EFFECT_AREA_HEIGHT },
     lifespan: 800,
     speedY: { min: 400, max: 600 },
     quantity: 15,
@@ -2356,7 +2376,7 @@ function create() {
   fogParts = scene.add.particles('fog').setDepth(28);
   fogEmitter = fogParts.createEmitter({
     x: { min: -50, max: 850 },
-    y: { min: 300, max: 580 },
+    y: { min: 260, max: 600 },
     lifespan: 6000,
     speedX: { min: -20, max: 20 },
     speedY: { min: -5, max: 5 },
@@ -3420,6 +3440,7 @@ function updateBackground(scene) {
   } else {
     backgroundRect.setTexture('background');
   }
+  setBackdropCover(backgroundRect, 800, 600, true);
 }
 
 function selectCity(scene, city) {
@@ -4482,7 +4503,8 @@ class TravelScene extends Phaser.Scene {
     let bgKey = Phaser.Utils.Array.GetRandom(keys);
     if (!this.textures.exists(bgKey)) bgKey = 'background';
     this.add.image(400, 300, 'backgroundSky').setDisplaySize(800, 600).setDepth(-5);
-    this.add.image(400, 300, bgKey).setDisplaySize(800, 600).setDepth(-2);
+    const travelBg = this.add.image(400, 300, bgKey).setDepth(-2);
+    setBackdropCover(travelBg, 800, 600, true);
     this.add.text(400, 40, `Travelling to ${this.city.name}`, { font: '32px serif', fill: '#ffff00' }).setOrigin(0.5);
     let d = currentDay;
     let m = currentMonth;
@@ -4501,7 +4523,7 @@ class TravelScene extends Phaser.Scene {
     // Simple particle emitters to visualize travel weather
     const rainEmitter = this.add.particles('raindrop').createEmitter({
       x: { min: 0, max: 800 },
-      y: 0,
+      y: { min: 0, max: EFFECT_AREA_HEIGHT },
       lifespan: 800,
       speedY: { min: 400, max: 600 },
       quantity: 15,
@@ -4510,7 +4532,7 @@ class TravelScene extends Phaser.Scene {
     });
     const fogEmitter = this.add.particles('fog').createEmitter({
       x: { min: -50, max: 850 },
-      y: { min: 300, max: 580 },
+      y: { min: 260, max: 600 },
       lifespan: 6000,
       speedX: { min: -20, max: 20 },
       speedY: { min: -5, max: 5 },
