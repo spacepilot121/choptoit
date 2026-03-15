@@ -2116,7 +2116,7 @@ function create() {
   // Ensure the logo appears above the intro
   logoBg = scene.add.rectangle(400, 300, 800, 600, 0x000000).setDepth(199);
   logoContainer = scene.add.container(400, -260).setDepth(200);
-  const rope = scene.add.rectangle(0, 0, 12, 380, 0xffffff)
+  const rope = scene.add.rectangle(0, -300, 12, 680, 0xffffff)
     .setOrigin(0.5, 0);
   const logo = scene.add.image(0, 380, 'logo')
     .setOrigin(513 / 1024, 127 / 1024);
