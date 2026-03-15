@@ -1249,8 +1249,14 @@ const cityCoords = {
 
 // Calculate great-circle distance between two coordinate pairs in miles
 function distanceMiles(a, b) {
-  const [lat1, lon1] = cityCoords[a];
-  const [lat2, lon2] = cityCoords[b];
+  const from = cityCoords[a];
+  const to = cityCoords[b];
+  if (!from || !to) {
+    console.warn('Missing city coordinates for travel distance calculation.', { from: a, to: b });
+    return 24;
+  }
+  const [lat1, lon1] = from;
+  const [lat2, lon2] = to;
   const R = 6371e3; // metres
   const phi1 = lat1 * Math.PI / 180;
   const phi2 = lat2 * Math.PI / 180;
@@ -1264,6 +1270,7 @@ function distanceMiles(a, b) {
 // Average pace roughly 24 miles per day
 function getTravelDays(from, to) {
   if (from === to) return 0;
+  if (!cityCoords[from] || !cityCoords[to]) return 1;
   const miles = distanceMiles(from, to);
   return Math.max(1, Math.round(miles / 24));
 }
