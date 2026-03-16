@@ -64,6 +64,9 @@
       text-align: center;
       cursor: pointer;
     }
+    #start-overlay.loading {
+      cursor: default;
+    }
     #start-overlay .card {
       width: min(100%, 360px);
       border: 1px solid rgba(255, 255, 255, 0.22);
@@ -101,7 +104,8 @@
       <p>Tap enemies as they rise to keep your streak alive and earn gold.</p>
       <p>Spend gold on upgrades to carry more and hit harder.</p>
       <p>Best played on iPhone portrait mode.</p>
-      <p class="tap">Tap anywhere to begin</p>
+      <p id="start-overlay-status">Loading assets... 0%</p>
+      <p class="tap">Preparing...</p>
     </div>
   </div>
   <div id="game-shell"></div>
@@ -142,6 +146,42 @@ const config = {
 
 let game = null;
 const shell = document.getElementById('game-shell');
+const startOverlay = document.getElementById('start-overlay');
+const startOverlayStatus = document.getElementById('start-overlay-status');
+const startOverlayTap = startOverlay.querySelector('.tap');
+let assetsReadyForStart = false;
+let startTapRequested = false;
+let beginIntroFlow = null;
+let hasBegunIntroFlow = false;
+
+function updateStartOverlayProgress(progress) {
+  if (!startOverlayStatus || assetsReadyForStart) return;
+  const pct = Math.round((progress || 0) * 100);
+  startOverlayStatus.textContent = `Loading assets... ${pct}%`;
+}
+
+function markAssetsReady() {
+  assetsReadyForStart = true;
+  startOverlay.classList.remove('loading');
+  startOverlayStatus.textContent = 'Assets ready.';
+  startOverlayTap.textContent = 'Tap anywhere to begin';
+  if (startTapRequested) {
+    beginAfterFinalTap();
+  }
+}
+
+function beginAfterFinalTap() {
+  if (!assetsReadyForStart || hasBegunIntroFlow || !beginIntroFlow) return;
+  hasBegunIntroFlow = true;
+  startOverlay.remove();
+  beginIntroFlow();
+}
+
+function handleStartOverlayTap() {
+  startTapRequested = true;
+  if (!assetsReadyForStart) return;
+  beginAfterFinalTap();
+}
 
 function legacyY(oldY) {
   return oldY + PORTRAIT_HEADROOM;
@@ -156,15 +196,15 @@ window.addEventListener('resize', updateShellHeight);
 window.visualViewport?.addEventListener('resize', updateShellHeight);
 window.visualViewport?.addEventListener('scroll', updateShellHeight);
 
-const startOverlay = document.getElementById('start-overlay');
-const startGame = () => {
+const initPhaser = () => {
   if (game) return;
-  startOverlay.remove();
   game = new Phaser.Game(config);
   game.scene.add('TravelScene', TravelScene, false);
 };
 
-startOverlay.addEventListener('click', startGame, { once: true });
+startOverlay.classList.add('loading');
+startOverlay.addEventListener('click', handleStartOverlayTap);
+initPhaser();
 
 // Feature toggles for easy testing
 const FEATURES = {
@@ -226,6 +266,11 @@ const player = {
 };
 
 const WEAPON_UPGRADE_RATIO = Math.pow(2000000 / 10, 1 / 28);
+const WEAPON_POWER_PER_LEVEL = 0.03;
+
+function getWeaponPowerMultiplier() {
+  return 1 + Math.max(0, player.weaponLevel - 1) * WEAPON_POWER_PER_LEVEL;
+}
 
 function formatGold(amount) {
   if (amount < 1000) return amount.toString();
@@ -1786,6 +1831,13 @@ function pickClass() {
 }
 
 function preload() {
+  if (this.load) {
+    this.load.on('progress', updateStartOverlayProgress);
+    this.load.once('complete', () => {
+      this.load.off('progress', updateStartOverlayProgress);
+      markAssetsReady();
+    });
+  }
   this.load.image('logo', 'logo.png');
   for (let i = 1; i <= 10; i++) {
     this.load.image(`intro${i}`, `intro${i}.png`);
@@ -2176,23 +2228,26 @@ function create() {
     .setOrigin(513 / 1024, 127 / 1024);
   setImageScaleToFit(logo, 360, 220);
   logoContainer.add([rope, logo]);
-  scene.tweens.add({
-    targets: logoContainer,
-    y: 0,
-    ease: 'Bounce',
-    duration: 600,
-    onComplete: () => {
-      scene.tweens.timeline({
-        targets: logoContainer,
-        tweens: [
-          { angle: { from: -15, to: 15 }, duration: 300, yoyo: true, ease: 'Sine.easeInOut' },
-          { angle: { from: -10, to: 10 }, duration: 400, yoyo: true, ease: 'Sine.easeInOut' },
-          { angle: { from: -5, to: 5 }, duration: 500, yoyo: true, ease: 'Sine.easeInOut' },
-          { angle: 0, duration: 600, ease: 'Sine.easeInOut', onComplete: showIntroAfterLogo }
-        ]
-      });
-    }
-  });
+  beginIntroFlow = () => {
+    scene.tweens.add({
+      targets: logoContainer,
+      y: 0,
+      ease: 'Bounce',
+      duration: 600,
+      onComplete: () => {
+        scene.tweens.timeline({
+          targets: logoContainer,
+          tweens: [
+            { angle: { from: -15, to: 15 }, duration: 300, yoyo: true, ease: 'Sine.easeInOut' },
+            { angle: { from: -10, to: 10 }, duration: 400, yoyo: true, ease: 'Sine.easeInOut' },
+            { angle: { from: -5, to: 5 }, duration: 500, yoyo: true, ease: 'Sine.easeInOut' },
+            { angle: 0, duration: 600, ease: 'Sine.easeInOut', onComplete: showIntroAfterLogo }
+          ]
+        });
+      }
+    });
+  };
+  if (startTapRequested) beginAfterFinalTap();
 
   function startGame() {
     if (gameStarted) return;
@@ -3550,6 +3605,8 @@ function savePrisoner(scene) {
 }
 
 function beheadPrisoner(scene, bloodAmount, angleDeg, power = 1) {
+  const weaponPower = getWeaponPowerMultiplier();
+  const finalPower = power * weaponPower;
   if (headResetEvent) {
     headResetEvent.remove(false);
     headResetEvent = null;
@@ -3583,7 +3640,7 @@ function beheadPrisoner(scene, bloodAmount, angleDeg, power = 1) {
   corpse.body.setBounce(0.05);
   corpse.body.setCollideWorldBounds(true);
   corpse.body.setDrag(50, 0);
-  const corpseSpeed = 80 * power;
+  const corpseSpeed = 80 * finalPower;
   // Throw the body based on the chosen slash angle and power
   corpse.body.setVelocity(Math.sin(rad) * corpseSpeed, Math.cos(rad) * corpseSpeed);
   // Spin faster so bodies topple onto their side
@@ -3638,7 +3695,7 @@ function beheadPrisoner(scene, bloodAmount, angleDeg, power = 1) {
   flyingHead.isCorpse = true;
   flyingHead.isHead = true;
   flyingHead.bounceCount = 0;
-  flyingHead.power = power;
+  flyingHead.power = finalPower;
   const hBody = flyingHead.body;
   scene.physics.add.overlap(flyingHead, targetGroup, (head, target) => {
     handleTargetHit(scene, target, head);
@@ -3657,7 +3714,7 @@ function beheadPrisoner(scene, bloodAmount, angleDeg, power = 1) {
   } else {
     hBody.setGravityY(0);
   }
-  const speed = 250 * power;
+  const speed = 250 * finalPower;
   let vx = Math.sin(rad) * speed;
   if (FEATURES.weather && currentWeather === 'wind') {
     vx += windForce.x;
