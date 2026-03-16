@@ -3335,9 +3335,9 @@ function getWeaponUpgradeCost() {
 }
 
 // Weapon levels should affect actual strike strength, not just meter leniency.
-// Level 1 => 1.00x, then +3% per level to keep scaling meaningful but controlled.
+// Level 1 => 1.00x, then +6% per level to keep scaling meaningful but controlled.
 function getWeaponPowerMultiplier() {
-  return 1 + ((player.weaponLevel - 1) * 0.03);
+  return 1 + ((player.weaponLevel - 1) * 0.06);
 }
 
 // Refresh weapon image, upgrade cost text, and interactivity
