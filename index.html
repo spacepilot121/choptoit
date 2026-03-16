@@ -3334,6 +3334,12 @@ function getWeaponUpgradeCost() {
   return Math.ceil(cost - 1e-6);
 }
 
+// Weapon levels should affect actual strike strength, not just meter leniency.
+// Level 1 => 1.00x, then +3% per level to keep scaling meaningful but controlled.
+function getWeaponPowerMultiplier() {
+  return 1 + ((player.weaponLevel - 1) * 0.03);
+}
+
 // Refresh weapon image, upgrade cost text, and interactivity
 function updateWeaponsUI() {
   if (!weaponsImage) return;
@@ -3556,6 +3562,8 @@ function beheadPrisoner(scene, bloodAmount, angleDeg, power = 1) {
   }
   const angle = angleDeg !== undefined ? angleDeg : Phaser.Math.Between(-110, -70);
   const rad = Phaser.Math.DegToRad(angle);
+  const weaponPowerMultiplier = getWeaponPowerMultiplier();
+  const finalStrikePower = power * weaponPowerMultiplier;
   const neckX = prisoner.x;
   const neckY = prisoner.y - 10;
   bloodEmitter.explode(bloodAmount, neckX, neckY);
@@ -3583,7 +3591,7 @@ function beheadPrisoner(scene, bloodAmount, angleDeg, power = 1) {
   corpse.body.setBounce(0.05);
   corpse.body.setCollideWorldBounds(true);
   corpse.body.setDrag(50, 0);
-  const corpseSpeed = 80 * power;
+  const corpseSpeed = 80 * finalStrikePower;
   // Throw the body based on the chosen slash angle and power
   corpse.body.setVelocity(Math.sin(rad) * corpseSpeed, Math.cos(rad) * corpseSpeed);
   // Spin faster so bodies topple onto their side
@@ -3638,7 +3646,7 @@ function beheadPrisoner(scene, bloodAmount, angleDeg, power = 1) {
   flyingHead.isCorpse = true;
   flyingHead.isHead = true;
   flyingHead.bounceCount = 0;
-  flyingHead.power = power;
+  flyingHead.power = finalStrikePower;
   const hBody = flyingHead.body;
   scene.physics.add.overlap(flyingHead, targetGroup, (head, target) => {
     handleTargetHit(scene, target, head);
@@ -3657,7 +3665,7 @@ function beheadPrisoner(scene, bloodAmount, angleDeg, power = 1) {
   } else {
     hBody.setGravityY(0);
   }
-  const speed = 250 * power;
+  const speed = 250 * finalStrikePower;
   let vx = Math.sin(rad) * speed;
   if (FEATURES.weather && currentWeather === 'wind') {
     vx += windForce.x;
