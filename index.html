@@ -1451,6 +1451,8 @@ function createTargetAppearance(scene, target, type) {
     case 'explodingBarrel': {
       const b = scene.add.rectangle(0, 0, 30, 40, 0x663300);
       const f = scene.add.rectangle(0, -22, 4, 8, 0xff0000);
+      target.barrelBodyRect = b;
+      target.barrelFuseRect = f;
       target.add([b, f]);
       break;
     }
@@ -3647,6 +3649,8 @@ function beheadPrisoner(scene, bloodAmount, angleDeg, power = 1) {
   flyingHead.isHead = true;
   flyingHead.bounceCount = 0;
   flyingHead.power = finalStrikePower;
+  flyingHead.prevX = flyingHead.x;
+  flyingHead.prevY = flyingHead.y;
   const hBody = flyingHead.body;
   scene.physics.add.overlap(flyingHead, targetGroup, (head, target) => {
     handleTargetHit(scene, target, head);
@@ -4156,26 +4160,7 @@ function handleTargetHit(scene, target, head) {
   }
   gainFame(scene, target, fameGain);
   if (target.targetType === 'explodingBarrel') {
-    targetGroup.getChildren().forEach(t => {
-      if (!t.collected && Phaser.Math.Distance.Between(t.x, t.y, target.x, target.y) < 300) {
-        handleTargetHit(scene, t, head);
-      }
-    });
-    targetGroup.remove(target);
-    fireworkEmitter.explode(25, target.x, target.y);
-    fireworkCloseEmitter.explode(40, target.x, target.y);
-    if (jester && !jester.running) {
-      jester.running = true;
-      const offX = jester.startFromRight ? 900 : -100;
-      scene.tweens.add({
-        targets: jester,
-        x: offX,
-        duration: 1500,
-        ease: 'Linear',
-        onComplete: () => jester.destroy()
-      });
-    }
-    target.destroy();
+    armExplodingBarrel(scene, target, head);
     return;
   }
   targetGroup.remove(target);
@@ -4209,6 +4194,172 @@ function handleTargetHit(scene, target, head) {
         });
       }
     }
+  });
+}
+
+function armExplodingBarrel(scene, target, head) {
+  if (target.barrelArmed || target.barrelExploded) return;
+  target.barrelArmed = true;
+  if (target.body) {
+    target.body.setVelocity(0, 0);
+    target.body.setAllowGravity(false);
+    target.body.setImmovable(true);
+    target.body.setCollideWorldBounds(false);
+    target.body.enable = false;
+  }
+  target.setScale(1);
+  target.barrelPulseTween = scene.tweens.add({
+    targets: target,
+    scaleX: 1.08,
+    scaleY: 1.08,
+    duration: 120,
+    yoyo: true,
+    repeat: -1,
+    ease: 'Sine.easeInOut'
+  });
+  let blinkRed = false;
+  target.barrelBlinkEvent = scene.time.addEvent({
+    delay: 100,
+    loop: true,
+    callback: () => {
+      if (!target.active) return;
+      blinkRed = !blinkRed;
+      if (target.barrelBodyRect) {
+        target.barrelBodyRect.setFillStyle(blinkRed ? 0xff3333 : 0xffffff);
+      }
+      if (target.barrelFuseRect) {
+        target.barrelFuseRect.setFillStyle(blinkRed ? 0xffffff : 0xff3333);
+      }
+    }
+  });
+  scene.time.delayedCall(700, () => detonateExplodingBarrel(scene, target, head));
+}
+
+function detonateExplodingBarrel(scene, target, head) {
+  if (!target || !target.active || target.barrelExploded) return;
+  target.barrelExploded = true;
+  if (target.barrelBlinkEvent) {
+    target.barrelBlinkEvent.remove(false);
+    target.barrelBlinkEvent = null;
+  }
+  if (target.barrelPulseTween) {
+    target.barrelPulseTween.stop();
+    target.barrelPulseTween = null;
+  }
+  target.setScale(1);
+  targetGroup.getChildren().forEach(t => {
+    if (!t.collected && Phaser.Math.Distance.Between(t.x, t.y, target.x, target.y) < 300) {
+      handleTargetHit(scene, t, head);
+    }
+  });
+  targetGroup.remove(target);
+  fireworkEmitter.explode(25, target.x, target.y);
+  fireworkCloseEmitter.explode(40, target.x, target.y);
+  const jester = target.jester;
+  if (jester && !jester.running) {
+    jester.running = true;
+    const offX = jester.startFromRight ? 900 : -100;
+    scene.tweens.add({
+      targets: jester,
+      x: offX,
+      duration: 1500,
+      ease: 'Linear',
+      onComplete: () => jester.destroy()
+    });
+  }
+  target.destroy();
+}
+
+function pointSegmentDistanceSq(px, py, x1, y1, x2, y2) {
+  const dx = x2 - x1;
+  const dy = y2 - y1;
+  if (dx === 0 && dy === 0) {
+    const dpx = px - x1;
+    const dpy = py - y1;
+    return dpx * dpx + dpy * dpy;
+  }
+  const t = Phaser.Math.Clamp(((px - x1) * dx + (py - y1) * dy) / (dx * dx + dy * dy), 0, 1);
+  const nx = x1 + t * dx;
+  const ny = y1 + t * dy;
+  const ddx = px - nx;
+  const ddy = py - ny;
+  return ddx * ddx + ddy * ddy;
+}
+
+function segmentIntersectsExpandedRect(x1, y1, x2, y2, left, top, right, bottom, padding) {
+  const minX = left - padding;
+  const minY = top - padding;
+  const maxX = right + padding;
+  const maxY = bottom + padding;
+  const dx = x2 - x1;
+  const dy = y2 - y1;
+  let tMin = 0;
+  let tMax = 1;
+  if (dx === 0) {
+    if (x1 < minX || x1 > maxX) return false;
+  } else {
+    let tx1 = (minX - x1) / dx;
+    let tx2 = (maxX - x1) / dx;
+    if (tx1 > tx2) [tx1, tx2] = [tx2, tx1];
+    tMin = Math.max(tMin, tx1);
+    tMax = Math.min(tMax, tx2);
+    if (tMin > tMax) return false;
+  }
+  if (dy === 0) {
+    if (y1 < minY || y1 > maxY) return false;
+  } else {
+    let ty1 = (minY - y1) / dy;
+    let ty2 = (maxY - y1) / dy;
+    if (ty1 > ty2) [ty1, ty2] = [ty2, ty1];
+    tMin = Math.max(tMin, ty1);
+    tMax = Math.min(tMax, ty2);
+    if (tMin > tMax) return false;
+  }
+  return true;
+}
+
+function didHeadSegmentHitTarget(head, target, x1, y1, x2, y2) {
+  if (!target.body || !target.body.enable || target.collected) return false;
+  const headRadius = Math.max(6, (head.displayWidth || 30) * 0.18);
+  if (target.body.isCircle) {
+    const centerX = target.body.center.x;
+    const centerY = target.body.center.y;
+    const radius = target.body.halfWidth + headRadius;
+    return pointSegmentDistanceSq(centerX, centerY, x1, y1, x2, y2) <= radius * radius;
+  }
+  const barrelPadding = target.targetType === 'explodingBarrel' ? 4 : 0;
+  return segmentIntersectsExpandedRect(
+    x1,
+    y1,
+    x2,
+    y2,
+    target.body.left,
+    target.body.top,
+    target.body.right,
+    target.body.bottom,
+    headRadius + barrelPadding
+  );
+}
+
+function checkFastHeadTargetCrossings(scene) {
+  if (!bodyGroup || !targetGroup) return;
+  const targets = targetGroup.getChildren();
+  bodyGroup.getChildren().forEach(head => {
+    if (!head.isHead || !head.active || !head.body || !head.body.enable) return;
+    const prevX = head.prevX ?? head.x;
+    const prevY = head.prevY ?? head.y;
+    const movedFarEnough = Phaser.Math.Distance.Between(prevX, prevY, head.x, head.y) > 4;
+    if (movedFarEnough) {
+      for (let i = 0; i < targets.length; i++) {
+        const target = targets[i];
+        if (didHeadSegmentHitTarget(head, target, prevX, prevY, head.x, head.y)) {
+          handleTargetHit(scene, target, head);
+          break;
+        }
+      }
+    }
+    head.prevX = head.x;
+    head.prevY = head.y;
   });
 }
 
@@ -4391,6 +4542,10 @@ function spawnTarget(scene) {
 
   target.collected = false;
   target.jester = jester;
+  target.barrelArmed = false;
+  target.barrelExploded = false;
+  target.barrelBlinkEvent = null;
+  target.barrelPulseTween = null;
   targetGroup.add(target);
 
   scene.tweens.add({
@@ -4551,6 +4706,8 @@ function update(time, delta) {
     });
   }
 
+
+  checkFastHeadTargetCrossings(this);
 
   // Splash when heads hit the blood pool
   if (bloodPool && bloodEmitter && bodyGroup) {
