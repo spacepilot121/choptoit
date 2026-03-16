@@ -101,7 +101,7 @@
       <p>Tap enemies as they rise to keep your streak alive and earn gold.</p>
       <p>Spend gold on upgrades to carry more and hit harder.</p>
       <p>Best played on iPhone portrait mode.</p>
-      <p class="tap" id="start-overlay-status">Loading…</p>
+      <p class="tap">Tap anywhere to begin</p>
     </div>
   </div>
   <div id="game-shell"></div>
@@ -142,30 +142,6 @@ const config = {
 
 let game = null;
 const shell = document.getElementById('game-shell');
-const startOverlay = document.getElementById('start-overlay');
-const startOverlayStatus = document.getElementById('start-overlay-status');
-let startupAssetsReady = false;
-let startupFlowStarted = false;
-
-function updateStartOverlayStatus(message, isReady = false) {
-  if (!startOverlayStatus) return;
-  startOverlayStatus.textContent = message;
-  startOverlayStatus.style.color = isReady ? '#7dff8f' : '#ffd166';
-}
-
-function markStartupAssetsReady() {
-  startupAssetsReady = true;
-  updateStartOverlayStatus('Tap anywhere to begin', true);
-}
-
-function tryBeginFromOverlay() {
-  if (startupFlowStarted || !startupAssetsReady) return;
-  startupFlowStarted = true;
-  startOverlay.remove();
-  if (typeof window.__beginBootFlow === 'function') {
-    window.__beginBootFlow();
-  }
-}
 
 function legacyY(oldY) {
   return oldY + PORTRAIT_HEADROOM;
@@ -180,9 +156,15 @@ window.addEventListener('resize', updateShellHeight);
 window.visualViewport?.addEventListener('resize', updateShellHeight);
 window.visualViewport?.addEventListener('scroll', updateShellHeight);
 
-game = new Phaser.Game(config);
-game.scene.add('TravelScene', TravelScene, false);
-startOverlay.addEventListener('click', tryBeginFromOverlay);
+const startOverlay = document.getElementById('start-overlay');
+const startGame = () => {
+  if (game) return;
+  startOverlay.remove();
+  game = new Phaser.Game(config);
+  game.scene.add('TravelScene', TravelScene, false);
+};
+
+startOverlay.addEventListener('click', startGame, { once: true });
 
 // Feature toggles for easy testing
 const FEATURES = {
@@ -1804,12 +1786,6 @@ function pickClass() {
 }
 
 function preload() {
-  this.load.on('progress', (value) => {
-    updateStartOverlayStatus(`Loading… ${Math.floor(value * 100)}%`);
-  });
-  this.load.once('complete', () => {
-    markStartupAssetsReady();
-  });
   this.load.image('logo', 'logo.png');
   for (let i = 1; i <= 10; i++) {
     this.load.image(`intro${i}`, `intro${i}.png`);
@@ -2190,50 +2166,33 @@ function create() {
     });
   }
 
-  // Prepare logo drop animation; it begins after the HTML overlay's final tap.
+  // Logo drop animation before showing the intro
+  // Ensure the logo appears above the intro
   logoBg = scene.add.rectangle(CENTER_X, CENTER_Y, GAME_WIDTH, GAME_HEIGHT, 0x000000).setDepth(199);
-  logoBg.setVisible(false);
   logoContainer = scene.add.container(CENTER_X, -260).setDepth(200);
-  logoContainer.setVisible(false);
   const rope = scene.add.rectangle(0, -300, 12, 680, 0xffffff)
     .setOrigin(0.5, 0);
   const logo = scene.add.image(0, 380, 'logo')
     .setOrigin(513 / 1024, 127 / 1024);
   setImageScaleToFit(logo, 360, 220);
   logoContainer.add([rope, logo]);
-  let logoSequenceStarted = false;
-  function beginBootFlow() {
-    if (logoSequenceStarted) return;
-    logoSequenceStarted = true;
-    logoBg.setVisible(true);
-    logoBg.setAlpha(1);
-    logoContainer.setVisible(true);
-    logoContainer.setAlpha(1);
-    logoContainer.setAngle(0);
-    logoContainer.setY(-260);
-    scene.tweens.add({
-      targets: logoContainer,
-      y: 0,
-      ease: 'Bounce',
-      duration: 600,
-      onComplete: () => {
-        scene.tweens.timeline({
-          targets: logoContainer,
-          tweens: [
-            { angle: { from: -15, to: 15 }, duration: 300, yoyo: true, ease: 'Sine.easeInOut' },
-            { angle: { from: -10, to: 10 }, duration: 400, yoyo: true, ease: 'Sine.easeInOut' },
-            { angle: { from: -5, to: 5 }, duration: 500, yoyo: true, ease: 'Sine.easeInOut' },
-            { angle: 0, duration: 600, ease: 'Sine.easeInOut', onComplete: showIntroAfterLogo }
-          ]
-        });
-      }
-    });
-  }
-
-  window.__beginBootFlow = beginBootFlow;
-  if (startupFlowStarted) {
-    beginBootFlow();
-  }
+  scene.tweens.add({
+    targets: logoContainer,
+    y: 0,
+    ease: 'Bounce',
+    duration: 600,
+    onComplete: () => {
+      scene.tweens.timeline({
+        targets: logoContainer,
+        tweens: [
+          { angle: { from: -15, to: 15 }, duration: 300, yoyo: true, ease: 'Sine.easeInOut' },
+          { angle: { from: -10, to: 10 }, duration: 400, yoyo: true, ease: 'Sine.easeInOut' },
+          { angle: { from: -5, to: 5 }, duration: 500, yoyo: true, ease: 'Sine.easeInOut' },
+          { angle: 0, duration: 600, ease: 'Sine.easeInOut', onComplete: showIntroAfterLogo }
+        ]
+      });
+    }
+  });
 
   function startGame() {
     if (gameStarted) return;
@@ -3624,9 +3583,7 @@ function beheadPrisoner(scene, bloodAmount, angleDeg, power = 1) {
   corpse.body.setBounce(0.05);
   corpse.body.setCollideWorldBounds(true);
   corpse.body.setDrag(50, 0);
-  const weaponPowerMultiplier = getWeaponPowerMultiplier();
-  const finalPower = power * weaponPowerMultiplier;
-  const corpseSpeed = 80 * finalPower;
+  const corpseSpeed = 80 * power;
   // Throw the body based on the chosen slash angle and power
   corpse.body.setVelocity(Math.sin(rad) * corpseSpeed, Math.cos(rad) * corpseSpeed);
   // Spin faster so bodies topple onto their side
@@ -3681,7 +3638,7 @@ function beheadPrisoner(scene, bloodAmount, angleDeg, power = 1) {
   flyingHead.isCorpse = true;
   flyingHead.isHead = true;
   flyingHead.bounceCount = 0;
-  flyingHead.power = finalPower;
+  flyingHead.power = power;
   const hBody = flyingHead.body;
   scene.physics.add.overlap(flyingHead, targetGroup, (head, target) => {
     handleTargetHit(scene, target, head);
@@ -3700,7 +3657,7 @@ function beheadPrisoner(scene, bloodAmount, angleDeg, power = 1) {
   } else {
     hBody.setGravityY(0);
   }
-  const speed = 250 * finalPower;
+  const speed = 250 * power;
   let vx = Math.sin(rad) * speed;
   if (FEATURES.weather && currentWeather === 'wind') {
     vx += windForce.x;
@@ -3729,11 +3686,6 @@ function beheadPrisoner(scene, bloodAmount, angleDeg, power = 1) {
   headEmitter.setFrequency(20);
   headEmitter.setQuantity(Math.max(5, bloodAmount / 30));
   headEmitter.start();
-}
-
-function getWeaponPowerMultiplier() {
-  const extraLevels = Math.max(0, player.weaponLevel - 1);
-  return 1 + (extraLevels * 0.03);
 }
 
 function showAimArrow(scene, bloodAmount, nextSide) {
