@@ -2419,8 +2419,21 @@ function create() {
   gPix.generateTexture('pixel', 2, 2);
   gPix.destroy();
   const gYorkRing = scene.add.graphics();
-  gYorkRing.lineStyle(8, 0xffe100, 1);
-  gYorkRing.strokeCircle(44, 44, 36);
+  const ringCenter = 44;
+  const ringRadius = 36;
+  const ringSegments = 12;
+  gYorkRing.lineStyle(10, 0xffffff, 1);
+  gYorkRing.strokeCircle(ringCenter, ringCenter, ringRadius);
+  for (let i = 0; i < ringSegments; i += 1) {
+    const startAngle = (Math.PI * 2 * i) / ringSegments;
+    const endAngle = startAngle + (Math.PI * 2) / ringSegments;
+    gYorkRing.lineStyle(10, i % 2 === 0 ? 0xffe100 : 0xffffff, 1);
+    gYorkRing.beginPath();
+    gYorkRing.arc(ringCenter, ringCenter, ringRadius, startAngle, endAngle - 0.08, false);
+    gYorkRing.strokePath();
+  }
+  gYorkRing.lineStyle(3, 0xfff7a6, 0.85);
+  gYorkRing.strokeCircle(ringCenter, ringCenter, 31);
   gYorkRing.generateTexture('yorkRingGate', 88, 88);
   gYorkRing.destroy();
   const fwCloseParts = scene.add.particles('pixel').setDepth(6);
@@ -4299,8 +4312,8 @@ function shouldSpawnYorkRingPlatformEvent() {
 
 function createYorkRingGuard(scene, x, y, facing) {
   const guard = scene.add.container(x, y).setDepth(21);
-  const body = scene.add.image(0, 50, 'escortBody').setOrigin(0.5, 1).setScale(0.72);
-  const head = scene.add.image(0, -11, 'escortHead').setOrigin(0.5).setScale(0.72);
+  const body = scene.add.image(0, 0, 'escortBody').setOrigin(0.5, 1).setScale(0.72);
+  const head = scene.add.image(0, -62, 'escortHead').setOrigin(0.5).setScale(0.72);
   guard.add([body, head]);
   guard.setScale(facing === 'left' ? -1 : 1, 1);
   return guard;
@@ -4324,6 +4337,8 @@ function spawnYorkThrownRing(scene, eventData, fromLeft) {
     centerY: y,
     innerRadius: 26,
     outerRadius: 38,
+    spinTurns: Phaser.Math.Between(5, 8),
+    spinDirection: fromLeft ? 1 : -1,
     spent: false,
     touchedHeadIds: new Set()
   };
@@ -4339,6 +4354,7 @@ function spawnYorkThrownRing(scene, eventData, fromLeft) {
       ringSprite.x = Phaser.Math.Linear(startX, endX, t);
       const arc = 4 * t * (1 - t);
       ringSprite.y = y - arc * 92;
+      ringSprite.rotation = ring.spinDirection * t * Math.PI * ring.spinTurns;
       ring.centerY = ringSprite.y;
     },
     onComplete: () => {
@@ -4422,12 +4438,18 @@ function spawnYorkRingPlatformEvent(scene) {
   const platformScaleX = 0.42;
   const platformScaleY = 0.3;
   const platformDisplayWidth = 300 * platformScaleX;
-  const leftStopX = platformDisplayWidth * 0.5;
-  const rightStopX = GAME_WIDTH - (platformDisplayWidth * 0.5);
+  const platformDisplayHeight = 300 * platformScaleY;
+  const leftStopX = 0;
+  const rightStopX = GAME_WIDTH;
+  const guardInsetFromInnerEdge = 8;
+  const guardFootYOffset = -platformDisplayHeight * 0.5 + 6;
+  const leftGuardStopX = leftStopX + (platformDisplayWidth * 0.5) - guardInsetFromInnerEdge;
+  const rightGuardStopX = rightStopX - (platformDisplayWidth * 0.5) + guardInsetFromInnerEdge;
+  const guardStopY = eventY + guardFootYOffset;
   const leftPlatform = scene.add.image(-platformDisplayWidth, eventY, 'platform').setDepth(19).setScale(platformScaleX, platformScaleY);
   const rightPlatform = scene.add.image(GAME_WIDTH + platformDisplayWidth, eventY, 'platform').setDepth(19).setScale(platformScaleX, platformScaleY);
-  const leftGuard = createYorkRingGuard(scene, leftPlatform.x, eventY - 8, 'right');
-  const rightGuard = createYorkRingGuard(scene, rightPlatform.x, eventY - 8, 'left');
+  const leftGuard = createYorkRingGuard(scene, leftPlatform.x + (platformDisplayWidth * 0.5) - guardInsetFromInnerEdge, guardStopY, 'right');
+  const rightGuard = createYorkRingGuard(scene, rightPlatform.x - (platformDisplayWidth * 0.5) + guardInsetFromInnerEdge, guardStopY, 'left');
   yorkRingPlatformEvent = {
     active: true,
     phase: 'entering',
@@ -4437,19 +4459,27 @@ function spawnYorkRingPlatformEvent(scene) {
     leftGuard,
     rightGuard,
     throwCount: 0,
+    maxThrows: 10,
     activeRing: null,
     throwFromLeft: true,
     throwTimer: null
   };
 
   scene.tweens.add({
-    targets: [leftPlatform, leftGuard],
+    targets: leftPlatform,
     x: leftStopX,
     duration: 650,
     ease: 'Sine.easeOut'
   });
   scene.tweens.add({
-    targets: [rightPlatform, rightGuard],
+    targets: leftGuard,
+    x: leftGuardStopX,
+    y: guardStopY,
+    duration: 650,
+    ease: 'Sine.easeOut'
+  });
+  scene.tweens.add({
+    targets: rightPlatform,
     x: rightStopX,
     duration: 650,
     ease: 'Sine.easeOut',
@@ -4462,7 +4492,7 @@ function spawnYorkRingPlatformEvent(scene) {
         callback: () => {
           if (!yorkRingPlatformEvent || yorkRingPlatformEvent.phase !== 'throwing') return;
           if (yorkRingPlatformEvent.activeRing) return;
-          if (yorkRingPlatformEvent.throwCount >= 5) {
+          if (yorkRingPlatformEvent.throwCount >= yorkRingPlatformEvent.maxThrows) {
             yorkRingPlatformEvent.throwTimer.remove(false);
             yorkRingPlatformEvent.throwTimer = null;
             yorkRingPlatformEvent.phase = 'leaving';
@@ -4480,14 +4510,26 @@ function spawnYorkRingPlatformEvent(scene) {
               onComplete: () => {
                 if (!yorkRingPlatformEvent) return;
                 scene.tweens.add({
-                  targets: [yorkRingPlatformEvent.leftPlatform, yorkRingPlatformEvent.leftGuard],
-                  x: -220,
+                  targets: yorkRingPlatformEvent.leftPlatform,
+                  x: -platformDisplayWidth,
                   duration: 700,
                   ease: 'Sine.easeIn'
                 });
                 scene.tweens.add({
-                  targets: [yorkRingPlatformEvent.rightPlatform, yorkRingPlatformEvent.rightGuard],
-                  x: GAME_WIDTH + 220,
+                  targets: yorkRingPlatformEvent.leftGuard,
+                  x: -platformDisplayWidth + (platformDisplayWidth * 0.5) - guardInsetFromInnerEdge,
+                  duration: 700,
+                  ease: 'Sine.easeIn'
+                });
+                scene.tweens.add({
+                  targets: yorkRingPlatformEvent.rightPlatform,
+                  x: GAME_WIDTH + platformDisplayWidth,
+                  duration: 700,
+                  ease: 'Sine.easeIn'
+                });
+                scene.tweens.add({
+                  targets: yorkRingPlatformEvent.rightGuard,
+                  x: GAME_WIDTH + platformDisplayWidth - (platformDisplayWidth * 0.5) + guardInsetFromInnerEdge,
                   duration: 700,
                   ease: 'Sine.easeIn',
                   onComplete: () => cleanupYorkRingPlatformEvent(scene)
@@ -4502,6 +4544,13 @@ function spawnYorkRingPlatformEvent(scene) {
         }
       });
     }
+  });
+  scene.tweens.add({
+    targets: rightGuard,
+    x: rightGuardStopX,
+    y: guardStopY,
+    duration: 650,
+    ease: 'Sine.easeOut'
   });
 }
 
