@@ -1050,6 +1050,8 @@ let marketPrisoner;
 let bodyGroup;
 let targetGroup;
 let chest;
+let yorkRingPlatformEvent = null;
+let yorkRingHeadSerial = 0;
 
 function setGoldChestVisible(visible) {
   if (chest) chest.setVisible(visible);
@@ -2416,6 +2418,11 @@ function create() {
   gPix.fillRect(0, 0, 2, 2);
   gPix.generateTexture('pixel', 2, 2);
   gPix.destroy();
+  const gYorkRing = scene.add.graphics();
+  gYorkRing.lineStyle(8, 0xffe100, 1);
+  gYorkRing.strokeCircle(44, 44, 36);
+  gYorkRing.generateTexture('yorkRingGate', 88, 88);
+  gYorkRing.destroy();
   const fwCloseParts = scene.add.particles('pixel').setDepth(6);
   fireworkCloseEmitter = fwCloseParts.createEmitter({
     speed: { min: 20, max: 60 },
@@ -2488,6 +2495,7 @@ function create() {
   scene.physics.add.overlap(prisonerHead, targetGroup, (_, target) => {
     handleTargetHit(scene, target, prisonerHead);
   });
+  yorkRingPlatformEvent = null;
   // Enable collisions between bodies so they pile up
   scene.physics.add.collider(bodyGroup, bodyGroup);
   // Stop corpses completely after two bounces
@@ -3488,6 +3496,7 @@ function hideTradeMenu(scene) {
 // }
 
 function resetForNewCity(scene) {
+  cleanupYorkRingPlatformEvent(scene);
   killStreak = 0;
   streakMultiplierText.setText(`x${killStreak}`);
   missStreak = 0;
@@ -3881,6 +3890,9 @@ function spawnPrisoner(scene, fromRight, withTarget = true) {
     for (let i = 0; i < targetCount; i++) {
       spawnTarget(scene, usedTargetXs);
     }
+  }
+  if (withTarget && shouldSpawnYorkRingPlatformEvent()) {
+    spawnYorkRingPlatformEvent(scene);
   }
   prisonerBody.clearTint();
   if (prisonerClass.name !== 'Clergy') {
@@ -4279,6 +4291,225 @@ function detonateExplodingBarrel(scene, target, head) {
   target.destroy();
 }
 
+function shouldSpawnYorkRingPlatformEvent() {
+  if (currentCity !== 'York') return false;
+  if (yorkRingPlatformEvent && yorkRingPlatformEvent.active) return false;
+  return Phaser.Math.Between(1, 100) <= 12;
+}
+
+function createYorkRingGuard(scene, x, y, facing) {
+  const guard = scene.add.container(x, y).setDepth(21);
+  const body = scene.add.image(0, 50, 'escortBody').setOrigin(0.5, 1).setScale(0.72);
+  const head = scene.add.image(0, -20, 'escortHead').setOrigin(0.5).setScale(0.72);
+  guard.add([body, head]);
+  guard.setScale(facing === 'left' ? -1 : 1, 1);
+  return guard;
+}
+
+function spawnYorkThrownRing(scene, eventData, fromLeft) {
+  if (!eventData || !eventData.active) return;
+  if (eventData.activeRing || !eventData.leftGuard?.active || !eventData.rightGuard?.active) return;
+  const startGuard = fromLeft ? eventData.leftGuard : eventData.rightGuard;
+  const endGuard = fromLeft ? eventData.rightGuard : eventData.leftGuard;
+  const startX = startGuard.x + (fromLeft ? 26 : -26);
+  const endX = endGuard.x + (fromLeft ? -26 : 26);
+  const y = startGuard.y - 56;
+  const ringSprite = scene.add.image(startX, y, 'yorkRingGate').setDepth(22);
+  ringSprite.setAlpha(0.95);
+  const ring = {
+    sprite: ringSprite,
+    startX,
+    endX,
+    centerY: y,
+    innerRadius: 26,
+    outerRadius: 38,
+    spent: false,
+    touchedHeadIds: new Set()
+  };
+  eventData.activeRing = ring;
+  scene.tweens.add({
+    targets: ringSprite,
+    x: endX,
+    duration: 760,
+    ease: 'Sine.easeInOut',
+    onUpdate: () => {
+      if (!ringSprite.active) return;
+      const t = Phaser.Math.Clamp(Math.abs((ringSprite.x - startX) / (endX - startX || 1)), 0, 1);
+      ringSprite.y = y - Math.sin(Math.PI * t) * 36;
+      ring.centerY = ringSprite.y;
+    },
+    onComplete: () => {
+      if (eventData.activeRing === ring) eventData.activeRing = null;
+      if (ringSprite.active) ringSprite.destroy();
+    }
+  });
+}
+
+function didHeadPassThroughMovingRing(head, ring, previousX, previousY, currentX, currentY) {
+  if (!head?.active || !ring?.sprite?.active || ring.spent) return false;
+  if (!head.ringHeadId) {
+    yorkRingHeadSerial += 1;
+    head.ringHeadId = yorkRingHeadSerial;
+  }
+  if (ring.touchedHeadIds.has(head.ringHeadId)) return false;
+  const ringX = ring.sprite.x;
+  const ringY = ring.centerY ?? ring.sprite.y;
+  const minDistSq = pointSegmentDistanceSq(ringX, ringY, previousX, previousY, currentX, currentY);
+  const headRadius = Math.max(6, (head.displayWidth || 30) * 0.18);
+  const safeInner = Math.max(6, ring.innerRadius - headRadius);
+  const rimOuter = ring.outerRadius + headRadius;
+  const sweptRim = minDistSq <= rimOuter * rimOuter && minDistSq >= safeInner * safeInner;
+  if (sweptRim) return false;
+  const prevDist = Phaser.Math.Distance.Between(previousX, previousY, ringX, ringY);
+  const currDist = Phaser.Math.Distance.Between(currentX, currentY, ringX, ringY);
+  const crossedInterior = (prevDist > safeInner && currDist < safeInner) || (prevDist < safeInner && currDist > safeInner) || minDistSq < safeInner * safeInner;
+  const minX = Math.min(previousX, currentX) - safeInner;
+  const maxX = Math.max(previousX, currentX) + safeInner;
+  const minY = Math.min(previousY, currentY) - safeInner;
+  const maxY = Math.max(previousY, currentY) + safeInner;
+  const nearRing = ringX >= minX && ringX <= maxX && ringY >= minY && ringY <= maxY;
+  if (crossedInterior && nearRing) {
+    ring.touchedHeadIds.add(head.ringHeadId);
+    return true;
+  }
+  return false;
+}
+
+function clearAllTargetsFromRingEvent(scene, triggeringHead) {
+  const targetsToClear = targetGroup.getChildren().filter(t => t.active && !t.collected && ['standard', 'moving'].includes(t.targetType) && !t.isYorkTallWaver);
+  targetsToClear.forEach(t => handleTargetHit(scene, t, triggeringHead));
+  fame += 3;
+  fameText.setText(formatGold(Math.floor(fame)));
+  const popup = scene.add.text(CENTER_X, CENTER_Y - 220, 'Ring Clear! +3 Fame', {
+    font: '36px monospace',
+    fill: '#ffe100',
+    stroke: '#000000',
+    strokeThickness: 6
+  }).setOrigin(0.5).setDepth(30);
+  scene.tweens.add({
+    targets: popup,
+    y: popup.y - 50,
+    alpha: 0,
+    duration: 900,
+    ease: 'Sine.easeOut',
+    onComplete: () => popup.destroy()
+  });
+}
+
+function cleanupYorkRingPlatformEvent(scene) {
+  if (!yorkRingPlatformEvent) return;
+  const e = yorkRingPlatformEvent;
+  if (e.throwTimer) { e.throwTimer.remove(false); e.throwTimer = null; }
+  if (e.activeRing?.sprite?.active) e.activeRing.sprite.destroy();
+  e.activeRing = null;
+  if (e.leftPlatformTween) e.leftPlatformTween.stop();
+  if (e.rightPlatformTween) e.rightPlatformTween.stop();
+  if (e.leftGuardTween) e.leftGuardTween.stop();
+  if (e.rightGuardTween) e.rightGuardTween.stop();
+  if (e.leftPlatform?.active) e.leftPlatform.destroy();
+  if (e.rightPlatform?.active) e.rightPlatform.destroy();
+  if (e.leftGuard?.active) e.leftGuard.destroy();
+  if (e.rightGuard?.active) e.rightGuard.destroy();
+  yorkRingPlatformEvent = null;
+}
+
+function spawnYorkRingPlatformEvent(scene) {
+  cleanupYorkRingPlatformEvent(scene);
+  const eventY = Phaser.Math.Between(Math.floor(GAME_HEIGHT * 0.2), Math.floor(GAME_HEIGHT * 0.5));
+  const leftStopX = 130;
+  const rightStopX = GAME_WIDTH - 130;
+  const leftPlatform = scene.add.image(-180, eventY, 'platform').setDepth(19).setScale(0.42, 0.3);
+  const rightPlatform = scene.add.image(GAME_WIDTH + 180, eventY, 'platform').setDepth(19).setScale(0.42, 0.3);
+  const leftGuard = createYorkRingGuard(scene, leftPlatform.x, eventY - 8, 'right');
+  const rightGuard = createYorkRingGuard(scene, rightPlatform.x, eventY - 8, 'left');
+  yorkRingPlatformEvent = {
+    active: true,
+    phase: 'entering',
+    y: eventY,
+    leftPlatform,
+    rightPlatform,
+    leftGuard,
+    rightGuard,
+    throwCount: 0,
+    activeRing: null,
+    throwFromLeft: true,
+    throwTimer: null
+  };
+
+  scene.tweens.add({
+    targets: [leftPlatform, leftGuard],
+    x: leftStopX,
+    duration: 650,
+    ease: 'Sine.easeOut'
+  });
+  scene.tweens.add({
+    targets: [rightPlatform, rightGuard],
+    x: rightStopX,
+    duration: 650,
+    ease: 'Sine.easeOut',
+    onComplete: () => {
+      if (!yorkRingPlatformEvent || yorkRingPlatformEvent.phase !== 'entering') return;
+      yorkRingPlatformEvent.phase = 'throwing';
+      yorkRingPlatformEvent.throwTimer = scene.time.addEvent({
+        delay: 1000,
+        loop: true,
+        callback: () => {
+          if (!yorkRingPlatformEvent || yorkRingPlatformEvent.phase !== 'throwing') return;
+          if (yorkRingPlatformEvent.activeRing) return;
+          if (yorkRingPlatformEvent.throwCount >= 5) {
+            yorkRingPlatformEvent.throwTimer.remove(false);
+            yorkRingPlatformEvent.throwTimer = null;
+            yorkRingPlatformEvent.phase = 'leaving';
+            scene.tweens.add({
+              targets: yorkRingPlatformEvent.leftGuard,
+              x: yorkRingPlatformEvent.leftGuard.x - 70,
+              duration: 420,
+              ease: 'Sine.easeIn'
+            });
+            scene.tweens.add({
+              targets: yorkRingPlatformEvent.rightGuard,
+              x: yorkRingPlatformEvent.rightGuard.x + 70,
+              duration: 420,
+              ease: 'Sine.easeIn',
+              onComplete: () => {
+                if (!yorkRingPlatformEvent) return;
+                scene.tweens.add({
+                  targets: [yorkRingPlatformEvent.leftPlatform, yorkRingPlatformEvent.leftGuard],
+                  x: -220,
+                  duration: 700,
+                  ease: 'Sine.easeIn'
+                });
+                scene.tweens.add({
+                  targets: [yorkRingPlatformEvent.rightPlatform, yorkRingPlatformEvent.rightGuard],
+                  x: GAME_WIDTH + 220,
+                  duration: 700,
+                  ease: 'Sine.easeIn',
+                  onComplete: () => cleanupYorkRingPlatformEvent(scene)
+                });
+              }
+            });
+            return;
+          }
+          spawnYorkThrownRing(scene, yorkRingPlatformEvent, yorkRingPlatformEvent.throwFromLeft);
+          yorkRingPlatformEvent.throwFromLeft = !yorkRingPlatformEvent.throwFromLeft;
+          yorkRingPlatformEvent.throwCount += 1;
+        }
+      });
+    }
+  });
+}
+
+function updateYorkRingPlatformEvent(scene) {
+  if (!yorkRingPlatformEvent || !yorkRingPlatformEvent.active) return;
+  if (currentCity !== 'York') {
+    cleanupYorkRingPlatformEvent(scene);
+    return;
+  }
+  if (yorkRingPlatformEvent.activeRing?.sprite?.active) {
+    yorkRingPlatformEvent.activeRing.centerY = yorkRingPlatformEvent.activeRing.sprite.y;
+  }
+}
+
 function pointSegmentDistanceSq(px, py, x1, y1, x2, y2) {
   const dx = x2 - x1;
   const dy = y2 - y1;
@@ -4359,6 +4590,16 @@ function checkFastHeadTargetCrossings(scene) {
     const prevY = head.prevY ?? head.y;
     const movedFarEnough = Phaser.Math.Distance.Between(prevX, prevY, head.x, head.y) > 4;
     if (movedFarEnough) {
+      if (yorkRingPlatformEvent && yorkRingPlatformEvent.activeRing && !yorkRingPlatformEvent.activeRing.spent) {
+        const ring = yorkRingPlatformEvent.activeRing;
+        if (didHeadPassThroughMovingRing(head, ring, prevX, prevY, head.x, head.y)) {
+          ring.spent = true;
+          clearAllTargetsFromRingEvent(scene, head);
+          scene.tweens.killTweensOf(ring.sprite);
+          if (ring.sprite && ring.sprite.active) ring.sprite.destroy();
+          yorkRingPlatformEvent.activeRing = null;
+        }
+      }
       for (let i = 0; i < targets.length; i++) {
         const target = targets[i];
         if (didHeadSegmentHitTarget(head, target, prevX, prevY, head.x, head.y)) {
@@ -4772,6 +5013,7 @@ function update(time, delta) {
 
 
   checkFastHeadTargetCrossings(this);
+  updateYorkRingPlatformEvent(this);
 
   // Splash when heads hit the blood pool
   if (bloodPool && bloodEmitter && bodyGroup) {
