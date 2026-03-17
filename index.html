@@ -1099,6 +1099,8 @@ const SaveManager = {
       fame,
       xp,
       level,
+      currentDay,
+      currentMonth,
       citiesUnlocked: cities.filter(c => c.unlocked).map(c => c.name),
       itemsOwned: inventory,
       upgradesOwned: {
@@ -1130,11 +1132,14 @@ const SaveManager = {
     this.disabled = true;
   },
   validate(data) {
+    const hasValidDay = data.currentDay === undefined || (typeof data.currentDay === 'number' && Number.isFinite(data.currentDay));
+    const hasValidMonth = data.currentMonth === undefined || (typeof data.currentMonth === 'number' && Number.isFinite(data.currentMonth));
     return data && typeof data.gold === 'number' && typeof data.fame === 'number' &&
       typeof data.xp === 'number' && typeof data.level === 'number' &&
       Array.isArray(data.citiesUnlocked) && typeof data.itemsOwned === 'object' &&
       data.upgradesOwned && typeof data.upgradesOwned.storageLevel === 'number' &&
-      typeof data.upgradesOwned.weaponLevel === 'number';
+      typeof data.upgradesOwned.weaponLevel === 'number' &&
+      hasValidDay && hasValidMonth;
   },
   apply(data, updateUI = false) {
     player.gold = data.gold || 0;
@@ -1152,6 +1157,9 @@ const SaveManager = {
       const purchased = data.upgradesOwned.purchasedUpgrades || [];
       gameUpgrades.forEach((u, i) => { u.purchased = !!purchased[i]; });
     }
+    currentDay = Phaser.Math.Clamp(Math.floor(typeof data.currentDay === 'number' ? data.currentDay : currentDay), 1, 30);
+    currentMonth = Phaser.Math.Clamp(Math.floor(typeof data.currentMonth === 'number' ? data.currentMonth : currentMonth), 0, months.length - 1);
+    if (dateText) dateText.setText(getDateString());
     xpThreshold = 10;
     for (let i = 1; i < level; i++) {
       xpThreshold = Math.floor(xpThreshold * 1.33);
