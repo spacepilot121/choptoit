@@ -1478,8 +1478,13 @@ function createTargetAppearance(scene, target, type) {
         break;
       }
       default: {
-        const outer = scene.add.circle(0, 0, 20, 0xff0000);
-        const inner = scene.add.circle(0, 0, 8, 0xffffff);
+        const isYorkTallWaverTarget = target.isYorkTallWaver === true;
+        const outerRadius = isYorkTallWaverTarget ? 30 : 20;
+        const innerRadius = isYorkTallWaverTarget ? 14 : 8;
+        const outerColor = isYorkTallWaverTarget ? 0x1f9d55 : 0xff0000;
+        const innerColor = 0xffffff;
+        const outer = scene.add.circle(0, 0, outerRadius, outerColor);
+        const inner = scene.add.circle(0, 0, innerRadius, innerColor);
         target.add([outer, inner]);
       }
   }
@@ -4576,8 +4581,9 @@ function spawnTarget(scene) {
         target.body.x = target.x + target.body.offset.x;
         target.body.y = target.y + target.body.offset.y;
       } else {
-        target.body.setCircle(20);
-        target.body.setOffset(-20, -20);
+        const targetRadius = target.isYorkTallWaver ? 30 : 20;
+        target.body.setCircle(targetRadius);
+        target.body.setOffset(-targetRadius, -targetRadius);
         target.body.x = target.x - target.body.halfWidth;
         target.body.y = target.y - target.body.halfHeight;
       }
