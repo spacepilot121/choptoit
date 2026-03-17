@@ -336,7 +336,7 @@ let travelRegion = null;
 // };
 // let backOverlayWasVisible = false;
 let locationText;
-let currentCity = 'Durham';
+let currentCity = 'York';
 let skyRect;
 let backgroundRect;
 let stage;
@@ -3489,6 +3489,7 @@ function resetForNewCity(scene) {
   missText.setText(`Misses: ${missStreak}`);
   bodyGroup.clear(true, true);
   targetGroup.getChildren().forEach(t => {
+    if (t.yorkWaveTween) { t.yorkWaveTween.stop(); t.yorkWaveTween = null; }
     if (t.jester) t.jester.destroy();
     t.destroy();
   });
@@ -4126,11 +4127,13 @@ function handleTargetHit(scene, target, head) {
   }
   target.collected = true;
   if (target.moveTween) { target.moveTween.stop(); target.moveTween = null; }
+  if (target.yorkWaveTween) { target.yorkWaveTween.stop(); target.yorkWaveTween = null; }
   const jester = target.jester;
   let fameGain = 1;
   if (target.isMoving) fameGain *= 2;
   if (target.targetType === 'royal') fameGain *= 5;
   if (target.targetType === 'holyMonk') fameGain = -2;
+  fameGain *= target.fameMultiplier || 1;
   if (target.targetType === 'bird') {
     bloodFireworkEmitter.explode(25, target.x, target.y);
     if (target.birdKind === 'dove') {
@@ -4484,7 +4487,12 @@ function spawnTarget(scene) {
   const fromRight = Phaser.Math.Between(0, 1) === 1;
   const startX = fromRight ? 850 : -50;
   const targetX = Phaser.Math.Between(100, 700);
-  const poleHeight = Phaser.Math.Between(80, 180);
+  const isYorkTallWaver = currentCity === 'York' && type === 'standard' && Phaser.Math.Between(1, 100) <= 35;
+  const maxVisiblePoleHeight = Math.max(540, CHARACTER_BASE_Y - 100);
+  const tallPoleMax = Math.min(900, maxVisiblePoleHeight);
+  const poleHeight = isYorkTallWaver
+    ? Phaser.Math.Between(540, tallPoleMax)
+    : Phaser.Math.Between(80, 180);
 
   // Ensure jesters render above the lighting overlay and other background elements.
   const jester = scene.add.container(startX, CHARACTER_BASE_Y).setDepth(20);
@@ -4497,6 +4505,11 @@ function spawnTarget(scene) {
 
   const target = scene.add.container(startX, CHARACTER_BASE_Y - 20 - poleHeight).setDepth(20);
   target.targetType = type;
+  target.isYorkTallWaver = isYorkTallWaver;
+  target.fameMultiplier = isYorkTallWaver ? 3 : 1;
+  target.yorkWaveTween = null;
+  target.jesterPole = pole;
+  target.poleHeight = poleHeight;
   createTargetAppearance(scene, target, type);
 
   if (type === 'woodenShield') {
@@ -4570,6 +4583,38 @@ function spawnTarget(scene) {
       }
       target.body.setAllowGravity(false);
       target.body.setImmovable(true);
+      if (target.isYorkTallWaver) {
+        const maxArcOffset = 50;
+        const arcAngle = Math.asin(Math.min(0.2, maxArcOffset / target.poleHeight));
+        const waveState = { angle: -arcAngle };
+        target.yorkWaveTween = scene.tweens.add({
+          targets: waveState,
+          angle: arcAngle,
+          duration: 1400,
+          yoyo: true,
+          repeat: -1,
+          ease: 'Sine.easeInOut',
+          onUpdate: () => {
+            if (!target.active || !jester.active) return;
+            const pivotX = jester.x;
+            const pivotY = jester.y - 20;
+            const s = Math.sin(waveState.angle);
+            const c = Math.cos(waveState.angle);
+            target.x = pivotX + s * target.poleHeight;
+            target.y = pivotY - c * target.poleHeight;
+            target.jesterPole.setRotation(waveState.angle);
+            if (target.body) {
+              if (type === 'explodingBarrel') {
+                target.body.x = target.x + target.body.offset.x;
+                target.body.y = target.y + target.body.offset.y;
+              } else {
+                target.body.x = target.x - target.body.halfWidth;
+                target.body.y = target.y - target.body.halfHeight;
+              }
+            }
+          }
+        });
+      }
       if (FEATURES.birds && Phaser.Math.Between(1, 10) === 1) {
         scene.time.delayedCall(2000, () => spawnBird(scene));
       }
