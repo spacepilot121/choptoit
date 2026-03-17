@@ -4300,7 +4300,7 @@ function shouldSpawnYorkRingPlatformEvent() {
 function createYorkRingGuard(scene, x, y, facing) {
   const guard = scene.add.container(x, y).setDepth(21);
   const body = scene.add.image(0, 50, 'escortBody').setOrigin(0.5, 1).setScale(0.72);
-  const head = scene.add.image(0, -20, 'escortHead').setOrigin(0.5).setScale(0.72);
+  const head = scene.add.image(0, -11, 'escortHead').setOrigin(0.5).setScale(0.72);
   guard.add([body, head]);
   guard.setScale(facing === 'left' ? -1 : 1, 1);
   return guard;
@@ -4320,6 +4320,7 @@ function spawnYorkThrownRing(scene, eventData, fromLeft) {
     sprite: ringSprite,
     startX,
     endX,
+    progress: 0,
     centerY: y,
     innerRadius: 26,
     outerRadius: 38,
@@ -4328,14 +4329,16 @@ function spawnYorkThrownRing(scene, eventData, fromLeft) {
   };
   eventData.activeRing = ring;
   scene.tweens.add({
-    targets: ringSprite,
-    x: endX,
-    duration: 760,
+    targets: ring,
+    progress: 1,
+    duration: Phaser.Math.Between(1550, 1850),
     ease: 'Sine.easeInOut',
     onUpdate: () => {
       if (!ringSprite.active) return;
-      const t = Phaser.Math.Clamp(Math.abs((ringSprite.x - startX) / (endX - startX || 1)), 0, 1);
-      ringSprite.y = y - Math.sin(Math.PI * t) * 36;
+      const t = Phaser.Math.Clamp(ring.progress, 0, 1);
+      ringSprite.x = Phaser.Math.Linear(startX, endX, t);
+      const arc = 4 * t * (1 - t);
+      ringSprite.y = y - arc * 92;
       ring.centerY = ringSprite.y;
     },
     onComplete: () => {
@@ -4416,10 +4419,13 @@ function cleanupYorkRingPlatformEvent(scene) {
 function spawnYorkRingPlatformEvent(scene) {
   cleanupYorkRingPlatformEvent(scene);
   const eventY = Phaser.Math.Between(Math.floor(GAME_HEIGHT * 0.2), Math.floor(GAME_HEIGHT * 0.5));
-  const leftStopX = 130;
-  const rightStopX = GAME_WIDTH - 130;
-  const leftPlatform = scene.add.image(-180, eventY, 'platform').setDepth(19).setScale(0.42, 0.3);
-  const rightPlatform = scene.add.image(GAME_WIDTH + 180, eventY, 'platform').setDepth(19).setScale(0.42, 0.3);
+  const platformScaleX = 0.42;
+  const platformScaleY = 0.3;
+  const platformDisplayWidth = 300 * platformScaleX;
+  const leftStopX = platformDisplayWidth * 0.5;
+  const rightStopX = GAME_WIDTH - (platformDisplayWidth * 0.5);
+  const leftPlatform = scene.add.image(-platformDisplayWidth, eventY, 'platform').setDepth(19).setScale(platformScaleX, platformScaleY);
+  const rightPlatform = scene.add.image(GAME_WIDTH + platformDisplayWidth, eventY, 'platform').setDepth(19).setScale(platformScaleX, platformScaleY);
   const leftGuard = createYorkRingGuard(scene, leftPlatform.x, eventY - 8, 'right');
   const rightGuard = createYorkRingGuard(scene, rightPlatform.x, eventY - 8, 'left');
   yorkRingPlatformEvent = {
