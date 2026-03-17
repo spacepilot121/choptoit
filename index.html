@@ -4311,9 +4311,10 @@ function shouldSpawnYorkRingPlatformEvent() {
 }
 
 function createYorkRingGuard(scene, x, y, facing) {
+  const guardPartScale = 0.96;
   const guard = scene.add.container(x, y).setDepth(21);
-  const body = scene.add.image(0, 0, 'escortBody').setOrigin(0.5, 1).setScale(0.72);
-  const head = scene.add.image(0, -62, 'escortHead').setOrigin(0.5).setScale(0.72);
+  const body = scene.add.image(0, 0, 'escortBody').setOrigin(0.5, 1).setScale(guardPartScale);
+  const head = scene.add.image(0, -86 * guardPartScale).setOrigin(0.5).setScale(guardPartScale);
   guard.add([body, head]);
   guard.setScale(facing === 'left' ? -1 : 1, 1);
   return guard;
@@ -4435,14 +4436,14 @@ function cleanupYorkRingPlatformEvent(scene) {
 function spawnYorkRingPlatformEvent(scene) {
   cleanupYorkRingPlatformEvent(scene);
   const eventY = Phaser.Math.Between(Math.floor(GAME_HEIGHT * 0.2), Math.floor(GAME_HEIGHT * 0.5));
-  const platformScaleX = 0.42;
-  const platformScaleY = 0.3;
+  const platformScaleX = 0.48;
+  const platformScaleY = 0.5;
   const platformDisplayWidth = 300 * platformScaleX;
   const platformDisplayHeight = 300 * platformScaleY;
   const leftStopX = 0;
   const rightStopX = GAME_WIDTH;
-  const guardInsetFromInnerEdge = 8;
-  const guardFootYOffset = -platformDisplayHeight * 0.5 + 6;
+  const guardInsetFromInnerEdge = 2;
+  const guardFootYOffset = -platformDisplayHeight * 0.5 + 2;
   const leftGuardStopX = leftStopX + (platformDisplayWidth * 0.5) - guardInsetFromInnerEdge;
   const rightGuardStopX = rightStopX - (platformDisplayWidth * 0.5) + guardInsetFromInnerEdge;
   const guardStopY = eventY + guardFootYOffset;
