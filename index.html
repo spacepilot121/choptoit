@@ -3877,8 +3877,9 @@ function spawnPrisoner(scene, fromRight, withTarget = true) {
   // The number of targets is chosen at random to keep gameplay varied
   if (withTarget) {
     const targetCount = Phaser.Math.Between(1, 3);
+    const usedTargetXs = [];
     for (let i = 0; i < targetCount; i++) {
-      spawnTarget(scene);
+      spawnTarget(scene, usedTargetXs);
     }
   }
   prisonerBody.clearTint();
@@ -4479,7 +4480,23 @@ function spawnBird(scene) {
   });
 }
 
-function spawnTarget(scene) {
+function pickSpacedTargetX(existingTargetXs = []) {
+  const minX = 100;
+  const maxX = 700;
+  const minSpacing = 90;
+  const maxAttempts = 12;
+  let candidate = Phaser.Math.Between(minX, maxX);
+
+  for (let i = 0; i < maxAttempts; i++) {
+    candidate = Phaser.Math.Between(minX, maxX);
+    const tooClose = existingTargetXs.some((x) => Math.abs(x - candidate) < minSpacing);
+    if (!tooClose) return candidate;
+  }
+
+  return candidate;
+}
+
+function spawnTarget(scene, existingTargetXs = []) {
   const type = chooseTargetType();
   if (type === 'holyMonk') {
     spawnHolyMonk(scene);
@@ -4491,7 +4508,8 @@ function spawnTarget(scene) {
   }
   const fromRight = Phaser.Math.Between(0, 1) === 1;
   const startX = fromRight ? 850 : -50;
-  const targetX = Phaser.Math.Between(100, 700);
+  const targetX = pickSpacedTargetX(existingTargetXs);
+  existingTargetXs.push(targetX);
   const isYorkTallWaver = currentCity === 'York' && type === 'standard' && Phaser.Math.Between(1, 100) <= 35;
   const maxVisiblePoleHeight = Math.max(540, CHARACTER_BASE_Y - 100);
   const tallPoleMax = Math.min(900, maxVisiblePoleHeight);
@@ -4517,29 +4535,14 @@ function spawnTarget(scene) {
   target.poleHeight = poleHeight;
   createTargetAppearance(scene, target, type);
 
-  if (type === 'woodenShield') {
-    if (killStreak >= 3) {
-      target.isMoving = true;
-      const dur = killStreak >= 10 ? 400 : 800;
-      target.moveTween = scene.tweens.add({
-        targets: target,
-        y: target.y - 20,
-        duration: dur,
-        yoyo: true,
-        repeat: -1,
-        ease: 'Sine.easeInOut'
-      });
-    }
-  } else if (FEATURES.movingTargets && Phaser.Math.Between(0, 1) === 1) {
+  const isEligibleForStandardMove = !isYorkTallWaver;
+  const shouldMoveWoodenShield = type === 'woodenShield' && killStreak >= 3;
+  const shouldMoveStandard = type !== 'woodenShield' && isEligibleForStandardMove && FEATURES.movingTargets && Phaser.Math.Between(0, 1) === 1;
+  const shouldStartMoveTweenAfterEntrance = shouldMoveWoodenShield || shouldMoveStandard;
+  const moveTweenDuration = shouldMoveWoodenShield && killStreak >= 10 ? 400 : 800;
+
+  if (shouldStartMoveTweenAfterEntrance) {
     target.isMoving = true;
-    target.moveTween = scene.tweens.add({
-      targets: target,
-      y: target.y - 20,
-      duration: 800,
-      yoyo: true,
-      repeat: -1,
-      ease: 'Sine.easeInOut'
-    });
   }
 
   let jBodyKey = 'jesterBody1';
@@ -4572,6 +4575,16 @@ function spawnTarget(scene) {
     duration: 1500,
     ease: 'Linear',
     onComplete: () => {
+      if (shouldStartMoveTweenAfterEntrance) {
+        target.moveTween = scene.tweens.add({
+          targets: target,
+          y: target.y - 20,
+          duration: moveTweenDuration,
+          yoyo: true,
+          repeat: -1,
+          ease: 'Sine.easeInOut'
+        });
+      }
       scene.physics.world.enable(target);
       if (type === 'explodingBarrel') {
         // Include the fuse above the barrel in the hitbox and widen it slightly
