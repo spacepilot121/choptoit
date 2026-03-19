@@ -1051,6 +1051,7 @@ let bodyGroup;
 let targetGroup;
 let chest;
 let yorkRingPlatformEvent = null;
+let yorkFlyingIslandEvent = null;
 let yorkRingHeadSerial = 0;
 
 function setGoldChestVisible(visible) {
@@ -3518,6 +3519,7 @@ function hideTradeMenu(scene) {
 
 function resetForNewCity(scene) {
   cleanupYorkRingPlatformEvent(scene);
+  cleanupYorkFlyingIslandEvent(scene);
   killStreak = 0;
   streakMultiplierText.setText(`x${killStreak}`);
   missStreak = 0;
@@ -3914,6 +3916,9 @@ function spawnPrisoner(scene, fromRight, withTarget = true) {
   }
   if (withTarget && shouldSpawnYorkRingPlatformEvent()) {
     spawnYorkRingPlatformEvent(scene);
+  }
+  if (withTarget && shouldSpawnYorkFlyingIslandEvent()) {
+    spawnYorkFlyingIslandEvent(scene);
   }
   prisonerBody.clearTint();
   if (prisonerClass.name !== 'Clergy') {
@@ -4312,6 +4317,298 @@ function detonateExplodingBarrel(scene, target, head) {
   target.destroy();
 }
 
+function shouldSpawnYorkFlyingIslandEvent() {
+  if (currentCity !== 'York') return false;
+  if (yorkFlyingIslandEvent && yorkFlyingIslandEvent.active) return false;
+  if (yorkRingPlatformEvent && yorkRingPlatformEvent.active) return false;
+  return Phaser.Math.Between(1, 100) <= 10;
+}
+
+function getFlyingIslandMetrics(islandEvent) {
+  if (!islandEvent) return null;
+  const x = islandEvent.container?.x ?? islandEvent.x ?? 0;
+  const y = islandEvent.container?.y ?? islandEvent.y ?? 0;
+  const greenCenterX = x;
+  const greenCenterY = y - 20;
+  const greenRadiusX = 76;
+  const greenRadiusY = 26;
+  const landingTopY = greenCenterY - 16;
+  const holeX = x + 24;
+  const holeY = y - 26;
+  return {
+    x,
+    y,
+    greenCenterX,
+    greenCenterY,
+    greenRadiusX,
+    greenRadiusY,
+    landingTopY,
+    holeX,
+    holeY,
+    holeRadius: 12,
+    islandHalfWidth: 90,
+    islandHalfHeight: 64
+  };
+}
+
+function createFlyingIslandPlaceholder(scene) {
+  const island = scene.add.container(0, 0).setDepth(23);
+  const shadow = scene.add.ellipse(0, 12, 154, 22, 0x000000, 0.18);
+  const underside = scene.add.ellipse(0, 18, 142, 86, 0x7a4a1f, 1);
+  const dirtTop = scene.add.ellipse(0, -6, 156, 54, 0x855629, 1);
+  const greenBase = scene.add.ellipse(0, -22, 158, 48, 0x27b857, 1);
+  const greenHighlight = scene.add.ellipse(-18, -28, 92, 20, 0x72f08c, 0.9);
+  const holeRim = scene.add.ellipse(24, -26, 24, 12, 0x143d22, 0.95);
+  const hole = scene.add.circle(24, -24, 8, 0x050505, 0.95);
+  const holeShade = scene.add.ellipse(24, -20, 18, 8, 0x000000, 0.3);
+  const rootLeft = scene.add.rectangle(-28, 44, 5, 20, 0x5a3315, 1).setAngle(-14);
+  const rootMid = scene.add.rectangle(2, 46, 4, 18, 0x5a3315, 1);
+  const rootRight = scene.add.rectangle(30, 44, 5, 22, 0x5a3315, 1).setAngle(14);
+  const rock1 = scene.add.circle(-44, 24, 12, 0x6b421b, 1);
+  const rock2 = scene.add.circle(0, 34, 11, 0x5f3918, 1);
+  const rock3 = scene.add.circle(40, 24, 10, 0x6e4520, 1);
+  const flagPole = scene.add.rectangle(44, -44, 4, 34, 0xe9e0c7, 1).setOrigin(0.5, 1);
+  const flag = scene.add.triangle(50, -70, 0, 0, 18, 8, 0, 16, 0xff4155, 1).setOrigin(0, 0.5);
+  const flagTip = scene.add.circle(44, -76, 3, 0xffe8a3, 1);
+  const flagGroup = scene.add.container(0, 0, [flagPole, flag, flagTip]);
+  island.add([shadow, underside, dirtTop, greenBase, greenHighlight, holeRim, holeShade, hole, rootLeft, rootMid, rootRight, rock1, rock2, rock3, flagGroup]);
+  island.flagGroup = flagGroup;
+  island.flagPole = flagPole;
+  island.flag = flag;
+  island.hole = hole;
+  island.greenBase = greenBase;
+  island.underside = underside;
+  return island;
+}
+
+function cleanupYorkFlyingIslandEvent(scene) {
+  if (!yorkFlyingIslandEvent) return;
+  const eventData = yorkFlyingIslandEvent;
+  eventData.active = false;
+  if (eventData.enterTween) eventData.enterTween.stop();
+  if (eventData.leaveTween) eventData.leaveTween.stop();
+  if (eventData.flagTween) eventData.flagTween.stop();
+  if (eventData.successTween) eventData.successTween.stop();
+  if (eventData.timeoutCall) {
+    eventData.timeoutCall.remove(false);
+    eventData.timeoutCall = null;
+  }
+  if (eventData.fireworkCalls) {
+    eventData.fireworkCalls.forEach(call => call?.remove?.(false));
+    eventData.fireworkCalls.length = 0;
+  }
+  if (eventData.container?.active) eventData.container.destroy();
+  yorkFlyingIslandEvent = null;
+}
+
+function spawnYorkFlyingIslandEvent(scene) {
+  cleanupYorkFlyingIslandEvent(scene);
+  const fromLeft = Phaser.Math.Between(0, 1) === 0;
+  const targetY = Phaser.Math.Between(Math.floor(GAME_HEIGHT * 0.25), Math.floor(GAME_HEIGHT * 0.6));
+  const targetX = Phaser.Math.Between(180, GAME_WIDTH - 180);
+  const startX = fromLeft ? -180 : GAME_WIDTH + 180;
+  const island = createFlyingIslandPlaceholder(scene);
+  island.setPosition(startX, targetY);
+  island.setAlpha(0.96);
+  const bobPhase = Phaser.Math.FloatBetween(0, Math.PI * 2);
+  yorkFlyingIslandEvent = {
+    active: true,
+    phase: 'entering',
+    success: false,
+    fromLeft,
+    spawnTime: scene.time.now,
+    settleX: targetX,
+    settleY: targetY,
+    bobPhase,
+    bobAmount: 10,
+    container: island,
+    timeoutCall: null,
+    fireworkCalls: [],
+    sunkHeadId: null,
+    enterTween: null,
+    leaveTween: null,
+    flagTween: null,
+    successTween: null
+  };
+  island.eventData = yorkFlyingIslandEvent;
+  yorkFlyingIslandEvent.enterTween = scene.tweens.add({
+    targets: island,
+    x: targetX,
+    duration: 1700,
+    ease: 'Sine.easeOut',
+    onComplete: () => {
+      if (!yorkFlyingIslandEvent || yorkFlyingIslandEvent.container !== island) return;
+      yorkFlyingIslandEvent.phase = 'active';
+      yorkFlyingIslandEvent.timeoutCall = scene.time.delayedCall(5200, () => {
+        if (yorkFlyingIslandEvent && yorkFlyingIslandEvent.phase === 'active' && !yorkFlyingIslandEvent.success) {
+          yorkFlyingIslandEvent.phase = 'leaving';
+        }
+      });
+    }
+  });
+}
+
+function updateFlyingIslandEvent(scene, islandEvent) {
+  if (!islandEvent || !islandEvent.active) return;
+  if (currentCity !== 'York') {
+    cleanupYorkFlyingIslandEvent(scene);
+    return;
+  }
+  if (islandEvent.phase !== 'success') {
+    const bobOffset = Math.sin((scene.time.now * 0.0025) + islandEvent.bobPhase) * islandEvent.bobAmount;
+    islandEvent.container.y = islandEvent.settleY + bobOffset;
+  }
+  if (islandEvent.phase === 'leaving' && !islandEvent.leaveTween) {
+    const exitX = islandEvent.container.x < CENTER_X ? -220 : GAME_WIDTH + 220;
+    islandEvent.leaveTween = scene.tweens.add({
+      targets: islandEvent.container,
+      x: exitX,
+      alpha: 0.75,
+      duration: 1400,
+      ease: 'Sine.easeIn',
+      onComplete: () => cleanupYorkFlyingIslandEvent(scene)
+    });
+  }
+  if (!bodyGroup) return;
+  bodyGroup.getChildren().forEach(head => {
+    if (!head?.isHead || !head.body) return;
+    if (head.flyingIslandGreenUntil && scene.time.now < head.flyingIslandGreenUntil) {
+      head.body.setDrag(220, 0);
+      head.body.setAngularVelocity(head.body.angularVelocity * 0.94);
+    } else if (head.flyingIslandGreenUntil) {
+      head.flyingIslandGreenUntil = 0;
+      head.body.setDrag(50, 0);
+    }
+  });
+}
+
+function isPointInsideFlyingIslandGreen(px, py, islandEvent, padding = 0) {
+  const metrics = getFlyingIslandMetrics(islandEvent);
+  if (!metrics) return false;
+  const dx = px - metrics.greenCenterX;
+  const dy = py - metrics.greenCenterY;
+  const rx = metrics.greenRadiusX + padding;
+  const ry = metrics.greenRadiusY + padding;
+  return ((dx * dx) / (rx * rx)) + ((dy * dy) / (ry * ry)) <= 1;
+}
+
+function handleFlyingIslandGreenBounce(scene, head, islandEvent) {
+  if (!head?.active || !head.body || !islandEvent || islandEvent.success) return false;
+  const metrics = getFlyingIslandMetrics(islandEvent);
+  const prevX = head.prevX ?? head.x;
+  const prevY = head.prevY ?? head.y;
+  const currentX = head.x;
+  const currentY = head.y;
+  const headRadius = Math.max(8, (head.displayWidth || 30) * 0.18);
+  const aboveSurfaceLastFrame = prevY <= metrics.landingTopY + headRadius;
+  const reachedSurface = currentY >= metrics.landingTopY - headRadius && currentY <= metrics.greenCenterY + metrics.greenRadiusY + headRadius;
+  const insideGreen = isPointInsideFlyingIslandGreen(currentX, currentY, islandEvent, headRadius * 0.8);
+  const nearHole = Phaser.Math.Distance.Between(currentX, currentY, metrics.holeX, metrics.holeY) <= metrics.holeRadius + headRadius + 4;
+  const withinSideBounds = Math.abs(currentX - metrics.x) <= metrics.islandHalfWidth - 8;
+  const descending = head.body.velocity.y >= -10;
+  if (!aboveSurfaceLastFrame || !reachedSurface || !insideGreen || nearHole || !withinSideBounds || !descending) return false;
+  head.y = metrics.landingTopY - headRadius + 2;
+  head.body.setVelocity(
+    head.body.velocity.x * 0.72,
+    Math.max(-58, -Math.abs(head.body.velocity.y) * 0.18 - 8)
+  );
+  head.body.setAngularVelocity(head.body.angularVelocity * 0.25);
+  head.body.setDrag(220, 0);
+  head.flyingIslandGreenUntil = scene.time.now + 260;
+  return true;
+}
+
+function didHeadSinkFlyingIslandHole(head, islandEvent, previousX, previousY, currentX, currentY) {
+  if (!head?.active || !head.body || !islandEvent || islandEvent.success) return false;
+  if (head.flyingIslandSunk) return false;
+  const metrics = getFlyingIslandMetrics(islandEvent);
+  const headRadius = Math.max(7, (head.displayWidth || 30) * 0.14);
+  const sinkRadius = Math.max(5, metrics.holeRadius - headRadius * 0.2);
+  const minDistSq = pointSegmentDistanceSq(metrics.holeX, metrics.holeY, previousX, previousY, currentX, currentY);
+  const descending = head.body.velocity.y >= -20 || currentY >= previousY;
+  const onGreenPath = isPointInsideFlyingIslandGreen(currentX, currentY, islandEvent, headRadius) || isPointInsideFlyingIslandGreen(previousX, previousY, islandEvent, headRadius);
+  const closeEnough = minDistSq <= sinkRadius * sinkRadius;
+  const believableHeight = currentY >= metrics.holeY - 34 && currentY <= metrics.holeY + 28;
+  return descending && onGreenPath && closeEnough && believableHeight;
+}
+
+function completeFlyingIslandHoleSuccess(scene, islandEvent, head) {
+  if (!islandEvent || islandEvent.success) return;
+  islandEvent.success = true;
+  islandEvent.phase = 'success';
+  if (islandEvent.timeoutCall) {
+    islandEvent.timeoutCall.remove(false);
+    islandEvent.timeoutCall = null;
+  }
+  const metrics = getFlyingIslandMetrics(islandEvent);
+  if (head?.body) {
+    head.flyingIslandSunk = true;
+    head.body.stop();
+    head.body.setAllowGravity(false);
+    head.body.enable = false;
+    head.body.setAngularVelocity(0);
+  }
+  scene.tweens.add({
+    targets: head,
+    x: metrics.holeX,
+    y: metrics.holeY + 6,
+    scaleX: 0.22,
+    scaleY: 0.22,
+    alpha: 0,
+    angle: head.angle + 120,
+    duration: 260,
+    ease: 'Cubic.easeIn'
+  });
+  islandEvent.flagTween = scene.tweens.add({
+    targets: islandEvent.container.flagGroup,
+    y: 22,
+    alpha: 0.15,
+    duration: 220,
+    ease: 'Cubic.easeIn'
+  });
+  gainFame(scene, islandEvent.container, 5);
+  addGold(scene, 5);
+  const successPopup = scene.add.text(metrics.x, metrics.y - 90, 'York Island Sink! +5 Fame +5 Gold', {
+    font: '24px monospace',
+    fill: '#fff08a',
+    stroke: '#000000',
+    strokeThickness: 5
+  }).setOrigin(0.5).setDepth(28);
+  scene.tweens.add({
+    targets: successPopup,
+    y: successPopup.y - 40,
+    alpha: 0,
+    duration: 1200,
+    ease: 'Sine.easeOut',
+    onComplete: () => successPopup.destroy()
+  });
+  const bursts = [
+    { delay: 90, x: metrics.x - 56, y: metrics.y - 54 },
+    { delay: 180, x: metrics.holeX, y: metrics.holeY - 26 },
+    { delay: 280, x: metrics.x + 60, y: metrics.y - 48 },
+    { delay: 390, x: metrics.x, y: metrics.y - 78 }
+  ];
+  bursts.forEach(burst => {
+    const call = scene.time.delayedCall(burst.delay, () => {
+      fireworkEmitter.explode(28, burst.x, burst.y);
+      fireworkCloseEmitter.explode(42, burst.x, burst.y);
+    });
+    islandEvent.fireworkCalls.push(call);
+  });
+  islandEvent.successTween = scene.tweens.add({
+    targets: islandEvent.container,
+    scaleX: 0.82,
+    scaleY: 0.82,
+    alpha: 0,
+    y: islandEvent.container.y - 40,
+    angle: islandEvent.fromLeft ? -8 : 8,
+    delay: 520,
+    duration: 700,
+    ease: 'Back.easeIn',
+    onComplete: () => cleanupYorkFlyingIslandEvent(scene)
+  });
+}
+
 function shouldSpawnYorkRingPlatformEvent() {
   if (currentCity !== 'York') return false;
   if (yorkRingPlatformEvent && yorkRingPlatformEvent.active) return false;
@@ -4660,6 +4957,15 @@ function checkFastHeadTargetCrossings(scene) {
     const prevY = head.prevY ?? head.y;
     const movedFarEnough = Phaser.Math.Distance.Between(prevX, prevY, head.x, head.y) > 4;
     if (movedFarEnough) {
+      if (yorkFlyingIslandEvent && yorkFlyingIslandEvent.active && !yorkFlyingIslandEvent.success) {
+        if (didHeadSinkFlyingIslandHole(head, yorkFlyingIslandEvent, prevX, prevY, head.x, head.y)) {
+          completeFlyingIslandHoleSuccess(scene, yorkFlyingIslandEvent, head);
+          head.prevX = head.x;
+          head.prevY = head.y;
+          return;
+        }
+        handleFlyingIslandGreenBounce(scene, head, yorkFlyingIslandEvent);
+      }
       if (yorkRingPlatformEvent && yorkRingPlatformEvent.activeRing && !yorkRingPlatformEvent.activeRing.spent) {
         const ring = yorkRingPlatformEvent.activeRing;
         if (didHeadPassThroughMovingRing(head, ring, prevX, prevY, head.x, head.y)) {
@@ -5084,6 +5390,7 @@ function update(time, delta) {
 
   checkFastHeadTargetCrossings(this);
   updateYorkRingPlatformEvent(this);
+  updateFlyingIslandEvent(this, yorkFlyingIslandEvent);
 
   // Splash when heads hit the blood pool
   if (bloodPool && bloodEmitter && bodyGroup) {
