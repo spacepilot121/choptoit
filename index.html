@@ -337,6 +337,11 @@ let travelRegion = null;
 // let backOverlayWasVisible = false;
 let locationText;
 let currentCity = 'York';
+
+const YORK_FLYING_ISLAND_ACTIVE_LINGER_MS = 60000;
+const YORK_RING_THROW_MIN_DURATION_MS = 2600;
+const YORK_RING_THROW_MAX_DURATION_MS = 3400;
+const YORK_RING_THROW_ARC_HEIGHT = 108;
 let skyRect;
 let backgroundRect;
 let stage;
@@ -4439,7 +4444,7 @@ function spawnYorkFlyingIslandEvent(scene) {
     onComplete: () => {
       if (!yorkFlyingIslandEvent || yorkFlyingIslandEvent.container !== island) return;
       yorkFlyingIslandEvent.phase = 'active';
-      yorkFlyingIslandEvent.timeoutCall = scene.time.delayedCall(5200, () => {
+      yorkFlyingIslandEvent.timeoutCall = scene.time.delayedCall(YORK_FLYING_ISLAND_ACTIVE_LINGER_MS, () => {
         if (yorkFlyingIslandEvent && yorkFlyingIslandEvent.phase === 'active' && !yorkFlyingIslandEvent.success) {
           yorkFlyingIslandEvent.phase = 'leaving';
         }
@@ -4657,14 +4662,14 @@ function spawnYorkThrownRing(scene, eventData, fromLeft) {
   scene.tweens.add({
     targets: ring,
     progress: 1,
-    duration: Phaser.Math.Between(1550, 1850),
+    duration: Phaser.Math.Between(YORK_RING_THROW_MIN_DURATION_MS, YORK_RING_THROW_MAX_DURATION_MS),
     ease: 'Sine.easeInOut',
     onUpdate: () => {
       if (!ringSprite.active) return;
       const t = Phaser.Math.Clamp(ring.progress, 0, 1);
       ringSprite.x = Phaser.Math.Linear(startX, endX, t);
       const arc = 4 * t * (1 - t);
-      ringSprite.y = y - arc * 92;
+      ringSprite.y = y - arc * YORK_RING_THROW_ARC_HEIGHT;
       ringSprite.rotation = ring.spinDirection * t * Math.PI * ring.spinTurns;
       ring.centerY = ringSprite.y;
     },
