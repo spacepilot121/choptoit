@@ -4322,11 +4322,14 @@ function detonateExplodingBarrel(scene, target, head) {
   target.destroy();
 }
 
+const YORK_RING_EVENT_TEST_CHANCE = 45;
+const YORK_ISLAND_EVENT_TEST_CHANCE = 35;
+
 function shouldSpawnYorkFlyingIslandEvent() {
   if (currentCity !== 'York') return false;
   if (yorkFlyingIslandEvent && yorkFlyingIslandEvent.active) return false;
   if (yorkRingPlatformEvent && yorkRingPlatformEvent.active) return false;
-  return Phaser.Math.Between(1, 100) <= 10;
+  return Phaser.Math.Between(1, 100) <= YORK_ISLAND_EVENT_TEST_CHANCE;
 }
 
 function getFlyingIslandMetrics(islandEvent) {
@@ -4617,7 +4620,7 @@ function completeFlyingIslandHoleSuccess(scene, islandEvent, head) {
 function shouldSpawnYorkRingPlatformEvent() {
   if (currentCity !== 'York') return false;
   if (yorkRingPlatformEvent && yorkRingPlatformEvent.active) return false;
-  return Phaser.Math.Between(1, 100) <= 12;
+  return Phaser.Math.Between(1, 100) <= YORK_RING_EVENT_TEST_CHANCE;
 }
 
 function createYorkRingGuard(scene, x, y, facing) {
