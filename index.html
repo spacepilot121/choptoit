@@ -339,7 +339,7 @@ let locationText;
 let currentCity = 'York';
 
 const YORK_FLYING_ISLAND_ACTIVE_LINGER_MS = 60000;
-const YORK_RING_THROW_MIN_DURATION_MS = 2600;
+const YORK_RING_THROW_MIN_DURATION_MS = 2800;
 const YORK_RING_THROW_MAX_DURATION_MS = 3400;
 const YORK_RING_THROW_ARC_HEIGHT = 108;
 let skyRect;
@@ -4804,7 +4804,7 @@ function spawnYorkRingPlatformEvent(scene) {
       if (!yorkRingPlatformEvent || yorkRingPlatformEvent.phase !== 'entering') return;
       yorkRingPlatformEvent.phase = 'throwing';
       yorkRingPlatformEvent.throwTimer = scene.time.addEvent({
-        delay: 1000,
+        delay: 1400,
         loop: true,
         callback: () => {
           if (!yorkRingPlatformEvent || yorkRingPlatformEvent.phase !== 'throwing') return;
