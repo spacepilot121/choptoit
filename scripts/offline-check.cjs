@@ -17,7 +17,11 @@ for(const name of fs.readdirSync(path.join(root,'assets')).filter(name=>name.end
   assert.ok(fs.statSync(path.join(root,'assets',name)).size<fs.statSync(path.join(root,'assets',original)).size/2,`Painting did not compress enough: ${name}`);
 }
 assert.ok(!release.files.some(file=>/\/prisonerhead.*\.png$/.test(file)),'Replaced individual faces must not be downloaded');
-assert.ok(release.files.includes('./weapons30.png'),'Keep late-game upgrades');
+const desktopAssets=collectAssets(root,false);
+for(const file of ['weapons30.png','storage_16.png','background_storage.png','background_weapons.png','background_travelmenu.png','background.png','background_bluesky.png']) {
+  assert.ok(!release.files.includes('./'+file),`Mobile export must skip hidden legacy art: ${file}`);
+  assert.ok(desktopAssets.includes(file),`Source desktop fallback must retain ${file}`);
+}
 function fixture(fail=false) {
   const handlers={}, messages=[], stores=new Map([['choptoit-release-old',new Map()],['unrelated-cache',new Map()]]);
   const self={CHOP_RELEASE:release,location:new URL('https://example.test/choptoit/sw.js'),clients:{claim:async()=>{},matchAll:async()=>[{postMessage:message=>messages.push(message)}]},addEventListener:(name,fn)=>{handlers[name]=fn;}};

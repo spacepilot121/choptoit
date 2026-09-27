@@ -12,4 +12,5 @@ for(const [mobile,city,expected] of [[true,'York',1],[true,'Chester',1],[false,'
 }
 const offline=require('./collect-assets.cjs')(path.join(__dirname,'..'));
 assert.equal(offline.filter(file=>/^assets\/(york|durham|chester|london|hull|newcastle|lincoln|canterbury|dover|norwich|winchester|colchester|oxford|southampton|gloucester)-v2\.jpg$/.test(file)).length,15);
-console.log('Mobile startup requests only the saved town; all fifteen town images remain in the offline package.');
+for(const file of ['background.png','background_bluesky.png','background_storage.png','background_weapons.png']) assert.ok(!offline.includes(file),`Do not preload hidden mobile scenery: ${file}`);
+console.log('Mobile startup loads only the saved town and skips legacy menus; all fifteen towns remain offline.');

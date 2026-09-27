@@ -1,6 +1,6 @@
 # Chop To It — release playtest
 
-Build under test: 7aed28e4f15eded1. This is a release candidate for testing, not a declaration that launch checks are complete.
+Build under test: 000efd14433fd81f. This is a release candidate for testing, not a declaration that launch checks are complete.
 
 Record phone model, OS, browser, whether installed on the home screen, and build version with every result. Export any valued save before testing a fresh story. Use a separate test profile when possible.
 
@@ -97,3 +97,7 @@ Build 224f64dde6d705d7 adds a count after each eight-file offline batch to the J
 ## 27 September — compact paintings in the exact package
 
 The 15 town and three story PNG masters remain editable in assets/, with quality-90 JPEG exports used by the game. The 18 shipped paintings are 4.9 MB instead of 38.6 MB; the full package is 23.0 MB instead of 56.7 MB. Original dimensions are retained, and the lowest measured pixel PSNR among the 18 exports is 36.9 dB. The packaged HTTP check verified all 126 files, hashes and JPEG content types. In the browser, the title, York game, Oswin opening portrait, London and Durham rendered without errors. A restored late-game test save travelled London to Durham. The Journal reported Ready to play offline. With the preview server stopped and an independent request for the Oxford JPEG refused, the game travelled Durham to Oxford, displayed the new town art and advanced nine days. Reloading with the server still down reopened Oxford with 1,000 gold and the saved date. Screenshot compact-art-offline-preview.png records Oxford after offline travel. The server was restored. This confirms desktop-browser artwork loading and offline travel for the compact export; phone decode quality, performance and storage eviction remain unverified.
+
+## 27 September — lean mobile export
+
+Build 000efd14433fd81f removes hidden legacy canvas menu art from the mobile download while retaining the desktop fallback in source. The offline package fell from 23.0 MB to 15.8 MB, with 63 cache entries and 66 upload files. The opening story and Workshop, Market, Travel and Journal rendered without errors. A restored test save in London spent 10 gold on a cart upgrade, bought one turnip, and travelled to Durham, with the purse correctly moving from 1,000 to 989 gold. The Journal said Ready to play offline. After stopping the preview server and independently confirming a refused connection, an offline reload retained Durham and 989 gold. The game then travelled nine days to Oxford and showed its painted background while still offline. Screenshot lean-mobile-offline-preview.png records that state. The basic shot button reacted, but this short run did not land a successful shot; the earlier complete campaign and exact-export shot checks remain the evidence for the shot loop. Physical iPhone/Android touch and storage-pressure checks remain open.

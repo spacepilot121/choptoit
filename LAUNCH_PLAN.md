@@ -19,7 +19,7 @@ Target: a polished portrait mobile game, playable in browser first, retaining ti
 
 As of 20 September, all fifteen towns have illustrated backgrounds. The executioner, main cast, jesters and ring-event guards use updated artwork. The mobile HUD, pause-safe menus, six contracts, endings, trade routes, upgrades, local save recovery, audio, install affordance and offline package are implemented. All work remains local; the public site is unchanged.
 
-Latest exported build: `7aed28e4f15eded1`, 126 upload files, 23.0 MB. The full automated release pipeline passes, including serving every file from the isolated export. Earlier entries below are historical evidence and may describe superseded artwork, file counts or behaviour.
+Latest exported build: `000efd14433fd81f`, 66 upload files, 15.8 MB. The full automated release pipeline passes, including serving every file from the isolated export. Earlier entries below are historical evidence and may describe superseded artwork, file counts or behaviour.
 
 ### Remaining launch gates, in priority order
 
@@ -281,3 +281,7 @@ Build 224f64dde6d705d7 reports each completed eight-file batch of the 123-file o
 ## Smaller mobile artwork download (27 September)
 
 Build 7aed28e4f15eded1 ships high-quality JPEG exports for 15 opaque town paintings and three story portraits, while retaining their original PNGs in the source repository and keeping transparent cast/weapon art as PNG. Those 18 paintings total 38.6 MB as PNG and 4.9 MB as JPEG; the full offline package falls from 56.7 MB to 23.0 MB with the same 123 cache entries and 126 upload files. The optional scripts/optimize-art.cjs reproduces the exports. Browser visual checks found the title, York, London, Durham, Oxford and Oswin portrait intact. After the server was stopped and independently refused the Oxford image request, the game travelled from Durham to Oxford, rendered that uncached-in-page image, and reopened in Oxford with progress intact. The server was restored. Real-phone decode/performance and storage behaviour remain open. See PLAYTEST.md and compact-art-offline-preview.png.
+
+## Skip unused mobile canvas menus (27 September)
+
+Build 000efd14433fd81f uses the portrait HTML menus without downloading or building the old canvas workshop, market and travel menus. The original browser menu code and art remain in the source repository. The mobile offline package now has 63 cache entries and 66 upload files, totalling 15.8 MB instead of 23.0 MB in the preceding build. The isolated export passed the full release and HTTP checks. In the browser, the opening story and four mobile menus worked; a restored test save bought a cart upgrade, traded in London, and travelled to Durham. With the preview server stopped and independently refusing connections, the game reopened in Durham, travelled to Oxford with its cached town art, and kept 989 gold. No browser errors were observed. Physical-phone performance and storage behaviour remain open. See PLAYTEST.md and lean-mobile-offline-preview.png.

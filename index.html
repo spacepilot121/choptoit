@@ -1925,7 +1925,7 @@ function preload() {
   for (let i = 1; !window.MobileGame && i <= 10; i++) {
     this.load.image(`intro${i}`, `intro${i}.png`);
   }
-  this.load.image('shop', 'shop.png');
+  if (!window.MobileGame) this.load.image('shop', 'shop.png');
   this.load.image('platform', 'platform.png');
   this.load.image('executionerHead', 'executionerhead.png');
   this.load.image('executionerFigure', 'assets/executioner-v2.png');
@@ -1936,29 +1936,25 @@ function preload() {
   this.load.image('executionerBody', 'executionerbody.png');
   this.load.image('escortHead', 'escorthead.png');
   this.load.image('escortBody', 'escortbody.png');
-  this.load.image('signTravel', 'sign_travel.png');
-  this.load.image('signStorage', 'sign_storage.png');
-  this.load.image('signWeapons', 'sign_weapons.png');
-  this.load.image('signClose', 'sign_close.png');
-  this.load.image('mapNorth', 'map_north.png');
-  this.load.image('mapSouth', 'map_south.png');
-  this.load.image('backgroundTravel', 'background_travel1.png');
-  this.load.image('backgroundTravelMenu', 'background_travelmenu.png');
   this.load.image('chestOpen', 'goldchest_open.png');
   this.load.image('chestClosed', 'goldchest_closed.png');
-  // Storage upgrade assets
-  this.load.image('backgroundStorage', 'background_storage.png');
-  this.load.image('upgradeButton', 'upgrade_button.png');
-  for (let i = 1; i <= 16; i++) {
-    this.load.image(`storage${i}`, `storage_${i}.png`);
+  if (!window.MobileGame) {
+    this.load.image('signTravel', 'sign_travel.png');
+    this.load.image('signStorage', 'sign_storage.png');
+    this.load.image('signWeapons', 'sign_weapons.png');
+    this.load.image('signClose', 'sign_close.png');
+    this.load.image('mapNorth', 'map_north.png');
+    this.load.image('mapSouth', 'map_south.png');
+    this.load.image('backgroundTravel', 'background_travel1.png');
+    this.load.image('backgroundTravelMenu', 'background_travelmenu.png');
+    this.load.image('backgroundStorage', 'background_storage.png');
+    this.load.image('upgradeButton', 'upgrade_button.png');
+    for (let i = 1; i <= 16; i++) this.load.image(`storage${i}`, `storage_${i}.png`);
+    this.load.image('backgroundWeapons', 'background_weapons.png');
+    for (let i = 1; i <= 30; i++) this.load.image(`weapons${i}`, `weapons${i}.png`);
+    this.load.image('background', 'background.png');
+    this.load.image('backgroundSky', 'background_bluesky.png');
   }
-  // Weapons upgrade assets
-  this.load.image('backgroundWeapons', 'background_weapons.png');
-  for (let i = 1; i <= 30; i++) {
-    this.load.image(`weapons${i}`, `weapons${i}.png`);
-  }
-  this.load.image('background', 'background.png');
-  this.load.image('backgroundSky', 'background_bluesky.png');
   // All townsfolk faces are supplied by castHeads; legacy numeric IDs still
   // select the same illustrated variants through CastArt.head.
   for (let i = 1; i <= 3; i++) {
@@ -2013,12 +2009,13 @@ function create() {
   if (scene.assetLoadFailed) { scene.scene.pause(); return; }
 
   // Background and stage art
-  skyRect = scene.add.image(CENTER_X, CENTER_Y, 'backgroundSky');
-  skyRect.setDisplaySize(GAME_WIDTH, GAME_HEIGHT);
+  skyRect = window.MobileGame
+    ? scene.add.rectangle(CENTER_X, CENTER_Y, GAME_WIDTH, GAME_HEIGHT, 0x79bac1)
+    : scene.add.image(CENTER_X, CENTER_Y, 'backgroundSky').setDisplaySize(GAME_WIDTH, GAME_HEIGHT);
   // Render sky behind celestial bodies
   skyRect.setDepth(-5);
 
-  backgroundRect = scene.add.image(CENTER_X, CENTER_Y, 'background');
+  backgroundRect = scene.add.image(CENTER_X, CENTER_Y, window.MobileGame ? `background-${currentCity.toLowerCase()}` : 'background');
   setBackdropCover(backgroundRect, GAME_WIDTH, GAME_HEIGHT, true);
   backgroundRect.setDepth(-2);
   // Apply the initial background for the starting city
@@ -2737,6 +2734,9 @@ function create() {
   });
 
   
+  // The mobile overlay has its own workshop, market and travel screens. Avoid
+  // building their hidden canvas counterparts and decoding all their art.
+  if (!window.MobileGame) {
   // Storage and weapons signs
   storageButton = scene.add.image(0, 0, 'signStorage')
     .setOrigin(0, 0)
@@ -3041,6 +3041,7 @@ function create() {
   tradeContainer.add([tradeBg, tradeTitle, b1, b10, bMax, s1, s10, sMax, tradeClose, tradeSpaceText]);
   tradeBuyBtns = [b1, b10, bMax];
   tradeSellBtns = [s1, s10, sMax];
+  }
 
   // Set up first day's prices and gossip
   if (restoredMarket) { updateMarketUI(); restoredMarket = false; }
@@ -3722,7 +3723,7 @@ function updateBackground(scene) {
   if (scene.textures.exists(key)) {
     backgroundRect.setTexture(key);
   } else {
-    backgroundRect.setTexture('background');
+    backgroundRect.setTexture(scene.textures.exists('background') ? 'background' : `background-${currentCity.toLowerCase()}`);
   }
   setBackdropCover(backgroundRect, GAME_WIDTH, GAME_HEIGHT, true);
   backgroundRect.y -= cityBackdropOffsets[currentCity] || 0;
