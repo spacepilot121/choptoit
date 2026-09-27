@@ -1075,6 +1075,7 @@ let chest;
 let yorkRingPlatformEvent = null;
 let yorkFlyingIslandEvent = null;
 let yorkRingHeadSerial = 0;
+let yorkRingHintShown = false;
 
 function setGoldChestVisible(visible) {
   if (chest) chest.setVisible(visible);
@@ -4825,6 +4826,8 @@ function spawnYorkThrownRing(scene, eventData, fromLeft) {
     endX,
     progress: 0,
     centerY: y,
+    prevX: startX,
+    prevY: y,
     innerRadius: 26,
     outerRadius: 38,
     spinTurns: Phaser.Math.Between(5, 8),
@@ -4863,20 +4866,26 @@ function didHeadPassThroughMovingRing(head, ring, previousX, previousY, currentX
   if (ring.touchedHeadIds.has(head.ringHeadId)) return false;
   const ringX = ring.sprite.x;
   const ringY = ring.centerY ?? ring.sprite.y;
-  const minDistSq = pointSegmentDistanceSq(ringX, ringY, previousX, previousY, currentX, currentY);
+  // Compare both paths in ring-relative space so a moving ring can meet a
+  // head that is nearly stationary at the top of its flight.
+  const relativePreviousX = previousX - (ring.prevX ?? ringX);
+  const relativePreviousY = previousY - (ring.prevY ?? ringY);
+  const relativeCurrentX = currentX - ringX;
+  const relativeCurrentY = currentY - ringY;
+  const minDistSq = pointSegmentDistanceSq(0, 0, relativePreviousX, relativePreviousY, relativeCurrentX, relativeCurrentY);
   const headRadius = Math.max(6, (head.displayWidth || 30) * 0.18);
   const safeInner = Math.max(6, ring.innerRadius - headRadius);
   const rimOuter = ring.outerRadius + headRadius;
   const sweptRim = minDistSq <= rimOuter * rimOuter && minDistSq >= safeInner * safeInner;
   if (sweptRim) return false;
-  const prevDist = Phaser.Math.Distance.Between(previousX, previousY, ringX, ringY);
-  const currDist = Phaser.Math.Distance.Between(currentX, currentY, ringX, ringY);
+  const prevDist = Phaser.Math.Distance.Between(relativePreviousX, relativePreviousY, 0, 0);
+  const currDist = Phaser.Math.Distance.Between(relativeCurrentX, relativeCurrentY, 0, 0);
   const crossedInterior = (prevDist > safeInner && currDist < safeInner) || (prevDist < safeInner && currDist > safeInner) || minDistSq < safeInner * safeInner;
-  const minX = Math.min(previousX, currentX) - safeInner;
-  const maxX = Math.max(previousX, currentX) + safeInner;
-  const minY = Math.min(previousY, currentY) - safeInner;
-  const maxY = Math.max(previousY, currentY) + safeInner;
-  const nearRing = ringX >= minX && ringX <= maxX && ringY >= minY && ringY <= maxY;
+  const minX = Math.min(relativePreviousX, relativeCurrentX) - safeInner;
+  const maxX = Math.max(relativePreviousX, relativeCurrentX) + safeInner;
+  const minY = Math.min(relativePreviousY, relativeCurrentY) - safeInner;
+  const maxY = Math.max(relativePreviousY, relativeCurrentY) + safeInner;
+  const nearRing = 0 >= minX && 0 <= maxX && 0 >= minY && 0 <= maxY;
   if (crossedInterior && nearRing) {
     ring.touchedHeadIds.add(head.ringHeadId);
     return true;
@@ -4961,6 +4970,10 @@ function spawnYorkRingPlatformEvent(scene) {
     throwFromLeft: true,
     throwTimer: null
   };
+  if (!yorkRingHintShown) {
+    yorkRingHintShown = true;
+    window.MobileGame?.hint('York challenge · send a head through the gold ring');
+  }
 
   scene.tweens.add({
     targets: leftPlatform,
@@ -5151,16 +5164,18 @@ function checkFastHeadTargetCrossings(scene) {
         }
         handleFlyingIslandGreenBounce(scene, head, yorkFlyingIslandEvent);
       }
-      if (yorkRingPlatformEvent && yorkRingPlatformEvent.activeRing && !yorkRingPlatformEvent.activeRing.spent) {
-        const ring = yorkRingPlatformEvent.activeRing;
-        if (didHeadPassThroughMovingRing(head, ring, prevX, prevY, head.x, head.y)) {
-          ring.spent = true;
-          clearAllTargetsFromRingEvent(scene, head);
-          scene.tweens.killTweensOf(ring);
-          if (ring.sprite && ring.sprite.active) ring.sprite.destroy();
-          yorkRingPlatformEvent.activeRing = null;
-        }
+    }
+    if (yorkRingPlatformEvent && yorkRingPlatformEvent.activeRing && !yorkRingPlatformEvent.activeRing.spent) {
+      const ring = yorkRingPlatformEvent.activeRing;
+      if (didHeadPassThroughMovingRing(head, ring, prevX, prevY, head.x, head.y)) {
+        ring.spent = true;
+        clearAllTargetsFromRingEvent(scene, head);
+        scene.tweens.killTweensOf(ring);
+        if (ring.sprite && ring.sprite.active) ring.sprite.destroy();
+        yorkRingPlatformEvent.activeRing = null;
       }
+    }
+    if (movedFarEnough) {
       for (let i = 0; i < targets.length; i++) {
         const target = targets[i];
         if (didHeadSegmentHitTarget(head, target, prevX, prevY, head.x, head.y)) {
@@ -5172,6 +5187,11 @@ function checkFastHeadTargetCrossings(scene) {
     head.prevX = head.x;
     head.prevY = head.y;
   });
+  const activeRing = yorkRingPlatformEvent?.activeRing;
+  if (activeRing?.sprite?.active) {
+    activeRing.prevX = activeRing.sprite.x;
+    activeRing.prevY = activeRing.centerY ?? activeRing.sprite.y;
+  }
 }
 
 function spawnHolyMonk(scene) {

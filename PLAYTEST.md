@@ -1,6 +1,6 @@
 # Chop To It — release playtest
 
-Build under test: 1bafe9c9f44ffad4. This is a release candidate for testing, not a declaration that launch checks are complete.
+Build under test: f7188a9fdfe27b51. This is a release candidate for testing, not a declaration that launch checks are complete.
 
 Record phone model, OS, browser, whether installed on the home screen, and build version with every result. Export any valued save before testing a fresh story. Use a separate test profile when possible.
 
@@ -81,3 +81,7 @@ Build a1ccc0f61e1d9f70 differs from the completed-campaign build only by trailin
 The 1:2 game canvas left narrow controls on short 9:16 phone viewports. The mobile HUD, menus, shot button and navigation now use the full available width at 600px and below, while the canvas retains its gameplay coordinates. At 320 × 520, the shot button measures 288 × 49px, the four navigation buttons each measure 80px wide, and the document has no horizontal overflow. Reduced spacing around the controls below 600px height, keeping the actors above them without moving the bird flight lane. Visually checked the first-story page, gameplay and Market at 320 × 568, gameplay at 320 × 520 and 360 × 640, and the stage at 390 × 844. Screenshot compact-mobile-preview.png records the shortest viewport. A timing/aim/power round completed in this layout. The source browser reported no warnings or errors.
 
 On the completed campaign save in York with blade level eight, normal rounds spawned the moving-ring guard event and several high targets. At 360 × 640 the ring, guards and targets were visible beneath the HUD. The ring collision itself and bird collisions remain to be tested in gameplay; visual appearance alone does not prove reachability. The release pipeline passed for build 1bafe9c9f44ffad4.
+
+## 27 September — moving York ring collision and teaching
+
+The moving-ring hit check now follows both the head and ring between frames, including a ring crossing a head that is nearly stationary at its apex. Deterministic checks cover a head passing through a still ring, the moving-ring crossing case, rim grazes, distant misses, duplicate claims and a single reward/cleanup. Normal York rounds spawned the event without browser errors. The first-event hint was initially hidden behind loading; after deferring it until play is visible, a fresh York start showed “York challenge · send a head through the gold ring” in the gameplay status region. The Targets & tricks guide explains the blade-eight challenge. Screenshot york-ring-hint-preview.png records the hint. `npm run release` and `npm test` pass on f7188a9fdfe27b51. A ring hit by hand during live play, bird collisions and physical-phone testing are still open.

@@ -23,16 +23,21 @@
     </section>`;
   document.body.append(ui);
   const el = id => document.getElementById(id);
-  let scene, screen = null, toastTimer, priorFocus;
+  let scene, screen = null, toastTimer, priorFocus, pendingHint = null;
   let introRead = false;
   let navigating = false;
   let travelLoading = false;
   let loadingTimer, loadingFailed = false;
   let lastReadyChapter = -1;
   try { introRead = localStorage.getItem('choptoit-intro-read') === 'yes'; } catch (_) {}
-  function toast(text) {
+  function toast(text, duration = 2300) {
     el('game-toast').textContent = text; el('game-toast').hidden = false;
-    clearTimeout(toastTimer); toastTimer = setTimeout(() => { el('game-toast').hidden = true; }, 2300);
+    clearTimeout(toastTimer); toastTimer = setTimeout(() => { el('game-toast').hidden = true; }, duration);
+  }
+  function showPendingHint() {
+    if (!pendingHint || !scene || screen || el('game-loading')) return;
+    toast(pendingHint, 4000);
+    pendingHint = null;
   }
   function save() { if (navigating) return; SaveManager.performSave(); if (SaveManager.disabled && !SaveManager.conflict) toast('Saving is unavailable. Export a backup from the journal.'); }
   const stats = () => ({chops:killCount,weapon:player.weaponLevel,rank:level,fame});
@@ -58,6 +63,7 @@
     ui.querySelectorAll('.mobile-hud,.mobile-controls,.mobile-nav').forEach(node => { node.inert = false; });
     if (scene?.scene.isPaused()) scene.scene.resume();
     priorFocus?.focus();
+    showPendingHint();
   }
   function show(name) {
     if (!scene) return;
@@ -112,7 +118,7 @@
       body.innerHTML = `<span class="eyebrow">CHAPTER ONE · THE PRICE OF FREEDOM</span><h3>Welcome to York.</h3><img src="assets/oswin-v2.png" class="journal-portrait" alt="Oswin, the royal clerk"><p class="journal-quote">“One million and one gold. Before the year is out. Then your debt—and your service—are finished.”</p><p>The royal clerk smiles. The extra coin is his fee. You take the axe. Somewhere beyond York, there must be a better way to make a living.</p><article class="item-card"><small>YOUR FIRST DAY</small><h3>Find your rhythm</h3><p>1. Stop the marker in the mint centre.<br>2. Set your aim toward a flying target.<br>3. Choose your power and let it fly.</p><p>Land clean hits, build a streak, then spend your first 10 gold on a better blade.</p></article><button class="wide" data-action="begin">Let's get to work →</button>`;
     } else if (name === 'guide') {
       el('dialog-title').textContent='Targets & tricks';
-      body.innerHTML='<article class="item-card"><small>BUILD A CROWD</small><h3>Aim for the rings</h3><p>Coral rings earn fame. Moving targets earn more, and the high mint targets in York are worth triple. Gold crown targets are worth five times a normal hit.</p></article><article class="item-card"><small>MAKE YOUR SHOT COUNT</small><h3>Break through</h3><p>Wooden shields need a powerful launch. If your shot bounces, use more power or upgrade your blade. Barrels light a short fuse, then explode into nearby targets.</p></article><article class="item-card"><small>WATCH YOUR REPUTATION</small><h3>Choose your targets</h3><p>Crows reward a hit. White doves and the pale-robed monks cost fame and do not count toward your contract. Steer around them.</p></article><article class="item-card"><small>KEEP YOUR RHYTHM</small><h3>Protect your streak</h3><p>Each successful chop increases your gold multiplier. A miss resets the streak. Watch the weather: wind pushes your shot, rain pulls it down, and fog fades targets.</p></article><button class="wide secondary" data-action="cancel-new">Back to ledger</button>';
+      body.innerHTML='<article class="item-card"><small>BUILD A CROWD</small><h3>Aim for the rings</h3><p>Coral rings earn fame. Moving targets earn more, and the high mint targets in York are worth triple. Gold crown targets are worth five times a normal hit.</p></article><article class="item-card"><small>YORK CHALLENGE · BLADE LEVEL 8</small><h3>Thread the gold ring</h3><p>When guards throw a gold ring, send a flying head through its centre. A clean pass clears nearby targets and earns bonus fame.</p></article><article class="item-card"><small>MAKE YOUR SHOT COUNT</small><h3>Break through</h3><p>Wooden shields need a powerful launch. If your shot bounces, use more power or upgrade your blade. Barrels light a short fuse, then explode into nearby targets.</p></article><article class="item-card"><small>WATCH YOUR REPUTATION</small><h3>Choose your targets</h3><p>Crows reward a hit. White doves and the pale-robed monks cost fame and do not count toward your contract. Steer around them.</p></article><article class="item-card"><small>KEEP YOUR RHYTHM</small><h3>Protect your streak</h3><p>Each successful chop increases your gold multiplier. A miss resets the streak. Watch the weather: wind pushes your shot, rain pulls it down, and fog fades targets.</p></article><button class="wide secondary" data-action="cancel-new">Back to ledger</button>';
     } else if (name === 'cast') {
       el('dialog-title').textContent='People on the road';
       const people=[
@@ -355,8 +361,9 @@
       el('loading-progress').hidden=true; el('loading-percent').hidden=true;
       el('loading-retry').hidden=false;
     },
-    ready(s) { clearTimeout(loadingTimer); el('game-loading')?.remove(); scene = s; ui.hidden = false; update(); if (SaveManager.unreadable) show('recovery'); else if (!introRead) show('welcome'); if (document.hidden) suspendGame(); if (SaveManager.recovered) toast('Recovered your progress from the last backup.'); },
+    ready(s) { clearTimeout(loadingTimer); el('game-loading')?.remove(); scene = s; ui.hidden = false; update(); if (SaveManager.unreadable) show('recovery'); else if (!introRead) show('welcome'); if (document.hidden) suspendGame(); if (SaveManager.recovered) toast('Recovered your progress from the last backup.'); else showPendingHint(); },
     strike, isPaused:() => !!screen,
+    hint(message) { pendingHint = message; showPendingHint(); },
     rankUp(rank) { toast(`Rank ${rank} reached · your reputation is growing`); ChopAudio.play('reward'); },
     feedback(message, success) {
       toast(message.replace(/\n/g,' · '));
