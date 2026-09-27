@@ -4,7 +4,9 @@
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no, viewport-fit=cover">
   <title>Chop To It!</title>
-  <link rel="icon" type="image/png" href="favicon256.png">
+  <link rel="icon" type="image/png" href="assets/app-icon-192.png">
+  <link rel="stylesheet" href="mobile.css">
+  <meta name="theme-color" content="#152b31">
   <style>
     html, body {
       width: 100%;
@@ -91,32 +93,38 @@
       font-size: 12px;
     }
   </style>
-  <script src="https://cdn.jsdelivr.net/npm/phaser@3.55.2/dist/phaser.js"></script>
+  <link rel="manifest" href="manifest.webmanifest">
+  <link rel="apple-touch-icon" sizes="180x180" href="assets/app-icon-180.png">
+  <meta name="apple-mobile-web-app-capable" content="yes">
+  <script src="vendor/phaser-3.55.2.min.js"></script>
   <script src="dayNightCycle.js"></script>
+  <script src="cast-art.js"></script>
+  <script src="game-core.js"></script>
+  <script src="campaign.js"></script>
 </head>
 <body>
   <div id="start-overlay" role="button" aria-label="Start game">
     <div class="card">
-      <h1>Chop To It!</h1>
-      <p>Tap enemies as they rise to keep your streak alive and earn gold.</p>
-      <p>Spend gold on upgrades to carry more and hit harder.</p>
-      <p>Best played on iPhone portrait mode.</p>
-      <p class="tap">Tap anywhere to begin</p>
+      <span class="eyebrow">A MOST UNFORTUNATE CAREER</span>
+      <h1>CHOP<br><em>TO IT!</em></h1>
+      <p>One year. One axe.<br>A million and one reasons to retire.</p>
+      <p class="tap">Enter the kingdom →</p>
+      <small>A darkly comic arcade adventure</small>
     </div>
   </div>
   <div id="game-shell"></div>
 
 <script>
 const GAME_WIDTH = 800;
-const GAME_HEIGHT = 1734;
+const GAME_HEIGHT = 1600;
 const CENTER_X = GAME_WIDTH / 2;
 const CENTER_Y = GAME_HEIGHT / 2;
 const SAFE_TOP = 60;
 const SAFE_BOTTOM = GAME_HEIGHT - 60;
 const LEFT_MARGIN = 16;
 const RIGHT_MARGIN = GAME_WIDTH - 16;
-const PORTRAIT_HEADROOM = GAME_HEIGHT - 600;
-const GROUND_Y = GAME_HEIGHT;
+const PORTRAIT_HEADROOM = GAME_HEIGHT - 1040;
+const GROUND_Y = GAME_HEIGHT - 380;
 const STAGE_Y = 520 + PORTRAIT_HEADROOM;
 const CHARACTER_BASE_Y = 460 + PORTRAIT_HEADROOM;
 const HUD_TOP_Y = SAFE_TOP;
@@ -159,12 +167,21 @@ window.visualViewport?.addEventListener('scroll', updateShellHeight);
 const startOverlay = document.getElementById('start-overlay');
 const startGame = () => {
   if (game) return;
+  if (typeof Phaser === 'undefined') {
+    startOverlay.querySelector('.tap').textContent = 'Could not load. Check your connection and reload.';
+    return;
+  }
   startOverlay.remove();
+  window.MobileGame?.loading();
   game = new Phaser.Game(config);
   game.scene.add('TravelScene', TravelScene, false);
 };
 
-startOverlay.addEventListener('click', startGame, { once: true });
+startOverlay.tabIndex = 0;
+startOverlay.addEventListener('click', startGame);
+startOverlay.addEventListener('keydown', event => {
+  if (event.key === 'Enter' || event.key === ' ') { event.preventDefault(); startGame(); }
+});
 
 // Feature toggles for easy testing
 const FEATURES = {
@@ -1079,21 +1096,33 @@ let inventory = {};
 // Multiplier applied to fame gains
 let fameMultiplier = 1;
 
-const SAVE_VERSION = 1;
+const SAVE_VERSION = 2;
 const SaveManager = {
   key: 'choptoit-save',
   saveVersion: SAVE_VERSION,
   disabled: false,
   warned: false,
   saveTimeout: null,
+  lastSavedRaw: null,
+  conflict: false,
   load() {
     if (this.disabled) return;
     try {
-      const raw = localStorage.getItem(this.key);
-      if (!raw) return;
-      const data = JSON.parse(raw);
-      if (!this.validate(data)) return;
-      this.apply(data);
+      this.lastSavedRaw = localStorage.getItem(this.key);
+      let foundSave = false;
+      for (const key of [this.key, this.key + '-backup']) {
+        const raw = localStorage.getItem(key);
+        if (!raw) continue;
+        foundSave = true;
+        let data;
+        try { data = JSON.parse(raw); } catch (_) { continue; }
+        if (!this.validate(data)) continue;
+        this.apply(data);
+        if (key !== this.key) this.recovered = true;
+        return;
+      }
+      // Keep unreadable saves intact until the player chooses a recovery action.
+      if (foundSave) { this.unreadable = true; this.disabled = true; }
     } catch (e) {
       this.handleError(e);
     }
@@ -1107,6 +1136,12 @@ const SaveManager = {
       level,
       currentDay,
       currentMonth,
+      currentCity,
+      timeOfDay: game?.scene?.scenes[0]?.dayNight?.timeOfDay ?? restoredTimeOfDay,
+      killCount,
+      campaign: Campaign.state,
+      market: marketItems.map(m => ({name:m.name,buy:m.currentBuy,sell:m.currentSell,stock:m.stock})),
+      marketSpecials: {buy:dailyBuySpecial,sell:dailySellSpecial},
       citiesUnlocked: cities.filter(c => c.unlocked).map(c => c.name),
       itemsOwned: inventory,
       upgradesOwned: {
@@ -1122,13 +1157,31 @@ const SaveManager = {
     this.saveTimeout = setTimeout(() => this.performSave(), 500);
   },
   performSave() {
+    if (this.saveTimeout) clearTimeout(this.saveTimeout);
     this.saveTimeout = null;
     if (this.disabled) return;
     try {
-      localStorage.setItem(this.key, JSON.stringify(this.getData()));
+      if (!this.checkCurrent()) return;
+      const previous = localStorage.getItem(this.key);
+      if (previous) {
+        try { if (this.validate(JSON.parse(previous))) localStorage.setItem(this.key + '-backup', previous); } catch (_) {}
+      }
+      const next = JSON.stringify(this.getData());
+      localStorage.setItem(this.key, next);
+      this.lastSavedRaw = next;
     } catch (e) {
       this.handleError(e);
     }
+  },
+  checkCurrent() {
+    if (this.conflict) return false;
+    const current = localStorage.getItem(this.key);
+    if (current === this.lastSavedRaw) return true;
+    this.conflict = true;
+    this.disabled = true;
+    if (this.saveTimeout) clearTimeout(this.saveTimeout);
+    this.saveTimeout = null;
+    return false;
   },
   handleError(e) {
     if (!this.warned) {
@@ -1138,6 +1191,18 @@ const SaveManager = {
     this.disabled = true;
   },
   validate(data) {
+    if (!data || typeof data !== 'object') return false;
+    if (data.saveVersion !== undefined && (!Number.isInteger(data.saveVersion) || data.saveVersion < 1 || data.saveVersion > this.saveVersion)) return false;
+    const bounded = (value, min, max) => Number.isFinite(value) && value >= min && value <= max;
+    if (!bounded(data.gold, 0, Number.MAX_SAFE_INTEGER) || !bounded(data.fame, 0, Number.MAX_SAFE_INTEGER) ||
+        !Number.isSafeInteger(data.level) || !bounded(data.level, 1, 1000) || !bounded(data.xp, 0, Number.MAX_SAFE_INTEGER)) return false;
+    if (!data.itemsOwned || Array.isArray(data.itemsOwned) || typeof data.itemsOwned !== 'object' ||
+        !Object.values(data.itemsOwned).every(n => Number.isSafeInteger(n) && n >= 0 && n <= 160)) return false;
+    if (!data.upgradesOwned || !Number.isInteger(data.upgradesOwned.storageLevel) ||
+        !bounded(data.upgradesOwned.storageLevel, 1, 16) || !Number.isInteger(data.upgradesOwned.weaponLevel) ||
+        !bounded(data.upgradesOwned.weaponLevel, 1, 30)) return false;
+    if (!Object.keys(data.itemsOwned).every(name => marketItems.some(item => item.name === name)) ||
+        Object.values(data.itemsOwned).reduce((sum, quantity) => sum + quantity, 0) > data.upgradesOwned.storageLevel * 10) return false;
     const hasValidDay = data.currentDay === undefined || (typeof data.currentDay === 'number' && Number.isFinite(data.currentDay));
     const hasValidMonth = data.currentMonth === undefined || (typeof data.currentMonth === 'number' && Number.isFinite(data.currentMonth));
     return data && typeof data.gold === 'number' && typeof data.fame === 'number' &&
@@ -1162,9 +1227,25 @@ const SaveManager = {
       player.weaponLevel = data.upgradesOwned.weaponLevel || 1;
       const purchased = data.upgradesOwned.purchasedUpgrades || [];
       gameUpgrades.forEach((u, i) => { u.purchased = !!purchased[i]; });
+      fameMultiplier = Math.max(1, ...gameUpgrades.filter(u => u.purchased).map(u => u.mult));
     }
     currentDay = Phaser.Math.Clamp(Math.floor(typeof data.currentDay === 'number' ? data.currentDay : currentDay), 1, 30);
     currentMonth = Phaser.Math.Clamp(Math.floor(typeof data.currentMonth === 'number' ? data.currentMonth : currentMonth), 0, months.length - 1);
+    if (cities.some(c => c.name === data.currentCity)) currentCity = data.currentCity;
+    const savedCity = cities.find(c => c.name === currentCity);
+    if (savedCity) savedCity.unlocked = true;
+    restoredTimeOfDay = Number.isFinite(data.timeOfDay) ? Phaser.Math.Clamp(data.timeOfDay, 0, 0.999999) : 0.2;
+    killCount = Number.isSafeInteger(data.killCount) && data.killCount >= 0 ? data.killCount : 0;
+    Campaign.restore(data.campaign, currentMonth * 30 + currentDay - 1);
+    Campaign.visit(currentCity);
+    if (Array.isArray(data.market) && data.market.length === marketItems.length && data.market.every((m,i) =>
+        m && m.name === marketItems[i].name && Number.isSafeInteger(m.buy) && m.buy > 0 && m.buy <= 1000000 &&
+        Number.isSafeInteger(m.sell) && m.sell > 0 && m.sell <= 1000000 && Number.isSafeInteger(m.stock) && m.stock >= 0 && m.stock <= 10000)) {
+      data.market.forEach((m,i) => Object.assign(marketItems[i],{currentBuy:m.buy,currentSell:Math.min(m.buy,m.sell),stock:m.stock}));
+      dailyBuySpecial = marketItems.some(m=>m.name===data.marketSpecials?.buy) ? data.marketSpecials.buy : null;
+      dailySellSpecial = marketItems.some(m=>m.name===data.marketSpecials?.sell) ? data.marketSpecials.sell : null;
+      restoredMarket = true;
+    }
     if (dateText) dateText.setText(getDateString());
     xpThreshold = 10;
     for (let i = 1; i < level; i++) {
@@ -1214,12 +1295,28 @@ const SaveManager = {
     this.save();
   },
   clear() {
-    if (this.disabled) return;
-    try { localStorage.removeItem(this.key); } catch (e) {}
+    if (this.saveTimeout) clearTimeout(this.saveTimeout);
+    this.saveTimeout = null;
+    try {
+      localStorage.removeItem(this.key);
+      localStorage.removeItem(this.key + '-backup');
+      this.lastSavedRaw = null;
+      return true;
+    } catch (e) { this.handleError(e); return false; }
+  },
+  restore(data) {
+    if (!this.validate(data)) throw new Error('This is not a valid Chop To It save, or it needs a newer game version.');
+    const previous = localStorage.getItem(this.key);
+    let previousValid = false;
+    try { previousValid = this.validate(JSON.parse(previous)); } catch (_) {}
+    if (previousValid) localStorage.setItem(this.key + '-backup', previous);
+    localStorage.setItem(this.key, JSON.stringify(data));
+    this.disabled = true;
   },
   newGame() {
     if (confirm('Start a new game?')) {
-      this.clear();
+      if (!this.clear()) return;
+      this.disabled = true;
       location.reload();
     }
   },
@@ -1228,7 +1325,7 @@ const SaveManager = {
   }
 };
 
-const baseSizes = { red: 60, yellow: 40, green: 20 };
+const baseSizes = { red: 96, yellow: 62, green: 30 };
 let zoneMods = { red: 0, yellow: 0, green: 0 };
 
 const classes = [
@@ -1335,29 +1432,36 @@ cities.forEach(c => {
   c.unlocked = c.name === currentCity;
 });
 
+let restoredTimeOfDay = 0.2;
+let restoredMarket = false;
 SaveManager.load();
 
 // Mapping of cities to their background image files. Keys are the city names
 // and values are the corresponding PNG filenames.
 const cityBackgrounds = {
-  York: 'background_york.png',
-  Canterbury: 'background_canterbury.png',
-  London: 'background_london.png',
-  Dover: 'background_dover.png',
-  Durham: 'background_durham.png',
-  Norwich: 'background_norwich.png',
-  Winchester: 'background_winchester.png',
-  Chester: 'background_chester.png',
-  Hull: 'background_hull.png',
-  Newcastle: 'background_newcastle.png',
-  Colchester: 'background-colchester.png',
-  Lincoln: 'background-lincoln.png',
-  Oxford: 'background-oxford.png',
-  Southampton: 'background-southhampton.png',
-  Gloucester: 'background-gloucester.png',
+  York: 'assets/york-v2.png',
+  Canterbury: 'assets/canterbury-v2.png',
+  London: 'assets/london-v2.png',
+  Dover: 'assets/dover-v2.png',
+  Durham: 'assets/durham-v2.png',
+  Norwich: 'assets/norwich-v2.png',
+  Winchester: 'assets/winchester-v2.png',
+  Chester: 'assets/chester-v2.png',
+  Hull: 'assets/hull-v2.png',
+  Newcastle: 'assets/newcastle-v2.png',
+  Colchester: 'assets/colchester-v2.png',
+  Lincoln: 'assets/lincoln-v2.png',
+  Oxford: 'assets/oxford-v2.png',
+  Southampton: 'assets/southampton-v2.png',
+  Gloucester: 'assets/gloucester-v2.png',
 };
 
 // List of travel background images used during travel scenes.
+// Align the painted stage surfaces with the shared character baseline.
+const cityBackdropOffsets = { York:160, Durham:48, Chester:64, London:90, Hull:80, Newcastle:80, Lincoln:140,
+  Canterbury:120, Dover:80, Norwich:140, Winchester:90,
+  Colchester:145, Oxford:70, Southampton:115, Gloucester:80 };
+
 const travelBackgrounds = Array.from({ length: 14 }, (_, i) => `background_travel${i + 1}.png`);
 
 // Rough geographic coordinates for each city used to estimate travel time
@@ -1416,23 +1520,13 @@ function getDateString() {
 function refreshMarketPrices() {
   const city = cities.find(c => c.name === currentCity);
   marketItems.forEach(m => {
+    const quote = ChopCore.marketQuote(currentCity,m,Phaser.Math.FloatBetween(.9,1.1),m.name === dailyBuySpecial,m.name === dailySellSpecial);
+    m.currentBuy = quote.buy;
+    m.currentSell = quote.sell;
     if (city && m.regions && !m.regions.includes(city.region)) {
-      m.currentBuy = m.buy;
-      m.currentSell = m.sell;
       m.stock = 0;
       return;
     }
-    let buyMult = Phaser.Math.FloatBetween(0.75, 1.25);
-    let sellMult = Phaser.Math.FloatBetween(0.75, 1.25);
-    if (city && city.modifiers && city.modifiers[m.name]) {
-      const mod = city.modifiers[m.name];
-      if (mod.buy) buyMult *= mod.buy;
-      if (mod.sell) sellMult *= mod.sell;
-    }
-    if (m.name === dailyBuySpecial) buyMult *= 0.5;
-    if (m.name === dailySellSpecial) sellMult *= 1.5;
-    m.currentBuy = Math.max(1, Math.round(m.buy * buyMult));
-    m.currentSell = Math.max(1, Math.round(m.sell * sellMult));
     const cityLevel = city ? city.fameReq || 0 : 0;
     const variation = Phaser.Math.Between(-2, 2);
     if (m.buy >= 20) {
@@ -1459,36 +1553,38 @@ function createTargetAppearance(scene, target, type) {
   target.removeAll(true);
   switch (type) {
     case 'woodenShield': {
-      const c = scene.add.circle(0, 0, 20, 0x8b4513);
-      const m = scene.add.circle(0, 0, 6, 0xcccccc);
-      target.add([c, m]);
+      const c = scene.add.circle(0, 0, 20, 0xaa7546).setStrokeStyle(3, 0x152b31);
+      const grain = scene.add.rectangle(0, 0, 3, 34, 0x714a32);
+      const band = scene.add.rectangle(0, 0, 34, 4, 0xe0bd78);
+      const m = scene.add.circle(0, 0, 6, 0xf4e9d1).setStrokeStyle(2, 0x152b31);
+      target.add([c, grain, band, m]);
       break;
     }
     case 'explodingBarrel': {
-      const b = scene.add.rectangle(0, 0, 30, 40, 0x663300);
-      const f = scene.add.rectangle(0, -22, 4, 8, 0xff0000);
+      const b = scene.add.rectangle(0, 0, 30, 40, 0xaa7546).setStrokeStyle(3, 0x152b31);
+      const f = scene.add.rectangle(0, -22, 4, 8, 0xec805d);
+      const upperBand = scene.add.rectangle(0, -11, 32, 5, 0xf9c66b);
+      const lowerBand = scene.add.rectangle(0, 11, 32, 5, 0xf9c66b);
       target.barrelBodyRect = b;
       target.barrelFuseRect = f;
-      target.add([b, f]);
+      target.add([b, upperBand, lowerBand, f]);
       break;
     }
     case 'holyMonk': {
-      const m = scene.add.rectangle(0, 0, 30, 40, 0xffffcc);
-      target.add(m);
+      const robe = scene.add.triangle(0, 5, 0, 30, 15, 0, 30, 30, 0xf4e9d1).setStrokeStyle(2, 0x152b31);
+      const face = scene.add.circle(0, -11, 7, 0xe0b77e);
+      const halo = scene.add.ellipse(0, -21, 22, 6, 0xf9c66b).setStrokeStyle(2, 0x152b31);
+      target.add([robe, face, halo]);
       break;
     }
       case 'royal': {
-        const o = scene.add.circle(0, 0, 20, 0xffff00);
-        const txt = scene.add.text(0, 0, 'R', { font: '16px monospace', fill: '#000' })
-          .setOrigin(0.5);
-        target.add([o, txt]);
+        const o = scene.add.circle(0, 0, 20, 0xf9c66b).setStrokeStyle(3, 0x152b31);
+        const crown = scene.add.polygon(0, 0, [0,0,8,7,14,-3,20,7,28,0,24,17,4,17], 0x152b31);
+        target.add([o, crown]);
         break;
       }
       case 'bird': {
-        const base = target.birdKind === 'dove' ? 'birdWhite' : 'birdBlack';
-        const direction = target.fromRight ? 'Right' : 'Left';
-        const key = base + direction;
-        const img = scene.add.image(0, 0, key).setOrigin(0.5);
+        const img = CastArt.bird(scene,target.birdKind,target.fromRight);
         target.add(img);
         target.birdSprite = img;
         break;
@@ -1497,16 +1593,33 @@ function createTargetAppearance(scene, target, type) {
         const isYorkTallWaverTarget = target.isYorkTallWaver === true;
         const outerRadius = isYorkTallWaverTarget ? 30 : 20;
         const innerRadius = isYorkTallWaverTarget ? 14 : 8;
-        const outerColor = isYorkTallWaverTarget ? 0x1f9d55 : 0xff0000;
-        const innerColor = 0xffffff;
-        const outer = scene.add.circle(0, 0, outerRadius, outerColor);
-        const inner = scene.add.circle(0, 0, innerRadius, innerColor);
-        target.add([outer, inner]);
+        const outerColor = isYorkTallWaverTarget ? 0x8bd1b2 : 0xec805d;
+        const outer = scene.add.circle(0, 0, outerRadius, outerColor).setStrokeStyle(3, 0x152b31);
+        const inner = scene.add.circle(0, 0, innerRadius + 3, 0xf4e9d1);
+        const bullseye = scene.add.circle(0, 0, Math.max(4, innerRadius / 2), 0x152b31);
+        target.add([outer, inner, bullseye]);
       }
   }
 }
 
 
+
+function applyTargetWeather(scene, target) {
+  for (const object of [target, target.jester]) {
+    if (!object) continue;
+    if (object.fogTween) { object.fogTween.stop(); object.fogTween = null; }
+    object.setAlpha(1);
+    if (!object.fogCleanupBound) {
+      object.fogCleanupBound = true;
+      object.once('destroy', () => {
+        if (object.fogTween) { object.fogTween.stop(); object.fogTween = null; }
+      });
+    }
+    if (FEATURES.weather && currentWeather === 'fog') {
+      object.fogTween = scene.tweens.add({ targets: object, alpha: 0.4, yoyo: true, repeat: -1, duration: 800 });
+    }
+  }
+}
 
 function applyRandomWeather(scene) {
   const clearChance = 0.5;
@@ -1522,12 +1635,7 @@ function applyRandomWeather(scene) {
   if (windEmitter) windEmitter.stop();
   let letter = '';
   let arrow = '';
-  targetGroup.getChildren().forEach(t => {
-    if (t.fogTween) { t.fogTween.stop(); t.fogTween = null; }
-    t.setAlpha(1);
-    if (t.jester && t.jester.fogTween) { t.jester.fogTween.stop(); t.jester.fogTween = null; }
-    if (t.jester) t.jester.setAlpha(1);
-  });
+  targetGroup.getChildren().forEach(t => applyTargetWeather(scene, t));
   if (currentWeather === 'wind') {
     windForce.x = Phaser.Math.Between(-100, 100);
     windForce.y = Phaser.Math.Between(-100, 100);
@@ -1542,12 +1650,6 @@ function applyRandomWeather(scene) {
     }
   } else if (currentWeather === 'fog') {
     letter = 'F';
-    targetGroup.getChildren().forEach(t => {
-      t.fogTween = scene.tweens.add({ targets: t, alpha: 0.4, yoyo: true, repeat: -1, duration: 800 });
-      if (t.jester) {
-        t.jester.fogTween = scene.tweens.add({ targets: t.jester, alpha: 0.4, yoyo: true, repeat: -1, duration: 800 });
-      }
-    });
     if (fogEmitter) fogEmitter.start();
   } else if (currentWeather === 'rain') {
     letter = 'R';
@@ -1714,6 +1816,7 @@ function dailyMarketUpdate() {
 
 // Advance the calendar by a number of days
 function advanceDays(days = 1) {
+  Campaign.advance(days);
   for (let i = 0; i < days; i++) {
     currentDay++;
     if (currentDay > 30) {
@@ -1722,11 +1825,13 @@ function advanceDays(days = 1) {
     }
   }
   if (dateText) dateText.setText(getDateString());
+  SaveManager.save();
 }
 
 // Alias used by the day/night cycle to advance time
 function advanceCalendarDays(days = 1) {
   advanceDays(days);
+  dailyMarketUpdate();
 }
 
 function isMenuOpen() {
@@ -1809,13 +1914,24 @@ function pickClass() {
 }
 
 function preload() {
+  this.assetLoadFailed = false;
+  this.load.on('progress', value => window.MobileGame?.loadProgress(value));
+  this.load.on('loaderror', () => {
+    this.assetLoadFailed = true;
+    window.MobileGame?.loadFailed();
+  });
   this.load.image('logo', 'logo.png');
-  for (let i = 1; i <= 10; i++) {
+  for (let i = 1; !window.MobileGame && i <= 10; i++) {
     this.load.image(`intro${i}`, `intro${i}.png`);
   }
   this.load.image('shop', 'shop.png');
   this.load.image('platform', 'platform.png');
   this.load.image('executionerHead', 'executionerhead.png');
+  this.load.image('executionerFigure', 'assets/executioner-v2.png');
+  this.load.atlas('castHeads','assets/cast-heads-v2.png','assets/cast-heads-v2.json');
+  this.load.atlas('castBodies','assets/cast-bodies-v2.png','assets/cast-bodies-v2.json');
+  this.load.atlas('castJesters','assets/cast-jesters-v2.png','assets/cast-jesters-v2.json');
+  this.load.atlas('castWeapons','assets/cast-weapons-v2.png','assets/cast-weapons-v2.json');
   this.load.image('executionerBody', 'executionerbody.png');
   this.load.image('escortHead', 'escorthead.png');
   this.load.image('escortBody', 'escortbody.png');
@@ -1842,20 +1958,12 @@ function preload() {
   }
   this.load.image('background', 'background.png');
   this.load.image('backgroundSky', 'background_bluesky.png');
-  for (let i = 1; i <= 87; i++) {
-    const headKey = `prisonerHead${i}`;
-    const headFile = i === 1 ? 'prisonerhead.png' : `prisonerhead${i}.png`;
-    this.load.image(headKey, headFile);
-  }
+  // All townsfolk faces are supplied by castHeads; legacy numeric IDs still
+  // select the same illustrated variants through CastArt.head.
   for (let i = 1; i <= 3; i++) {
     const bodyKey = `prisonerBody${i}`;
     const bodyFile = i === 1 ? 'prisonerbody.png' : `prisonerbody${i}.png`;
     this.load.image(bodyKey, bodyFile);
-  }
-  for (let i = 1; i <= 4; i++) {
-    const headKey = `priestHead${i}`;
-    const headFile = i === 1 ? 'prisonerhead_priest.png' : `prisonerhead_priest${i}.png`;
-    this.load.image(headKey, headFile);
   }
   this.load.image('priestBody', 'prisonerbody_priest.png');
   this.load.image('jesterHead1', 'jesterhead.png');
@@ -1866,25 +1974,42 @@ function preload() {
   this.load.image('jesterBody3', 'jesterbody3.png');
   this.load.image('jesterHead4', 'jesterhead4.png');
   this.load.image('jesterBody4', 'jesterbody4.png');
-  this.load.image('birdBlackLeft', 'bird_black_left.png');
-  this.load.image('birdBlackRight', 'bird_black_right.png');
-  this.load.image('birdWhiteLeft', 'bird_white_left.png');
-  this.load.image('birdWhiteRight', 'bird_white_right.png');
-  // Load city backgrounds using explicit file mappings to handle inconsistent
-  // naming.
-  Object.entries(cityBackgrounds).forEach(([name, file]) => {
+  // Mobile starts with only the saved town. Other towns remain in the offline
+  // package and are decoded on travel, avoiding fourteen large startup images.
+  Object.entries(cityBackgrounds).filter(([name]) => !window.MobileGame || name === currentCity).forEach(([name, file]) => {
     const key = `background-${name.toLowerCase()}`;
     this.load.image(key, file);
   });
   // Load dedicated travel backgrounds.
-  travelBackgrounds.forEach((file, i) => {
+  if (!window.MobileGame) travelBackgrounds.forEach((file, i) => {
     const key = `background-travel${i + 1}`;
     this.load.image(key, file);
   });
 }
 
+const pendingCityBackgrounds = new Map();
+function ensureCityBackground(scene, name) {
+  const key = `background-${name.toLowerCase()}`;
+  if (scene.textures.exists(key)) return Promise.resolve();
+  if (pendingCityBackgrounds.has(key)) return pendingCityBackgrounds.get(key);
+  const pending = new Promise((resolve, reject) => {
+    const img = new Image();
+    const timeout = setTimeout(() => { img.onload = img.onerror = null; reject(new Error('The town artwork took too long to load.')); }, 20000);
+    img.onload = () => {
+      clearTimeout(timeout);
+      if (!scene.textures.exists(key)) scene.textures.addImage(key, img);
+      resolve();
+    };
+    img.onerror = () => { clearTimeout(timeout); reject(new Error('The town artwork could not load.')); };
+    img.src = cityBackgrounds[name];
+  }).finally(() => pendingCityBackgrounds.delete(key));
+  pendingCityBackgrounds.set(key, pending);
+  return pending;
+}
+
 function create() {
   const scene = this;
+  if (scene.assetLoadFailed) { scene.scene.pause(); return; }
 
   // Background and stage art
   skyRect = scene.add.image(CENTER_X, CENTER_Y, 'backgroundSky');
@@ -1927,7 +2052,7 @@ function create() {
     cloudLayerFar = scene.add.group();
     cloudLayerNear = scene.add.group();
 
-    for (let i = 0; i < 11; i++) {
+    for (let i = 0; i < 4; i++) {
       const cloud = scene.add.image(
         Phaser.Math.Between(0, config.width),
         Phaser.Math.Between(CLOUD_MIN_Y, CLOUD_MAX_Y),
@@ -1940,7 +2065,7 @@ function create() {
       cloudLayerFar.add(cloud);
     }
 
-    for (let i = 0; i < 7; i++) {
+    for (let i = 0; i < 2; i++) {
       const cloud = scene.add.image(
         Phaser.Math.Between(0, config.width),
         Phaser.Math.Between(CLOUD_MIN_Y + 20, CLOUD_MAX_Y),
@@ -1959,7 +2084,7 @@ function create() {
   // UI elements remain on top and unaffected by the darkening effect.
   this.dayNight.init(scene, { backCloudsDepth: -3, overlayDepth: -1.5 });
   // Start the calendar at sunrise on January 1st
-  this.dayNight.timeOfDay = this.dayNight.config.sunriseStart;
+  this.dayNight.timeOfDay = restoredTimeOfDay;
   this.dayNight.update(0);
   this.dayNight.onFullDay(() => { advanceCalendarDays(1); });
   // Only begin a new execution round if the player isn't already interacting
@@ -1971,7 +2096,7 @@ function create() {
     }
   });
 
-  stage = scene.add.image(CENTER_X, STAGE_Y, 'platform').setDepth(0);
+  stage = scene.add.image(CENTER_X, STAGE_Y, 'platform').setDepth(0).setAlpha(currentCity in cityBackdropOffsets ? 0 : 1);
   stageBlood = scene.add.rectangle(CENTER_X, STAGE_Y, 1, 10, 0x770000)
     .setOrigin(0.5, 1)
     .setVisible(false)
@@ -1993,14 +2118,13 @@ function create() {
   // Executioner, starts off-screen and walks in on first spawn
   // Place him behind the prisoner but in front of the background
   executioner = scene.add.container(CENTER_X, CHARACTER_BASE_Y).setDepth(0.5);
-  executionerWeapon = scene.add.image(0, -20, `weapons${player.weaponLevel}`)
+  executionerWeapon = CastArt.weapon(scene.add.image(42, -15, `weapons${player.weaponLevel}`),player.weaponLevel)
     .setOrigin(0.5)
     .setAngle(135);
-  const execBody = scene.add.image(0, 50, 'executionerBody')
-    .setOrigin(0.5, 1);
-  const execHead = scene.add.image(0, -30, 'executionerHead')
-    .setOrigin(0.5, 0.5);
-  executioner.add([executionerWeapon, execBody, execHead]);
+  const execBody = scene.add.image(0, 50, 'executionerFigure')
+    .setOrigin(0.5, 1).setDisplaySize(120, 180);
+  executioner.add([execBody, executionerWeapon]);
+  scene.tweens.add({targets:execBody,y:48,duration:1100,yoyo:true,repeat:-1,ease:'Sine.easeInOut'});
   executioner.setVisible(false);
 
   // Condemned figure with separate head and body
@@ -2009,8 +2133,10 @@ function create() {
   // Position it so the top still aligns with the neck
   prisonerBody = scene.add.image(0, 50, prisonerBodyKey)
     .setOrigin(0.5, 1);
-  prisonerHead = scene.add.container(0, -20);
-  prisonerHeadSprite = scene.add.image(0, 0, prisonerHeadKey).setOrigin(0.5);
+  CastArt.body(prisonerBody,prisonerBodyKey);
+  prisonerHead = scene.add.container(0, -64);
+  prisonerHeadSprite = scene.add.image(0, 0, 'castHeads', '0').setOrigin(0.5);
+  CastArt.head(prisonerHeadSprite,prisonerHeadKey);
   prisonerHead.add(prisonerHeadSprite);
   // Aim arrow points upward for angle selection
   // Larger arrow for angle and power selection
@@ -2018,6 +2144,7 @@ function create() {
     .setOrigin(0.5, 1)
     .setVisible(false);
   prisonerHead.add(aimArrow);
+  scene.launchGuide = scene.add.graphics().setDepth(24);
   prisoner.add([prisonerBody, prisonerHead]);
   prisoner.setVisible(false);
 
@@ -2025,15 +2152,17 @@ function create() {
   leftEscort = scene.add.container(0, 0);
   const leftBody = scene.add.image(0, 50, 'escortBody')
     .setOrigin(0.5, 1);
-  const leftHead = scene.add.image(0, -20, 'escortHead')
+  const leftHead = scene.add.image(0, -64, 'escortHead')
     .setOrigin(0.5, 0.5);
   leftEscort.add([leftBody, leftHead]);
+  CastArt.body(leftBody,'escortBody');CastArt.head(leftHead,'escortHead');
   rightEscort = scene.add.container(0, 0);
   const rightBody = scene.add.image(0, 50, 'escortBody')
     .setOrigin(0.5, 1);
-  const rightHead = scene.add.image(0, -20, 'escortHead')
+  const rightHead = scene.add.image(0, -64, 'escortHead')
     .setOrigin(0.5, 0.5);
   rightEscort.add([rightBody, rightHead]);
+  CastArt.body(rightBody,'escortBody');CastArt.head(rightHead,'escortHead');
   leftEscort.setVisible(false);
   rightEscort.setVisible(false);
 
@@ -2189,7 +2318,7 @@ function create() {
     });
   }
 
-  // Logo drop animation before showing the intro
+  // The mobile journal owns onboarding; retain the legacy intro as a fallback.
   // Ensure the logo appears above the intro
   logoBg = scene.add.rectangle(CENTER_X, CENTER_Y, GAME_WIDTH, GAME_HEIGHT, 0x000000).setDepth(199);
   logoContainer = scene.add.container(CENTER_X, -260).setDepth(200);
@@ -2211,7 +2340,10 @@ function create() {
           { angle: { from: -15, to: 15 }, duration: 300, yoyo: true, ease: 'Sine.easeInOut' },
           { angle: { from: -10, to: 10 }, duration: 400, yoyo: true, ease: 'Sine.easeInOut' },
           { angle: { from: -5, to: 5 }, duration: 500, yoyo: true, ease: 'Sine.easeInOut' },
-          { angle: 0, duration: 600, ease: 'Sine.easeInOut', onComplete: showIntroAfterLogo }
+          { angle: 0, duration: 600, ease: 'Sine.easeInOut', onComplete: () => {
+            if (window.MobileGame) { startGame(); window.MobileGame.ready(scene); }
+            else showIntroAfterLogo();
+          } }
         ]
       });
     }
@@ -2244,7 +2376,11 @@ function create() {
     xpBarFill.setVisible(true);
     setGoldChestVisible(true);
     gameStarted = true;
-    if (executionerIntro) {
+    if (window.MobileGame) {
+      executioner.setVisible(true);
+      executioner.setPosition(CENTER_X - 100, CHARACTER_BASE_Y);
+      spawnPrisoner(scene, false);
+    } else if (executionerIntro) {
       introExecutioner(scene, () => spawnPrisoner(scene, false));
     } else {
       spawnPrisoner(scene, false);
@@ -2465,11 +2601,20 @@ function create() {
   gWeather.fillStyle(0x99ccff, 1);
   gWeather.fillRect(0, 0, 2, 10);
   gWeather.generateTexture('raindrop', 2, 10);
-  gWeather.clear();
-  gWeather.fillStyle(0xffffff, 0.6);
-  gWeather.fillRect(0, 0, 20, 8);
-  gWeather.generateTexture('fog', 20, 8);
   gWeather.destroy();
+  // A soft ellipse makes drifting mist, without hundreds of hard-edged tiles.
+  if (!scene.textures.exists('mist-soft')) {
+    const mist = scene.textures.createCanvas('mist-soft', 256, 128);
+    const ctx = mist.context;
+    ctx.scale(2, 1);
+    const gradient = ctx.createRadialGradient(64, 64, 0, 64, 64, 64);
+    gradient.addColorStop(0, 'rgba(210,230,224,0.7)');
+    gradient.addColorStop(0.45, 'rgba(210,230,224,0.3)');
+    gradient.addColorStop(1, 'rgba(210,230,224,0)');
+    ctx.fillStyle = gradient;
+    ctx.fillRect(0, 0, 128, 128);
+    mist.refresh();
+  }
   // Place weather effects behind UI overlays so menus appear on top
   rainParts = scene.add.particles('raindrop').setDepth(28);
   rainEmitter = rainParts.createEmitter({
@@ -2477,19 +2622,21 @@ function create() {
     y: { min: WEATHER_MIN_Y, max: WEATHER_MAX_Y },
     lifespan: 800,
     speedY: { min: 400, max: 600 },
-    quantity: 24,
+    quantity: 6,
     frequency: 80,
     on: false
   });
-  fogParts = scene.add.particles('fog').setDepth(28);
+  fogParts = scene.add.particles('mist-soft').setDepth(28);
   fogEmitter = fogParts.createEmitter({
     x: { min: -50, max: GAME_WIDTH + 50 },
     y: { min: FOG_MIN_Y, max: FOG_MAX_Y },
     lifespan: 6000,
     speedX: { min: -20, max: 20 },
     speedY: { min: -5, max: 5 },
-    quantity: 10,
-    alpha: { start: 0.8, end: 0.1 },
+    quantity: 1,
+    frequency: 300,
+    scale: { start: 0.8, end: 1.5 },
+    alpha: { start: 0.25, end: 0 },
     on: false
   });
 
@@ -2501,9 +2648,9 @@ function create() {
   windParts = scene.add.particles('leaf').setDepth(28);
   windEmitter = windParts.createEmitter({
     lifespan: 4000,
-    // Increase particle output dramatically so the wind effect is visible
-    quantity: 14,
-    frequency: 16,
+    // Sparse leaves keep wind readable without obscuring targets.
+    quantity: 2,
+    frequency: 100,
     speedY: { min: 20, max: 140 },
     scale: { start: 1, end: 0 },
     rotate: { min: -180, max: 180 },
@@ -2649,7 +2796,7 @@ function create() {
   const sqBodyKey = `prisonerBody${Phaser.Math.Between(1, 3)}`;
   const sqHeadKey = `prisonerHead${Phaser.Math.Between(1, 87)}`;
   const sqBody = scene.add.image(0, 0, sqBodyKey).setOrigin(0.5, 1).setScale(1);
-  const sqHead = scene.add.image(0, -80, sqHeadKey).setOrigin(0.5).setScale(1);
+  const sqHead = CastArt.head(scene.add.image(0, -80, 'castHeads', '0'), sqHeadKey);
   storagePeasant = scene.add.container(0, 0, [sqBody, sqHead]);
   storagePeasant.setPosition(400, 550);
   upgradeButton = scene.add.image(400, 290, 'upgradeButton')
@@ -2702,7 +2849,7 @@ function create() {
   const wqBodyKey = `prisonerBody${Phaser.Math.Between(1, 3)}`;
   const wqHeadKey = `prisonerHead${Phaser.Math.Between(1, 87)}`;
   const wqBody = scene.add.image(0, 0, wqBodyKey).setOrigin(0.5, 1).setScale(1);
-  const wqHead = scene.add.image(0, -80, wqHeadKey).setOrigin(0.5).setScale(1);
+  const wqHead = CastArt.head(scene.add.image(0, -80, 'castHeads', '0'), wqHeadKey);
   weaponPeasant = scene.add.container(0, 0, [wqBody, wqHead]);
   weaponPeasant.setPosition(400, 550);
   const weaponsClose = scene.add.image(700, 0, 'signClose')
@@ -2813,7 +2960,7 @@ function create() {
   const bodyKey = `prisonerBody${Phaser.Math.Between(1, 3)}`;
   const headKey = `prisonerHead${Phaser.Math.Between(1, 87)}`;
   const body = scene.add.image(0, 0, bodyKey).setOrigin(0.5, 1).setScale(1);
-  const head = scene.add.image(0, -80, headKey).setOrigin(0.5).setScale(1);
+  const head = CastArt.head(scene.add.image(0, -80, 'castHeads', '0'), headKey);
   marketPrisoner = scene.add.container(400, 550, [body, head]);
   shopContainer.add(marketChatterBubble);
   shopContainer.add(marketChatterText);
@@ -2895,7 +3042,8 @@ function create() {
   tradeSellBtns = [s1, s10, sMax];
 
   // Set up first day's prices and gossip
-  dailyMarketUpdate();
+  if (restoredMarket) { updateMarketUI(); restoredMarket = false; }
+  else dailyMarketUpdate();
 
   SaveManager.startAutoSave();
   updateUnlockButtons(scene);
@@ -2906,11 +3054,13 @@ function create() {
     .setVisible(false);
 
   // Input key for timing
-  scene.input.keyboard.on('keydown-SPACE', () => {
-    if (swingActive && inputEnabled) endSwing(scene);
+  scene.input.keyboard.on('keydown-SPACE', event => {
+    if (event.repeat || event.target?.closest?.('button')) return;
+    if (window.MobileGame) window.MobileGame.strike();
+    else if (swingActive && inputEnabled) endSwing(scene);
   });
   scene.input.on('pointerdown', () => {
-    if (!inputEnabled || menuOpen) return;
+    if (!inputEnabled || menuOpen || window.MobileGame?.isPaused()) return;
     if (awaitingAngle) {
       chooseAngle(scene);
     } else if (awaitingPower) {
@@ -2921,6 +3071,13 @@ function create() {
   });
 
   // Targets spawn with each prisoner
+  if (window.MobileGame) {
+    scene.tweens.killTweensOf(logoContainer);
+    scene.time.delayedCall(1, () => {
+      startGame();
+      window.MobileGame.ready(scene);
+    });
+  }
 }
 
 let swingDirection = 1;
@@ -3044,23 +3201,25 @@ function updateZones() {
 // Purchase a fame boosting upgrade
 function buyUpgrade(scene, index) {
   const u = gameUpgrades[index];
-  if (u.purchased || fame < u.fameReq) return;
+  if (!u || u.purchased || fame < u.fameReq || u.mult <= fameMultiplier) return false;
   if (player.gold >= u.cost) {
     player.gold -= u.cost;
     goldText.setText(formatGold(player.gold));
-    fameMultiplier = u.mult;
+    fameMultiplier = Math.max(fameMultiplier, u.mult);
     u.purchased = true;
     if (u.ui && u.ui.buy) {
       u.ui.buy.setText('Bought').disableInteractive();
     }
     SaveManager.save();
+    return true;
   }
+  return false;
 }
 
 // Buying from the trading market
 function buyMarketItem(scene, index, qty = 1) {
   const item = marketItems[index];
-  if (fame < item.fameReq) return;
+  if (!item || !Number.isSafeInteger(qty) || qty <= 0 || fame < item.fameReq) return 0;
   qty = Math.min(qty, item.stock || 0);
   const cost = item.currentBuy * qty;
   if (qty > 0 && player.gold >= cost && getInventoryCount() + qty <= player.maxStorage) {
@@ -3071,20 +3230,26 @@ function buyMarketItem(scene, index, qty = 1) {
     updateMarketUI();
     showMarketQuote(sellingQuotes);
     SaveManager.save();
+    return qty;
   }
+  return 0;
 }
 
 // Selling items the player owns
 function sellMarketItem(scene, index, qty = 1) {
   const item = marketItems[index];
+  if (!item || !Number.isSafeInteger(qty) || qty <= 0) return 0;
   if ((inventory[item.name] || 0) >= qty) {
     inventory[item.name] -= qty;
     item.stock = (item.stock || 0) + qty;
     addGold(scene, item.currentSell * qty);
+    Campaign.state.sold += qty;
     updateMarketUI();
     showMarketQuote(buyingQuotes);
     SaveManager.save();
+    return qty;
   }
+  return 0;
 }
 
 
@@ -3429,7 +3594,7 @@ function upgradeWeapon(scene) {
 // Update executioner's carried weapon to current level
 function updateExecutionerWeaponTexture() {
   if (executionerWeapon) {
-    executionerWeapon.setTexture(`weapons${player.weaponLevel}`);
+    CastArt.weapon(executionerWeapon,player.weaponLevel);
   }
 }
 
@@ -3559,6 +3724,8 @@ function updateBackground(scene) {
     backgroundRect.setTexture('background');
   }
   setBackdropCover(backgroundRect, GAME_WIDTH, GAME_HEIGHT, true);
+  backgroundRect.y -= cityBackdropOffsets[currentCity] || 0;
+  if (stage) stage.setAlpha(currentCity in cityBackdropOffsets ? 0 : 1);
 }
 
 function selectCity(scene, city) {
@@ -3625,9 +3792,7 @@ function beheadPrisoner(scene, bloodAmount, angleDeg, power = 1) {
   const corpse = scene.add.image(prisoner.x, prisoner.y + 50, prisonerBodyKey)
     .setOrigin(0.5, 1)
     .setDepth(0.5);
-  if (prisonerClass.name !== 'Clergy') {
-    corpse.setTint(prisonerClass.color);
-  }
+  CastArt.body(corpse,prisonerBodyKey,prisonerClass.name);
   scene.physics.world.enable(corpse);
   bodyGroup.add(corpse);
   corpse.isCorpse = true;
@@ -3683,9 +3848,10 @@ function beheadPrisoner(scene, bloodAmount, angleDeg, power = 1) {
   prisoner.setVisible(false);
 
   // Spawn a new flying head sprite
-  const flyingHead = scene.add.image(headX0, headY0, prisonerHeadKey)
+  const flyingHead = scene.add.image(headX0, headY0, 'castHeads', '0')
     .setOrigin(0.5)
     .setDepth(0.8);
+  CastArt.head(flyingHead,prisonerHeadKey);
   scene.physics.world.enable(flyingHead);
   bodyGroup.add(flyingHead);
   flyingHead.isCorpse = true;
@@ -3712,15 +3878,7 @@ function beheadPrisoner(scene, bloodAmount, angleDeg, power = 1) {
   } else {
     hBody.setGravityY(0);
   }
-  const speed = 250 * finalStrikePower;
-  let vx = Math.sin(rad) * speed;
-  if (FEATURES.weather && currentWeather === 'wind') {
-    vx += windForce.x;
-  }
-  let vy = -Math.cos(rad) * speed;
-  if (FEATURES.weather && currentWeather === 'wind') {
-    vy += windForce.y;
-  }
+  const {x:vx,y:vy} = ChopCore.launchVelocity(angle,power,weaponPowerMultiplier,FEATURES.weather && currentWeather === 'wind' ? windForce : {x:0,y:0});
   hBody.setVelocity(vx, vy);
   hBody.setAngularVelocity(Phaser.Math.Between(-200, 200));
 
@@ -3799,8 +3957,8 @@ function choosePower(scene) {
 function slashExecutioner(scene, angle, onComplete) {
   if (slashTween) slashTween.stop();
   slashTween = scene.tweens.add({
-    targets: executioner,
-    angle: { from: 0, to: -angle },
+    targets: executionerWeapon,
+    angle: { from: 135, to: 15 - angle * 0.25 },
     duration: 150,
     yoyo: true,
     ease: 'Cubic.easeOut',
@@ -3863,7 +4021,7 @@ function resetHead(scene) {
     scene.children.remove(prisonerHead);
     prisoner.add(prisonerHead);
   }
-  prisonerHead.setPosition(0, -20);
+  prisonerHead.setPosition(0, -64);
   prisonerHead.setRotation(0);
   prisonerBody.setAngle(0);
   prisonerBody.y = 50;
@@ -3908,8 +4066,8 @@ function spawnPrisoner(scene, fromRight, withTarget = true) {
     prisonerHeadKey = `prisonerHead${headVariant}`;
     prisonerBodyKey = `prisonerBody${bodyVariant}`;
   }
-  prisonerBody.setTexture(prisonerBodyKey);
-  prisonerHeadSprite.setTexture(prisonerHeadKey);
+  CastArt.body(prisonerBody,prisonerBodyKey,prisonerClass.name);
+  CastArt.head(prisonerHeadSprite,prisonerHeadKey);
   // Spawn up to 3 targets (jesters, barrels, etc.) each time a prisoner appears
   // The number of targets is chosen at random to keep gameplay varied
   if (withTarget) {
@@ -3924,10 +4082,6 @@ function spawnPrisoner(scene, fromRight, withTarget = true) {
   }
   if (withTarget && shouldSpawnYorkFlyingIslandEvent()) {
     spawnYorkFlyingIslandEvent(scene);
-  }
-  prisonerBody.clearTint();
-  if (prisonerClass.name !== 'Clergy') {
-    prisonerBody.setTint(prisonerClass.color);
   }
   baseSwingSpeed = prisonerClass.speed;
   swingSpeed = baseSwingSpeed * speedMultiplier;
@@ -4077,7 +4231,7 @@ function endSwing(scene) {
     killCount++;
     killStreak++;
     if (killStreak > 1) {
-      speedMultiplier *= 1.05;
+      speedMultiplier = Math.min(1.65, speedMultiplier * 1.035);
     }
     swingSpeed = baseSwingSpeed * speedMultiplier;
     killText.setText(`Kills: ${killCount}`);
@@ -4108,6 +4262,7 @@ function endSwing(scene) {
   // Show popup
   scene.popupText.setText(message);
   scene.popupText.setVisible(true);
+  window.MobileGame?.feedback(!missed ? `${message} · +${goldGain} gold · ${killStreak} in a row` : `${message} · streak reset`, !missed);
 
   SaveManager.save();
 
@@ -4131,16 +4286,20 @@ function endSwing(scene) {
 }
 
 function gainFame(scene, npc, amount = 1) {
-  const fameGain = amount * fameMultiplier;
-  fame += fameGain;
+  const previousFame = fame;
+  fame = Math.max(0, fame + amount * (amount > 0 ? fameMultiplier : 1));
+  const fameGain = fame - previousFame;
   fameText.setText(formatGold(Math.floor(fame)));
-  addXP(scene, 5 * amount);
+  if (amount > 0) addXP(scene, 5 * amount);
   SaveManager.save();
   const coinsToSpawn = Math.max(0, Math.floor(fameGain));
   for (let i = 0; i < coinsToSpawn; i++) {
     scene.time.delayedCall(i * 100, () => spawnFameCoin(scene));
   }
-  const popup = scene.add.text(npc.x, npc.y - 40, `+${amount} Fame`, {
+  const fameLabel = `${fameGain > 0 ? '+' : ''}${Number(fameGain.toFixed(1))} fame`;
+  const labels = {woodenShield:'Shield broken',explodingBarrel:'Barrel lit',royal:'Royal target',holyMonk:'Avoid the monks',bird:'Crow hit'};
+  if (amount !== 0) window.MobileGame?.feedback(`${labels[npc.targetType] || (npc.isYorkTallWaver ? 'High target' : 'Target hit')} · ${fameLabel}${npc.targetType === 'bird' ? ' · +1 gold' : ''}`, amount > 0);
+  const popup = scene.add.text(npc.x, npc.y - 40, fameLabel, {
     font: '20px monospace',
     fill: '#ffff00'
   }).setOrigin(0.5);
@@ -4172,9 +4331,14 @@ function handleTargetHit(scene, target, head) {
   if (target.collected) return;
   if (target.targetType === 'woodenShield' && head && head.power < 1.5) {
     head.body.setVelocityX(-head.body.velocity.x * 0.5);
+    if (!target.shieldFeedbackAt || scene.time.now - target.shieldFeedbackAt > 700) {
+      target.shieldFeedbackAt = scene.time.now;
+      window.MobileGame?.feedback('Shield blocked · use more power', false);
+    }
     return;
   }
   target.collected = true;
+  if (target.targetType !== 'holyMonk' && !(target.targetType === 'bird' && target.birdKind === 'dove')) Campaign.state.targets++;
   if (target.moveTween) { target.moveTween.stop(); target.moveTween = null; }
   if (target.yorkWaveTween) { target.yorkWaveTween.stop(); target.yorkWaveTween = null; }
   const jester = target.jester;
@@ -4186,7 +4350,9 @@ function handleTargetHit(scene, target, head) {
   if (target.targetType === 'bird') {
     bloodFireworkEmitter.explode(25, target.x, target.y);
     if (target.birdKind === 'dove') {
+      const lostFame = Math.min(1, fame);
       fame = Math.max(0, fame - 1);
+      window.MobileGame?.feedback(`Avoid the doves · ${lostFame > 0 ? `-${lostFame} fame` : 'no fame left to lose'}`, false);
       fameText.setText(formatGold(Math.floor(fame)));
       fameGain = 0;
     } else {
@@ -4194,7 +4360,7 @@ function handleTargetHit(scene, target, head) {
       addGold(scene, 1);
       fameGain = 0;
     }
-    gainFame(scene, target, fameGain);
+    SaveManager.save();
     targetGroup.remove(target);
     target.body.setVelocity(0, 0);
     target.body.setAllowGravity(false);
@@ -4359,30 +4525,34 @@ function getFlyingIslandMetrics(islandEvent) {
   };
 }
 
-function createFlyingIslandPlaceholder(scene) {
+function createFlyingIsland(scene) {
   const island = scene.add.container(0, 0).setDepth(23);
   const shadow = scene.add.ellipse(0, 24, 220, 24, 0x000000, 0.16);
-  const underside = scene.add.ellipse(0, 18, 214, 64, 0x7a4a1f, 1);
-  const undersideFront = scene.add.rectangle(0, 28, 196, 34, 0x6b421b, 0.9).setStrokeStyle(3, 0x4b2910, 0.35);
-  const dirtLip = scene.add.ellipse(0, 0, 210, 36, 0x8a5a2b, 1);
-  const greenBase = scene.add.ellipse(0, -18, 236, 54, 0x27b857, 1);
-  const greenTrim = scene.add.ellipse(0, -10, 226, 20, 0x1d8f44, 0.55);
-  const greenHighlight = scene.add.ellipse(-34, -24, 126, 18, 0x72f08c, 0.82);
-  const holeRim = scene.add.ellipse(30, -22, 28, 12, 0x143d22, 0.95);
-  const hole = scene.add.circle(30, -20, 8, 0x050505, 0.95);
+  const underside = scene.add.ellipse(0, 18, 214, 64, 0x725846, 1).setStrokeStyle(4, 0x19363c);
+  const undersideFront = scene.add.polygon(0, 31, [0,0, 196,0, 184,20, 149,27, 135,39, 97,31, 67,38, 43,25, 12,20], 0x685343).setStrokeStyle(3, 0x19363c);
+  const dirtLip = scene.add.ellipse(0, 0, 210, 36, 0xb18a55, 1).setStrokeStyle(3, 0x19363c);
+  const greenBase = scene.add.ellipse(0, -18, 236, 54, 0x598e76, 1).setStrokeStyle(4, 0x19363c);
+  const greenTrim = scene.add.ellipse(0, -10, 226, 20, 0x376b60, 0.65);
+  const greenHighlight = scene.add.ellipse(-34, -24, 126, 18, 0x9cc49a, 0.6);
+  const holeRim = scene.add.ellipse(30, -22, 28, 12, 0xd8bb78, 1).setStrokeStyle(2, 0x19363c);
+  const hole = scene.add.circle(30, -20, 8, 0x10272c, 1);
   const holeShade = scene.add.ellipse(30, -16, 22, 8, 0x000000, 0.28);
-  const rootLeft = scene.add.rectangle(-56, 42, 7, 18, 0x5a3315, 1).setAngle(-6);
-  const rootMid = scene.add.rectangle(0, 44, 6, 16, 0x5a3315, 1);
-  const rootRight = scene.add.rectangle(54, 42, 7, 18, 0x5a3315, 1).setAngle(6);
-  const rock1 = scene.add.circle(-68, 26, 12, 0x6b421b, 1);
-  const rock2 = scene.add.circle(-14, 34, 10, 0x5f3918, 1);
-  const rock3 = scene.add.circle(40, 32, 11, 0x6e4520, 1);
-  const rock4 = scene.add.circle(80, 24, 10, 0x5b3516, 1);
-  const flagPole = scene.add.rectangle(72, -38, 4, 51, 0xe9e0c7, 1).setOrigin(0.5, 1);
-  const flag = scene.add.triangle(78, -79, 0, 0, 21, 9, 0, 18, 0xff4155, 1).setOrigin(0, 0.5);
-  const flagTip = scene.add.circle(72, -91, 3, 0xffe8a3, 1);
+  const rootLeft = scene.add.rectangle(-56, 42, 5, 18, 0xb18a55, 1).setAngle(-12);
+  const rootMid = scene.add.rectangle(0, 44, 4, 16, 0xb18a55, 1).setAngle(8);
+  const rootRight = scene.add.rectangle(54, 42, 5, 18, 0xb18a55, 1).setAngle(12);
+  const rock1 = scene.add.ellipse(-68, 26, 23, 13, 0x9e8b70, 1).setStrokeStyle(2, 0x4d5148);
+  const rock2 = scene.add.ellipse(-14, 34, 19, 12, 0x837b68, 1).setStrokeStyle(2, 0x4d5148);
+  const rock3 = scene.add.ellipse(40, 32, 24, 14, 0x9e8b70, 1).setStrokeStyle(2, 0x4d5148);
+  const rock4 = scene.add.ellipse(80, 24, 18, 11, 0x837b68, 1).setStrokeStyle(2, 0x4d5148);
+  const grass = scene.add.graphics().lineStyle(2, 0xc4d1a1, 0.7);
+  [[-82,-22],[-59,-13],[-25,-29],[4,-12],[61,-19],[88,-24]].forEach(([x,y]) => {
+    grass.lineBetween(x-3,y,x,y-4); grass.lineBetween(x,y-4,x+3,y);
+  });
+  const flagPole = scene.add.rectangle(72, -38, 4, 51, 0xd8bb78, 1).setOrigin(0.5, 1).setStrokeStyle(1, 0x19363c);
+  const flag = scene.add.triangle(78, -79, 0, 0, 21, 9, 0, 18, 0xd7836d, 1).setOrigin(0, 0.5).setStrokeStyle(2, 0x19363c);
+  const flagTip = scene.add.circle(72, -91, 3, 0xf4d18a, 1).setStrokeStyle(1, 0x19363c);
   const flagGroup = scene.add.container(0, 0, [flagPole, flag, flagTip]);
-  island.add([shadow, underside, undersideFront, dirtLip, greenBase, greenTrim, greenHighlight, holeRim, holeShade, hole, rootLeft, rootMid, rootRight, rock1, rock2, rock3, rock4, flagGroup]);
+  island.add([shadow, underside, undersideFront, dirtLip, greenBase, greenTrim, greenHighlight, grass, holeRim, holeShade, hole, rootLeft, rootMid, rootRight, rock1, rock2, rock3, rock4, flagGroup]);
   island.flagGroup = flagGroup;
   island.flagPole = flagPole;
   island.flag = flag;
@@ -4418,7 +4588,7 @@ function spawnYorkFlyingIslandEvent(scene) {
   const targetY = Phaser.Math.Between(Math.floor(GAME_HEIGHT * 0.25), Math.floor(GAME_HEIGHT * 0.6));
   const targetX = Phaser.Math.Between(180, GAME_WIDTH - 180);
   const startX = fromLeft ? -180 : GAME_WIDTH + 180;
-  const island = createFlyingIslandPlaceholder(scene);
+  const island = createFlyingIsland(scene);
   island.setPosition(startX, targetY);
   island.setAlpha(0.96);
   const bobPhase = Phaser.Math.FloatBetween(0, Math.PI * 2);
@@ -4622,20 +4792,18 @@ function completeFlyingIslandHoleSuccess(scene, islandEvent, head) {
 
 function shouldSpawnYorkRingPlatformEvent() {
   if (currentCity !== 'York') return false;
+  if (player.weaponLevel < 8) return false;
   if (yorkRingPlatformEvent && yorkRingPlatformEvent.active) return false;
   return Phaser.Math.Between(1, 100) <= YORK_RING_EVENT_TEST_CHANCE;
 }
 
 function createYorkRingGuard(scene, x, y, facing) {
-  const guardPartScale = 1.12;
   const guard = scene.add.container(x, y).setDepth(21);
-  const body = scene.add.image(0, 0, 'escortBody')
+  const body = CastArt.body(scene.add.image(0, 0, 'escortBody'), 'escortBody')
     .setOrigin(0.5, 1)
-    .setScale(guardPartScale)
     .setFlipX(facing === 'left');
-  const head = scene.add.image(0, -body.displayHeight, 'escortHead')
+  const head = CastArt.head(scene.add.image(0, -114, 'escortHead'), 'escortHead')
     .setOrigin(0.5, 0.5)
-    .setScale(guardPartScale)
     .setFlipX(facing === 'left');
   guard.add([body, head]);
   return guard;
@@ -4740,13 +4908,15 @@ function clearAllTargetsFromRingEvent(scene, triggeringHead) {
 function cleanupYorkRingPlatformEvent(scene) {
   if (!yorkRingPlatformEvent) return;
   const e = yorkRingPlatformEvent;
+  e.active = false;
+  e.phase = 'finished';
   if (e.throwTimer) { e.throwTimer.remove(false); e.throwTimer = null; }
+  if (e.activeRing) scene.tweens.killTweensOf(e.activeRing);
   if (e.activeRing?.sprite?.active) e.activeRing.sprite.destroy();
   e.activeRing = null;
-  if (e.leftPlatformTween) e.leftPlatformTween.stop();
-  if (e.rightPlatformTween) e.rightPlatformTween.stop();
-  if (e.leftGuardTween) e.leftGuardTween.stop();
-  if (e.rightGuardTween) e.rightGuardTween.stop();
+  for (const actor of [e.leftPlatform,e.rightPlatform,e.leftGuard,e.rightGuard]) {
+    if (actor) scene.tweens.killTweensOf(actor);
+  }
   if (e.leftPlatform?.active) e.leftPlatform.destroy();
   if (e.rightPlatform?.active) e.rightPlatform.destroy();
   if (e.leftGuard?.active) e.leftGuard.destroy();
@@ -4756,10 +4926,14 @@ function cleanupYorkRingPlatformEvent(scene) {
 
 function spawnYorkRingPlatformEvent(scene) {
   cleanupYorkRingPlatformEvent(scene);
-  const eventY = Phaser.Math.Between(Math.floor(GAME_HEIGHT * 0.2), Math.floor(GAME_HEIGHT * 0.5));
   const platformScaleX = 0.48;
   const platformScaleY = 0.5;
-  const platformTextureWidth = scene.textures.get('platform').getSourceImage().width;
+  const platformImage = scene.textures.get('platform').getSourceImage();
+  const platformTextureWidth = platformImage.width;
+  // Include the entire ring and its arc, not just the platform's centre.
+  const minEventY = Math.ceil(GAME_HEIGHT * .25 + 38 + YORK_RING_THROW_ARC_HEIGHT + 56 + platformImage.height * platformScaleY * .5);
+  const maxEventY = Math.max(minEventY, CHARACTER_BASE_Y - 180);
+  const eventY = Phaser.Math.Between(minEventY, maxEventY);
   const leftStopX = 0;
   const rightStopX = GAME_WIDTH;
   const offscreenPlatformX = platformTextureWidth * platformScaleX * -1;
@@ -4982,7 +5156,7 @@ function checkFastHeadTargetCrossings(scene) {
         if (didHeadPassThroughMovingRing(head, ring, prevX, prevY, head.x, head.y)) {
           ring.spent = true;
           clearAllTargetsFromRingEvent(scene, head);
-          scene.tweens.killTweensOf(ring.sprite);
+          scene.tweens.killTweensOf(ring);
           if (ring.sprite && ring.sprite.active) ring.sprite.destroy();
           yorkRingPlatformEvent.activeRing = null;
         }
@@ -5013,6 +5187,7 @@ function spawnHolyMonk(scene) {
   monk.collected = false;
   monk.jester = null;
   targetGroup.add(monk);
+  applyTargetWeather(scene, monk);
   const changes = Phaser.Math.Between(1, 2);
   let done = 0;
   const changeEvent = scene.time.addEvent({
@@ -5053,6 +5228,7 @@ function spawnRoyal(scene) {
   royal.collected = false;
   royal.jester = null;
   targetGroup.add(royal);
+  applyTargetWeather(scene, royal);
   scene.tweens.add({
     targets: royal,
     x: stopX,
@@ -5078,7 +5254,8 @@ function spawnBird(scene) {
   const startX = fromRight ? 850 : -50;
   const endX = fromRight ? -50 : 850;
   const kind = Phaser.Math.Between(0, 1) ? 'dove' : 'crow';
-  const bird = scene.add.container(startX, 160).setDepth(20);
+  // Keep the flight lane below the portrait HUD, where players can see and aim.
+  const bird = scene.add.container(startX, 420).setDepth(20);
   bird.targetType = 'bird';
   bird.birdKind = kind;
   bird.fromRight = fromRight;
@@ -5086,10 +5263,12 @@ function spawnBird(scene) {
   scene.physics.world.enable(bird);
   bird.body.setAllowGravity(false);
   bird.body.setImmovable(true);
-  bird.body.setVelocityX(fromRight ? -40 : 40);
+  bird.body.setSize(58,36);
+  bird.body.setOffset(-29,-18);
   bird.collected = false;
   bird.jester = null;
   targetGroup.add(bird);
+  applyTargetWeather(scene, bird);
   bird.moveTween = scene.tweens.add({
     targets: bird,
     x: endX,
@@ -5098,14 +5277,11 @@ function spawnBird(scene) {
     yoyo: true,
     repeat: 0,
     onYoyo: () => {
-      bird.body.setVelocityX(-bird.body.velocity.x);
-      const base = bird.birdKind === 'dove' ? 'birdWhite' : 'birdBlack';
-      const movingRight = bird.body.velocity.x > 0;
-      const dir = movingRight ? 'Right' : 'Left';
-      if (bird.birdSprite) bird.birdSprite.setTexture(base + dir);
+      if (bird.birdSprite) bird.birdSprite.setScale(fromRight?1:-1,1);
     },
     onComplete: () => bird.destroy()
   });
+  bird.once('destroy',()=>bird.moveTween?.stop());
 }
 
 function pickSpacedTargetX(existingTargetXs = []) {
@@ -5138,8 +5314,9 @@ function spawnTarget(scene, existingTargetXs = []) {
   const startX = fromRight ? 850 : -50;
   const targetX = pickSpacedTargetX(existingTargetXs);
   existingTargetXs.push(targetX);
-  const isYorkTallWaver = currentCity === 'York' && type === 'standard' && Phaser.Math.Between(1, 100) <= 35;
-  const maxVisiblePoleHeight = Math.max(540, CHARACTER_BASE_Y - 100);
+  const isYorkTallWaver = currentCity === 'York' && player.weaponLevel >= 8 && type === 'standard' && Phaser.Math.Between(1, 100) <= 35;
+  // Reserve the upper quarter for the mobile HUD and the target's radius.
+  const maxVisiblePoleHeight = Math.max(540, CHARACTER_BASE_Y - 20 - GAME_HEIGHT * .25);
   const tallPoleMax = Math.min(900, maxVisiblePoleHeight);
   const poleHeight = isYorkTallWaver
     ? Phaser.Math.Between(540, tallPoleMax)
@@ -5151,8 +5328,7 @@ function spawnTarget(scene, existingTargetXs = []) {
   const body = scene.add.image(0, 50, 'jesterBody1').setOrigin(0.5, 1);
   const pole = scene.add.rectangle(0, -20, 6, poleHeight, 0x8b4513)
     .setOrigin(0.5, 1);
-  const head = scene.add.image(0, -20, 'jesterHead1').setOrigin(0.5);
-  jester.add([body, pole, head]);
+  jester.add([pole, body]);
 
   const target = scene.add.container(startX, CHARACTER_BASE_Y - 20 - poleHeight).setDepth(20);
   target.targetType = type;
@@ -5174,20 +5350,15 @@ function spawnTarget(scene, existingTargetXs = []) {
   }
 
   let jBodyKey = 'jesterBody1';
-  let jHeadKey = 'jesterHead1';
   if (type === 'woodenShield') {
     jBodyKey = 'jesterBody2';
-    jHeadKey = 'jesterHead2';
   } else if (type === 'explodingBarrel') {
     jBodyKey = 'jesterBody3';
-    jHeadKey = 'jesterHead3';
   }
   if (target.isMoving) {
     jBodyKey = 'jesterBody4';
-    jHeadKey = 'jesterHead4';
   }
-  body.setTexture(jBodyKey);
-  head.setTexture(jHeadKey);
+  CastArt.jester(body,jBodyKey);
 
   target.collected = false;
   target.jester = jester;
@@ -5196,6 +5367,7 @@ function spawnTarget(scene, existingTargetXs = []) {
   target.barrelBlinkEvent = null;
   target.barrelPulseTween = null;
   targetGroup.add(target);
+  applyTargetWeather(scene, target);
 
   scene.tweens.add({
     targets: [jester, target],
@@ -5281,13 +5453,15 @@ function spawnTarget(scene, existingTargetXs = []) {
 }
 
 function addXP(scene, amount) {
-  xp += amount;
-  if (xp >= xpThreshold) {
+  if (!Number.isFinite(amount) || amount <= 0) return;
+  xp = Math.min(Number.MAX_SAFE_INTEGER, xp + amount);
+  const previousLevel = level;
+  while (xp >= xpThreshold) {
     xp -= xpThreshold;
     level++;
     xpThreshold = Math.floor(xpThreshold * 1.33);
-    onLevelUp(scene);
   }
+  if (level > previousLevel) onLevelUp(scene);
   updateXPUI();
   SaveManager.save();
 }
@@ -5299,6 +5473,11 @@ function updateXPUI() {
 }
 
 function onLevelUp(scene) {
+  if (window.MobileGame) {
+    const reached=level;
+    scene.time.delayedCall(650,()=>window.MobileGame.rankUp(reached));
+    return;
+  }
   const msg = scene.add.text(CENTER_X, CENTER_Y, 'LEVEL UP!', { font: '48px monospace', fill: '#ffff00' })
     .setOrigin(0.5)
     .setDepth(25);
@@ -5329,6 +5508,7 @@ function showUnlockMessage(scene, text, delay = 0) {
 }
 
 function updateUnlockButtons(scene, fromLevelUp = false) {
+  if (window.MobileGame) return;
   if (level >= 2 && !weaponsButton.visible) {
     weaponsButton.setVisible(true).setInteractive();
     if (fromLevelUp) showUnlockMessage(scene, 'Weapons Unlocked', 500);
@@ -5354,14 +5534,29 @@ function updateUnlockButtons(scene, fromLevelUp = false) {
 function update(time, delta) {
 
   if (!gameStarted || menuOpen) return;
+  if (this.launchGuide) {
+    this.launchGuide.clear();
+    if (awaitingPower && prisoner.visible) {
+      const points=ChopCore.launchPreview(selectedAngle,aimArrow.scaleY,getWeaponPowerMultiplier(),FEATURES.weather && currentWeather==='wind'?windForce:{x:0,y:0},FEATURES.weather && currentWeather==='rain');
+      points.forEach((point,i)=>{
+        const x=prisoner.x+prisonerHead.x+point.x,y=prisoner.y+prisonerHead.y+point.y;
+        if(x<12 || x>GAME_WIDTH-12 || y<GAME_HEIGHT*.25 || y>STAGE_Y) return;
+        this.launchGuide.fillStyle(0x152b31,.8).fillCircle(x,y,6-i*.25);
+        this.launchGuide.fillStyle(0xf9c66b,.95-i*.075).fillCircle(x,y,4-i*.25);
+      });
+    }
+  }
 
   if (this.dayNight) {
     this.dayNight.update(delta / 1000);
   }
 
   if (FEATURES.clouds && cloudLayerFar && cloudLayerNear) {
+    const daylight=.5*(1-Math.cos((this.dayNight?.timeOfDay ?? .5)*Math.PI*2));
+    const cloudChannel=(night,day)=>Math.round(night+(day-night)*daylight);
+    const cloudTint=(cloudChannel(100,255)<<16)|(cloudChannel(132,255)<<8)|cloudChannel(153,255);
     cloudLayerFar.getChildren().forEach(cloud => {
-      cloud.x -= 0.2;
+      cloud.x -= 12 * delta / 1000;
       if (cloud.x < -cloud.width / 2) {
         cloud.x = config.width + cloud.width / 2;
         cloud.y = Phaser.Math.Between(CLOUD_MIN_Y, CLOUD_MAX_Y);
@@ -5370,7 +5565,8 @@ function update(time, delta) {
       }
     });
     cloudLayerNear.getChildren().forEach(cloud => {
-      cloud.x -= 0.4;
+      cloud.setTint(cloudTint);
+      cloud.x -= 24 * delta / 1000;
       if (cloud.x < -cloud.width / 2) {
         cloud.x = config.width + cloud.width / 2;
         cloud.y = Phaser.Math.Between(CLOUD_MIN_Y + 20, CLOUD_MAX_Y);
@@ -5382,10 +5578,9 @@ function update(time, delta) {
 
   // Move cursor
   if (swingActive) {
-    cursor.x += swingDirection * swingSpeed;
-    if (cursor.x > 550 || cursor.x < 250) {
-      swingDirection *= -1;
-    }
+    const motion = ChopCore.advanceMeter(cursor.x, swingDirection, swingSpeed * 60, delta / 1000);
+    cursor.x = motion.position;
+    swingDirection = motion.direction;
   }
 
   // Apply extra gravity once heads start falling in the rain
@@ -5463,14 +5658,16 @@ class TravelScene extends Phaser.Scene {
       frequency: 80,
       on: false
     });
-    const fogEmitter = this.add.particles('fog').createEmitter({
+    const fogEmitter = this.add.particles('mist-soft').createEmitter({
       x: { min: -50, max: GAME_WIDTH + 50 },
       y: { min: FOG_MIN_Y, max: FOG_MAX_Y },
       lifespan: 6000,
       speedX: { min: -20, max: 20 },
       speedY: { min: -5, max: 5 },
-      quantity: 10,
-      alpha: { start: 0.8, end: 0.1 },
+      quantity: 1,
+      frequency: 300,
+      scale: { start: 0.8, end: 1.5 },
+      alpha: { start: 0.25, end: 0 },
       on: false
     });
     const windEmitter = this.add.particles('leaf').createEmitter({
@@ -5663,7 +5860,7 @@ class TravelScene extends Phaser.Scene {
   }
 }
 
-// Inject styled gameplay instructions beneath the Phaser canvas once the page loads
+/* Legacy desktop instructions are superseded by the in-game journal.
 window.addEventListener('load', () => {
   const instructions = document.createElement('div');
   instructions.id = 'game-instructions';
@@ -5721,7 +5918,24 @@ window.addEventListener('load', () => {
   visitorCounterEl.style.fontFamily = 'Georgia, serif';
   document.body.appendChild(visitorCounterEl);
   fetchVisitorCount();
-});
+}); */
+</script>
+<script src="audio.js"></script><script src="mobile.js"></script>
+<script src="offline.js"></script>
+<script>
+// This fallback also works when the engine failed before game setup could run.
+if (!window.Phaser || !window.ChopCore || !window.Campaign || !window.DayNightCycle || !window.CastArt || !window.MobileGame) {
+  const gate = document.getElementById('start-overlay');
+  if (gate) {
+    gate.querySelector('.tap').textContent = 'Download interrupted · tap to retry';
+    gate.querySelector('small').textContent = 'Check your connection, then try again. Your saved progress stays on this device.';
+    gate.setAttribute('aria-label', 'Retry game download');
+    gate.tabIndex = 0;
+    const retry = event => { event.preventDefault(); event.stopImmediatePropagation(); location.reload(); };
+    gate.addEventListener('click', retry, true);
+    gate.addEventListener('keydown', event => { if (event.key === 'Enter' || event.key === ' ') retry(event); }, true);
+  }
+}
 </script>
 
 </body>

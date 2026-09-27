@@ -1,0 +1,78 @@
+:root { --ink:#152b31; --paper:#f4e9d1; --gold:#f9c66b; --coral:#ec805d; --mint:#8bd1b2; }
+body { background:#0c1c22!important; }
+body #start-overlay { background:linear-gradient(180deg,#10272b66,#10272be8),url('assets/york-v2.png') center/cover; }
+body #start-overlay .card { border:0; border-radius:0; background:none; box-shadow:none; }
+body #start-overlay h1 { font:900 clamp(64px,16vw,100px)/.85 Georgia,serif; letter-spacing:-5px; color:var(--paper); margin:30px 0; text-shadow:4px 5px 0 #152b31; transform:rotate(-4deg); }
+body #start-overlay h1 em { color:var(--gold); font-style:normal; }
+body #start-overlay p { color:var(--paper); line-height:1.6; }
+body #start-overlay .tap { background:var(--gold); padding:19px 22px; border-radius:10px; color:var(--ink); margin:32px 0 20px; font-size:15px; box-shadow:0 5px 0 #8c613a; }
+.eyebrow { font-size:10px; letter-spacing:2.5px; font-weight:800; color:var(--gold); }
+#game-loading { position:fixed; inset:0; z-index:6; background:var(--ink); color:var(--paper); display:flex; flex-direction:column; align-items:center; justify-content:center; padding:28px; text-align:center; }
+#game-loading h2 { font:700 30px Georgia,serif; }
+#game-loading p { font-size:14px; color:#d5d8c9; }
+#game-loading [hidden] { display:none!important; }
+#game-loading progress { width:min(280px,100%); height:12px; accent-color:var(--mint); margin:12px 0; }
+#loading-percent { font-size:12px; color:var(--mint); }
+#loading-retry { margin-top:22px; min-height:48px; padding:12px 28px; border:0; border-radius:9px; background:var(--gold); color:var(--ink); font:700 16px 'Trebuchet MS',sans-serif; cursor:pointer; touch-action:manipulation; }
+body #start-overlay small { color:#dccdb5; font-size:12px; }
+#game-instructions,#visitor-counter { display:none!important; }
+#mobile-ui { position:fixed; width:min(100vw,calc((var(--shell-vh) - var(--safe-top) - var(--safe-bottom)) / 2)); height:calc(var(--shell-vh) - var(--safe-top) - var(--safe-bottom)); left:50%; top:var(--safe-top); transform:translateX(-50%); z-index:5; pointer-events:none; color:var(--paper); font-family:'Trebuchet MS',system-ui,sans-serif; }
+#mobile-ui[hidden],#mobile-ui [hidden] { display:none!important; }
+#mobile-ui button { font:inherit; border:0; cursor:pointer; touch-action:manipulation; min-height:44px; border-radius:9px; padding:10px 14px; font-weight:700; color:var(--ink); background:var(--gold); pointer-events:auto; }
+#mobile-ui button:disabled { opacity:.48; cursor:default; }
+#mobile-ui button:focus-visible { outline:3px solid white; outline-offset:3px; }
+#mobile-ui button:active:not(:disabled) { transform:translateY(2px); }
+.mobile-hud { padding:14px 16px 30px; background:linear-gradient(#112930f5,#112930dd 65%,transparent); }
+.hud-row { display:flex; align-items:center; justify-content:space-between; gap:8px; }
+.hud-place strong { display:block; font:700 24px Georgia,serif; }
+.hud-place small { font-size:11px; color:#d5d8c9; }
+.hud-gold { color:var(--gold); font-weight:900; font-size:21px; text-align:right; }
+.hud-gold small { display:block; font-size:9px; letter-spacing:1.5px; color:#d5d8c9; }
+.hud-meta { margin-top:11px; font-size:11px; color:#d5d8c9; }
+.rank-track { height:3px; background:#f4e9d125; margin-top:7px; border-radius:4px; overflow:hidden; }
+.rank-track i { display:block; height:100%; background:var(--mint); }
+#mobile-ui #contract-track { position:relative; width:100%; min-height:44px; margin-top:9px; padding:7px 24px 7px 10px; text-align:left; background:#10272de8; color:var(--paper); border:1px solid #f4e9d12b; border-radius:7px; }
+#contract-track small { display:block; font-size:8px; letter-spacing:.8px; color:#c8cbbc; margin-bottom:3px; }
+#contract-track span { display:block; font-size:11px; line-height:1.3; }
+#contract-track b { position:absolute; right:10px; top:10px; font-size:21px; color:var(--gold); }
+#mobile-ui #contract-track.reward-ready { border-color:var(--gold); background:#4b4229; color:var(--gold); }
+#mobile-ui .mobile-nav button.reward-ready { color:var(--gold); background:#f9c66b16; box-shadow:inset 0 3px var(--gold); }
+.mobile-controls { position:absolute; bottom:59px; left:0; right:0; padding:25px 16px 12px; background:linear-gradient(transparent,#152b31ee 20%,#152b31); pointer-events:auto; }
+.shot-steps { display:flex; justify-content:space-between; font-size:9px; letter-spacing:1px; color:#9daaa8; margin-bottom:9px; }
+.shot-steps .active { color:var(--gold); font-weight:900; }
+.shot-meter { height:18px; background:#394c4e; position:relative; border:1px solid #a9b4a344; border-radius:5px; margin-bottom:10px; overflow:hidden; }
+.shot-meter .zone { position:absolute; top:0; bottom:0; left:50%; transform:translateX(-50%); }
+.zone.outer { background:#be6954; }.zone.middle { background:#f2c978; }.zone.inner { background:#8bd1b2; }
+.shot-meter .needle { position:absolute; top:0; bottom:0; width:4px; background:white; box-shadow:0 0 5px #fff; transform:translateX(-50%); }
+#mobile-ui #shot-button { width:100%; min-height:49px; font-size:17px; letter-spacing:1px; box-shadow:0 3px 0 #966d3a; }
+.shot-hint { min-height:14px; margin:8px 0 0; text-align:center; font-size:10px; color:#dfdfce; }
+.mobile-nav { position:absolute; bottom:0; left:0; right:0; height:59px; display:grid; grid-template-columns:repeat(4,1fr); background:#10272d; border-top:1px solid #f4e9d125; pointer-events:auto; }
+#mobile-ui .mobile-nav button { background:none; color:#e0d9c6; border-radius:0; padding:8px 2px; font-size:10px; }
+.mobile-nav b { display:block; font:20px Georgia,serif; margin-bottom:3px; color:var(--gold); }
+.mobile-toast { position:absolute; top:max(29%,180px); left:16px; right:16px; padding:12px; text-align:center; border-radius:9px; background:#152b31ec; color:var(--gold); font-weight:800; font-size:14px; border:1px solid #f9c66b55; }
+.mobile-dialog { pointer-events:auto; position:absolute; inset:0; background:#10252bea; display:flex; flex-direction:column; backdrop-filter:blur(7px); }
+.dialog-header { display:flex; padding:20px 18px 14px; justify-content:space-between; align-items:center; border-bottom:1px solid #f4e9d125; }
+.dialog-header h2 { margin:0; font:700 29px Georgia,serif; }.dialog-header small { color:var(--gold); font-size:10px; letter-spacing:2px; }
+#mobile-ui .dialog-header button { background:#f4e9d119; color:var(--paper); font-size:20px; }
+.dialog-body { padding:18px; overflow-y:auto; overscroll-behavior:contain; touch-action:pan-y; flex:1; min-height:0; }
+.dialog-body p { font-size:14px; line-height:1.6; color:#d8d9cb; }
+.dialog-body h3 { font:700 23px Georgia,serif; color:var(--paper); margin:8px 0; }
+.item-card { padding:16px; margin:0 0 12px; border:1px solid #f4e9d127; border-radius:12px; background:#f4e9d108; }
+.item-card .item-art { width:76px; height:80px; object-fit:contain; image-rendering:pixelated; float:right; margin:0 0 8px 10px; }
+.item-card .cart-art { image-rendering:auto; }
+.item-card .weapon-art { width:76px; height:90px; display:block; overflow:hidden; image-rendering:auto; }
+.item-card small { color:var(--gold); font-size:11px; }.item-card p { margin:8px 0 14px; font-size:13px; }
+.item-card button { width:100%; clear:both; }
+.trade-actions { display:flex; gap:8px; }.trade-actions button { font-size:12px!important; }
+.trade-bulk { margin-top:8px; }
+#mobile-ui .secondary { background:#f4e9d115; color:var(--paper); border:1px solid #f4e9d133; }
+.journal-portrait { width:104px; height:104px; object-fit:cover; float:left; margin:0 16px 12px 0; border-radius:16px; border:1px solid #f9c66b55; box-shadow:0 6px 18px #0004; }
+.dialog-body .journal-quote { display:flow-root; }
+.cast-heading { display:flex; align-items:center; gap:16px; }
+.cast-heading .journal-portrait { flex:none; float:none; margin:0; width:96px; height:96px; }
+.cast-card > p { margin-top:16px; }
+.journal-quote { color:var(--paper)!important; font:italic 19px/1.5 Georgia,serif!important; }
+.dialog-body .wide { width:100%; margin-bottom:12px; }
+#backup-text { box-sizing:border-box; width:100%; margin-top:8px; padding:12px; border:1px solid #f4e9d155; border-radius:8px; background:#0a1b20; color:var(--paper); font:13px/1.5 monospace; user-select:text; touch-action:pan-y; resize:vertical; }
+@media(max-height:670px) { .mobile-hud {padding-top:9px}.hud-place strong{font-size:20px}.mobile-controls{padding-top:16px}.shot-hint{font-size:9px} }
+@media(prefers-reduced-motion:reduce) { #mobile-ui * { scroll-behavior:auto; } }

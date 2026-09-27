@@ -1,0 +1,16 @@
+{
+  "saveVersion": 2,
+  "gold": 200,
+  "fame": 2,
+  "xp": 0,
+  "level": 2,
+  "currentDay": 1,
+  "currentMonth": 0,
+  "currentCity": "York",
+  "timeOfDay": 0.1,
+  "killCount": 5,
+  "itemsOwned": {},
+  "citiesUnlocked": ["York"],
+  "upgradesOwned": {"storageLevel": 1, "weaponLevel": 2, "purchasedUpgrades": []},
+  "campaign": {"claimed": 1, "targets": 2, "sold": 0, "days": 360, "visited": ["York"], "ending": null, "epilogueSeen": false}
+}

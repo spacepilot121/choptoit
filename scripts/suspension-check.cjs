@@ -1,0 +1,15 @@
+const fs=require('node:fs'),path=require('node:path'),vm=require('node:vm'),assert=require('node:assert/strict');
+const source=fs.readFileSync(path.join(__dirname,'../mobile.js'),'utf8');
+const events={};let saves=0,pauses=0;
+const context={scene:null,screen:null,document:{hidden:false,addEventListener(name,fn){events[name]=fn;}},window:{addEventListener(name,fn){events[name]=fn;}},save(){saves++;},show(name){context.screen=name;pauses++;context.save();}};
+vm.createContext(context);
+vm.runInContext(source.slice(source.indexOf('  function suspendGame()'),source.indexOf("  window.addEventListener('storage'")),context);
+events.pagehide();assert.equal(saves,0,'Leaving during loading must not touch an uninitialized game');
+context.scene={};context.document.hidden=true;
+events.visibilitychange();
+assert.equal(context.screen,'pause');assert.equal(pauses,1);assert.equal(saves,1);
+events.pagehide();assert.equal(pauses,1,'Repeated lifecycle events must preserve the existing pause');
+context.document.hidden=false;events.visibilitychange();assert.equal(context.screen,'pause','Returning must not automatically resume a shot');
+context.screen='import';events.pagehide();assert.equal(context.screen,'import','A backup form must survive an interruption');
+context.screen=null;events.pagehide();assert.equal(context.screen,'pause','Pagehide must pause even without visibilitychange');
+console.log('Page interruptions pause active play, preserve menus, ignore loading and require explicit resume.');

@@ -1,0 +1,92 @@
+{
+  "frames": {
+    "0": {
+      "frame": {
+        "x": 245,
+        "y": 1,
+        "w": 304,
+        "h": 620
+      },
+      "rotated": false,
+      "trimmed": false,
+      "spriteSourceSize": {
+        "x": 0,
+        "y": 0,
+        "w": 304,
+        "h": 620
+      },
+      "sourceSize": {
+        "w": 304,
+        "h": 620
+      }
+    },
+    "1": {
+      "frame": {
+        "x": 711,
+        "y": 16,
+        "w": 303,
+        "h": 611
+      },
+      "rotated": false,
+      "trimmed": false,
+      "spriteSourceSize": {
+        "x": 0,
+        "y": 0,
+        "w": 303,
+        "h": 611
+      },
+      "sourceSize": {
+        "w": 303,
+        "h": 611
+      }
+    },
+    "2": {
+      "frame": {
+        "x": 247,
+        "y": 627,
+        "w": 303,
+        "h": 610
+      },
+      "rotated": false,
+      "trimmed": false,
+      "spriteSourceSize": {
+        "x": 0,
+        "y": 0,
+        "w": 303,
+        "h": 610
+      },
+      "sourceSize": {
+        "w": 303,
+        "h": 610
+      }
+    },
+    "3": {
+      "frame": {
+        "x": 707,
+        "y": 627,
+        "w": 313,
+        "h": 613
+      },
+      "rotated": false,
+      "trimmed": false,
+      "spriteSourceSize": {
+        "x": 0,
+        "y": 0,
+        "w": 313,
+        "h": 613
+      },
+      "sourceSize": {
+        "w": 313,
+        "h": 613
+      }
+    }
+  },
+  "meta": {
+    "image": "cast-jesters-v2.png",
+    "size": {
+      "w": 1254,
+      "h": 1254
+    },
+    "scale": "1"
+  }
+}

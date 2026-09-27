@@ -1,0 +1,16 @@
+{
+  "saveVersion": 2,
+  "gold": 1000,
+  "fame": 15,
+  "xp": 0,
+  "level": 5,
+  "currentDay": 1,
+  "currentMonth": 4,
+  "currentCity": "London",
+  "timeOfDay": 0.4,
+  "killCount": 100,
+  "itemsOwned": {},
+  "citiesUnlocked": ["York", "Durham", "Chester", "London"],
+  "upgradesOwned": {"storageLevel": 1, "weaponLevel": 8, "purchasedUpgrades": []},
+  "campaign": {"claimed": 0, "targets": 60, "sold": 10, "days": 120, "visited": ["York", "Durham", "Chester", "London"], "ending": null, "epilogueSeen": false}
+}

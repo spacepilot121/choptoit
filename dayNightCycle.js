@@ -8,12 +8,13 @@ class DayNightCycle {
       sunriseEnd: 0.30,
       sunsetStart: 0.70,
       sunsetEnd: 0.80,
-      // At midnight the background should be 80% dark,
-      // fading to fully transparent at midday.
-      minDarkAlpha: 0.8,
+      // A blue night wash preserves the painted town's details.
+      minDarkAlpha: 0.62,
       maxLightAlpha: 0.0,
+      overlayColor: 0x071b30,
     };
     this.config = { ...defaults, ...config };
+    this.setDayLength(this.config.dayLengthSeconds);
 
     this.scene = null;
     this.timeOfDay = 0; // 0..1
@@ -42,26 +43,36 @@ class DayNightCycle {
    */
   init(scene, layers = {}) {
     this.scene = scene;
-    const { backCloudsDepth = 0, overlayDepth = 28.9 } = layers;
+    const { overlayDepth = 28.9, celestialDepth = overlayDepth + .1 } = layers;
 
-    // Container for sun and moon positioned behind back clouds
-    this.container = scene.add.container(0, 0).setDepth(backCloudsDepth - 1);
+    // Painted town backgrounds are opaque, so the sky ornaments sit above
+    // the wash while remaining below characters and gameplay targets.
+    this.container = scene.add.container(0, 0).setDepth(celestialDepth);
+    this.stars = scene.add.graphics();
+    for (let i=0;i<24;i++) {
+      const x=scene.scale.width*(.26+((i*37)%101)/210);
+      const y=scene.scale.height*(.26+((i*23)%97)/740);
+      this.stars.fillStyle(0xdce9ee,.45+(i%3)*.15).fillCircle(x,y,i%5===0?2.2:1.3);
+    }
+    this.container.add(this.stars);
 
     // Create sun
     this.sun = scene.add.circle(0, 0, 30, this.config.sunColor);
     this.sun.setAlpha(0);
     this.container.add(this.sun);
 
-    // Create crescent moon texture via graphics
-    const gfx = scene.add.graphics();
-    gfx.fillStyle(this.config.moonColor, 1);
-    gfx.fillCircle(20, 20, 20);
-    gfx.fillStyle(0x000000, 1);
-    gfx.fillCircle(28, 20, 20);
-    gfx.generateTexture('crescent-moon', 40, 40);
-    gfx.destroy();
+    // Cut a real transparent crescent, rather than drawing a black disc.
+    const moonKey='crescent-moon-clear';
+    if (!scene.textures.exists(moonKey)) {
+      const texture=scene.textures.createCanvas(moonKey,80,80), ctx=texture.context;
+      ctx.fillStyle='#'+this.config.moonColor.toString(16).padStart(6,'0');
+      ctx.beginPath();ctx.arc(40,40,36,0,Math.PI*2);ctx.fill();
+      ctx.globalCompositeOperation='destination-out';
+      ctx.beginPath();ctx.arc(57,29,33,0,Math.PI*2);ctx.fill();
+      ctx.globalCompositeOperation='source-over';texture.refresh();
+    }
 
-    this.moon = scene.add.image(0, 0, 'crescent-moon');
+    this.moon = scene.add.image(0, 0, moonKey).setDisplaySize(48,48);
     this.moon.setAlpha(1);
     this.container.add(this.moon);
 
@@ -71,7 +82,7 @@ class DayNightCycle {
       scene.scale.height / 2,
       scene.scale.width,
       scene.scale.height,
-      0x000000,
+      this.config.overlayColor,
       1
     );
     this.overlay.setDepth(overlayDepth);
@@ -82,6 +93,9 @@ class DayNightCycle {
   }
 
   setDayLength(seconds) {
+    if (!Number.isFinite(seconds) || seconds <= 0) {
+      throw new RangeError('Day length must be a positive number of seconds.');
+    }
     this.config.dayLengthSeconds = seconds;
   }
 
@@ -98,26 +112,29 @@ class DayNightCycle {
   }
 
   update(deltaSeconds) {
-    if (!this.scene) return;
-    const prev = this.timeOfDay;
-    this.timeOfDay = (this.timeOfDay + deltaSeconds / this.config.dayLengthSeconds) % 1;
-
-    // Day wrap
-    if (this.timeOfDay < prev) {
-      this.executionsThisDay = 0;
-      this.currentDayCount++;
-      this.fullDayHandlers.forEach(fn => fn(this.currentDayCount));
-    }
-
-    // Hourly execution
-    const currentHour = Math.floor(this.timeOfDay * 24);
-    if (currentHour !== this.lastHour) {
-      this.lastHour = currentHour;
-      if (this.executionsThisDay < 24) {
-        this.executionsThisDay++;
-        this.hourHandlers.forEach(fn => fn(currentHour));
+    if (!this.scene || !Number.isFinite(deltaSeconds) || deltaSeconds < 0) return;
+    const startHour = Math.floor(this.timeOfDay * 24);
+    const totalHours = (this.timeOfDay + deltaSeconds / this.config.dayLengthSeconds) * 24;
+    if (!Number.isFinite(totalHours) || totalHours > Number.MAX_SAFE_INTEGER) return;
+    // Snap tiny floating-point errors at exact hour boundaries. A full day
+    // ends at the same clock time it started, so comparing clock times alone
+    // cannot tell us how many midnights have passed.
+    const endHours = Math.abs(totalHours - Math.round(totalHours)) < 1e-9
+      ? Math.round(totalHours) : totalHours;
+    this.lastHour = startHour;
+    for (let boundary = startHour + 1; boundary <= Math.floor(endHours); boundary++) {
+      const hour = boundary % 24;
+      this.timeOfDay = hour / 24;
+      if (hour === 0) {
+        this.executionsThisDay = 0;
+        this.currentDayCount++;
+        this.fullDayHandlers.forEach(fn => fn(this.currentDayCount));
       }
+      this.lastHour = hour;
+      this.executionsThisDay++;
+      this.hourHandlers.forEach(fn => fn(hour));
     }
+    this.timeOfDay = (endHours % 24) / 24;
 
     this.updateOverlay();
     this.updateCelestials();
@@ -138,7 +155,7 @@ class DayNightCycle {
   updateCelestials() {
     const { sunriseStart, sunriseEnd, sunsetStart, sunsetEnd } = this.config;
     const width = this.scene.scale.width;
-    const baseY = 120;
+    const baseY = this.scene.scale.height * .33;
     const arc = 80;
     const t = this.timeOfDay;
 
@@ -146,7 +163,7 @@ class DayNightCycle {
     if (t >= sunriseStart && t <= sunsetEnd) {
       const sunT = Phaser.Math.Clamp((t - sunriseStart) / (sunsetEnd - sunriseStart), 0, 1);
       const angle = sunT * Math.PI;
-      this.sun.setPosition(width * sunT, baseY - Math.sin(angle) * arc);
+      this.sun.setPosition(width * (.25 + .5*sunT), baseY - Math.sin(angle) * arc);
       if (t < sunriseEnd) {
         const p = (t - sunriseStart) / (sunriseEnd - sunriseStart);
         this.sun.setAlpha(Phaser.Math.Easing.Quadratic.InOut(p));
@@ -169,7 +186,7 @@ class DayNightCycle {
       moonT = (t + (1 - sunsetEnd)) / nightLength;
     }
     const moonAngle = moonT * Math.PI;
-    this.moon.setPosition(width * moonT, baseY - Math.sin(moonAngle) * arc);
+    this.moon.setPosition(width * (.25 + .5*moonT), baseY - Math.sin(moonAngle) * arc);
 
     let moonAlpha = 0;
     if (t >= sunsetStart && t <= sunsetEnd) {
@@ -182,6 +199,7 @@ class DayNightCycle {
       moonAlpha = 1;
     }
     this.moon.setAlpha(moonAlpha);
+    this.stars.setAlpha(moonAlpha*.8);
   }
 }
 

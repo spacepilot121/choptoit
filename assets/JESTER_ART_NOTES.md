@@ -1,0 +1,7 @@
+# Jester atlas v2
+
+Generated with the built-in image tool and saved as `cast-jesters-v2.png`. The source PNG is preserved; `cast-jesters-v2.json` describes the four alpha-bounded frames. `CastArt.jester` maps the existing standard, shield, barrel and moving target costumes to these frames. Figures are rendered at 130 game pixels tall with their feet aligned to the stage.
+
+## Final prompt
+
+Production sprite atlas for a darkly comic medieval arcade game. Square canvas, exact 2 by 2 grid of four full-body adult court jesters, one centered inside each equal cell. Genuine transparent alpha background, no text, borders, ground shadows, scenery, poles or props. Full figures from pointed hat tips to boot soles, filling 85 percent of cell height and roughly 45 percent cell width. Standing front-facing, feet apart, hands held together in front around waist height as if holding a thin vertical pole that is NOT drawn. Expressive mischievous adult faces, varied ages and skin tones. Top left coral and cream motley with a three-point bell cap; top right muted teal and ochre motley with a two-point cap; bottom left rust and ochre tunic with bells and a floppy cap; bottom right muted plum and mint motley with a long curved cap. Cohesive hand-painted storybook gouache, dark teal outlines, chunky shapes, slightly oversized heads, readable on phone at 65px tall. Equal character heights and aligned feet, generous transparent gaps. All four poses static with neutral arms, no leaping, no weapons, no gore.
