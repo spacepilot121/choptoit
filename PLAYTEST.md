@@ -1,6 +1,6 @@
 # Chop To It — release playtest
 
-Build under test: 000efd14433fd81f. This is a release candidate for testing, not a declaration that launch checks are complete.
+Build under test: 42c4c417e99219d1. This is a release candidate for testing, not a declaration that launch checks are complete.
 
 Record phone model, OS, browser, whether installed on the home screen, and build version with every result. Export any valued save before testing a fresh story. Use a separate test profile when possible.
 
@@ -101,3 +101,7 @@ The 15 town and three story PNG masters remain editable in assets/, with quality
 ## 27 September — lean mobile export
 
 Build 000efd14433fd81f removes hidden legacy canvas menu art from the mobile download while retaining the desktop fallback in source. The offline package fell from 23.0 MB to 15.8 MB, with 63 cache entries and 66 upload files. The opening story and Workshop, Market, Travel and Journal rendered without errors. A restored test save in London spent 10 gold on a cart upgrade, bought one turnip, and travelled to Durham, with the purse correctly moving from 1,000 to 989 gold. The Journal said Ready to play offline. After stopping the preview server and independently confirming a refused connection, an offline reload retained Durham and 989 gold. The game then travelled nine days to Oxford and showed its painted background while still offline. Screenshot lean-mobile-offline-preview.png records that state. The basic shot button reacted, but this short run did not land a successful shot; the earlier complete campaign and exact-export shot checks remain the evidence for the shot loop. Physical iPhone/Android touch and storage-pressure checks remain open.
+
+## 27 September — York streak and target readability
+
+On build 000efd14433fd81f, a restored blade-eight York save earned a twelve-chop streak through normal timing, aim and power controls. The moving gold ring and a crow both appeared beneath the HUD, and high pole targets paid fame on hits. However, unhit pole targets stayed through every new customer, eventually covering the stage with jesters. Build 42c4c417e99219d1 retires those targets as the next customer enters. Five successive successful rounds in the exact exported build left the stage readable with only current pole targets; screenshot tidy-york-rounds-preview.png records the result. The updated ring reward now saves and announces its three-fame bonus even when no ordinary target is cleared. The release and HTTP checks passed without browser errors. The attempted live ring and crow shots did not establish a collision, so those remain explicit playtest items rather than verified hits.

@@ -9,6 +9,7 @@ require('./ring-layout-check.cjs');
 require('./ring-cleanup-check.cjs');
 require('./ring-collision-check.cjs');
 require('./bird-check.cjs');
+require('./target-retirement-check.cjs');
 require('./startup-check.cjs');
 const vm = require('node:vm');
 const assert = require('node:assert/strict');

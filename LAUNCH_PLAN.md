@@ -19,7 +19,7 @@ Target: a polished portrait mobile game, playable in browser first, retaining ti
 
 As of 20 September, all fifteen towns have illustrated backgrounds. The executioner, main cast, jesters and ring-event guards use updated artwork. The mobile HUD, pause-safe menus, six contracts, endings, trade routes, upgrades, local save recovery, audio, install affordance and offline package are implemented. All work remains local; the public site is unchanged.
 
-Latest exported build: `000efd14433fd81f`, 66 upload files, 15.8 MB. The full automated release pipeline passes, including serving every file from the isolated export. Earlier entries below are historical evidence and may describe superseded artwork, file counts or behaviour.
+Latest exported build: `42c4c417e99219d1`, 66 upload files, 15.8 MB. The full automated release pipeline passes, including serving every file from the isolated export. Earlier entries below are historical evidence and may describe superseded artwork, file counts or behaviour.
 
 ### Remaining launch gates, in priority order
 
@@ -285,3 +285,7 @@ Build 7aed28e4f15eded1 ships high-quality JPEG exports for 15 opaque town painti
 ## Skip unused mobile canvas menus (27 September)
 
 Build 000efd14433fd81f uses the portrait HTML menus without downloading or building the old canvas workshop, market and travel menus. The original browser menu code and art remain in the source repository. The mobile offline package now has 63 cache entries and 66 upload files, totalling 15.8 MB instead of 23.0 MB in the preceding build. The isolated export passed the full release and HTTP checks. In the browser, the opening story and four mobile menus worked; a restored test save bought a cart upgrade, traded in London, and travelled to Durham. With the preview server stopped and independently refusing connections, the game reopened in Durham, travelled to Oxford with its cached town art, and kept 989 gold. No browser errors were observed. Physical-phone performance and storage behaviour remain open. See PLAYTEST.md and lean-mobile-offline-preview.png.
+
+## Clear old targets between customers (27 September)
+
+Live York play with a blade-eight save reached a twelve-chop streak. Unhit pole targets accumulated until their jesters obscured the character and new targets. Build 42c4c417e99219d1 has those missed jesters leave at the next customer's arrival; birds retain their separate flight window. After five successful rounds on the exact export, the stage showed only the current targets and York ring challenge, with no browser errors. A ring pass now immediately saves its three-fame bonus even if no ordinary target remains, and announces the reward in the mobile HUD. The reward path has a deterministic regression check; a live ring pass and bird collision remain unproven. See PLAYTEST.md and tidy-york-rounds-preview.png.

@@ -4032,7 +4032,35 @@ function resetHead(scene) {
 
 
 
+function retirePreviousRoundTargets(scene) {
+  if (!targetGroup) return;
+  // Each set of pole targets belongs to one customer. Let unhit jesters leave
+  // before the next set arrives, so a long streak does not bury the stage.
+  targetGroup.getChildren().filter(target => target.jester && !target.collected).forEach(target => {
+    const jester = target.jester;
+    if (target.moveTween) target.moveTween.stop();
+    if (target.yorkWaveTween) target.yorkWaveTween.stop();
+    if (target.barrelPulseTween) target.barrelPulseTween.stop();
+    if (target.barrelBlinkEvent) target.barrelBlinkEvent.remove(false);
+    scene.tweens.killTweensOf(target);
+    scene.tweens.killTweensOf(jester);
+    target.collected = true;
+    if (target.body) target.body.enable = false;
+    targetGroup.remove(target);
+    const exitX = jester.startFromRight ? GAME_WIDTH + 100 : -100;
+    scene.tweens.add({
+      targets: [jester, target],
+      x: exitX,
+      alpha: 0,
+      duration: 650,
+      ease: 'Sine.easeIn',
+      onComplete: () => { jester.destroy(); target.destroy(); }
+    });
+  });
+}
+
 function spawnPrisoner(scene, fromRight, withTarget = true) {
+  retirePreviousRoundTargets(scene);
   const city = cities.find(c => c.name === currentCity);
   roundCount++;
   if (FEATURES.weather && (roundCount === 1 || roundCount % 5 === 1)) {
@@ -4899,6 +4927,8 @@ function clearAllTargetsFromRingEvent(scene, triggeringHead) {
   targetsToClear.forEach(t => handleTargetHit(scene, t, triggeringHead));
   fame += 3;
   fameText.setText(formatGold(Math.floor(fame)));
+  SaveManager.save();
+  window.MobileGame?.feedback('Ring clear! · +3 fame · nearby targets cleared', true);
   const popup = scene.add.text(CENTER_X, CENTER_Y - 220, 'Ring Clear! +3 Fame', {
     font: '36px monospace',
     fill: '#ffe100',

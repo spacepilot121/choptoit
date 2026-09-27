@@ -1,6 +1,7 @@
 const fs=require('node:fs'),path=require('node:path'),vm=require('node:vm'),assert=require('node:assert/strict');
 const html=fs.readFileSync(path.join(__dirname,'..','index.html'),'utf8');
 const between=(x1,y1,x2,y2)=>Math.hypot(x2-x1,y2-y1);
+let saves=0, feedback=[];
 const context={
   yorkRingHeadSerial:0,
   Phaser:{Math:{Clamp:(n,lo,hi)=>Math.max(lo,Math.min(hi,n)),Distance:{Between:between}}},
@@ -10,6 +11,8 @@ const context={
   CENTER_Y:640,
   fame:0,
   fameText:{setText(){}},
+  SaveManager:{save(){saves++;}},
+  window:{MobileGame:{feedback(message,success){feedback.push([message,success]);}}},
   formatGold:String,
   bodyGroup:null,
   targetGroup:{getChildren:()=>[]},
@@ -47,10 +50,13 @@ assert.equal(context.didHeadPassThroughMovingRing(head(),ring(-60,60,35),0,0,0,0
   r.sprite.x=30;
   context.checkFastHeadTargetCrossings(scene);
   assert.equal(context.fame,3,'A moving-ring hit grants the actual fame reward');
+  assert.equal(saves,1,'The ring bonus is saved even when no ordinary targets remain');
+  assert.deepEqual(feedback,[['Ring clear! · +3 fame · nearby targets cleared',true]],'The mobile HUD announces the reward');
   assert.equal(r.spent,true);
   assert.equal(r.sprite.active,false);
   assert.equal(context.yorkRingPlatformEvent.activeRing,null);
   context.checkFastHeadTargetCrossings(scene);
   assert.equal(context.fame,3,'A spent ring cannot pay out twice');
+  assert.equal(saves,1,'A spent ring cannot save a second bonus');
 }
 console.log('Moving-ring collisions use both paths, reject rim grazes and pay out only once.');
