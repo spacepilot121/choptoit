@@ -19,11 +19,11 @@ Target: a polished portrait mobile game, playable in browser first, retaining ti
 
 As of 20 September, all fifteen towns have illustrated backgrounds. The executioner, main cast, jesters and ring-event guards use updated artwork. The mobile HUD, pause-safe menus, six contracts, endings, trade routes, upgrades, local save recovery, audio, install affordance and offline package are implemented. All work remains local; the public site is unchanged.
 
-Latest exported build: `a1ccc0f61e1d9f70`, 126 upload files, 56.7 MB. The full automated release pipeline passes, including serving every file from the isolated export. Earlier entries below are historical evidence and may describe superseded artwork, file counts or behaviour.
+Latest exported build: `1bafe9c9f44ffad4`, 126 upload files, 56.7 MB. The full automated release pipeline passes, including serving every file from the isolated export. Earlier entries below are historical evidence and may describe superseded artwork, file counts or behaviour.
 
 ### Remaining launch gates, in priority order
 
-1. Finish browser checks of fog, ring-event reachability and the new bird flight lane. Browser access is working again; physical touch performance remains unverified.
+1. Finish browser checks of fog, ring-event collision and the new bird flight lane. The moving York ring and high targets are visibly below the HUD at 360 × 640, but their collisions are not yet proven in gameplay; physical touch performance remains unverified.
 2. [Completed in desktop browser] A clean save earned all six contracts and the reform ending without imported progress. The final chop requirement was reduced from 100 to 50 after play revealed an unproductive stretch. Repeat on a real phone to judge feel and pacing.
 3. [Completed in desktop browser] This exact package installed its offline cache, reopened with the server stopped, accepted a shot and retained its save after another reload. Repeat installation, offline travel/trading and storage-pressure checks on real phones.
 4. Test real iPhone and Android touch controls, sound, app switching, safe areas, short screens and home-screen installation. Desktop viewport checks are not sufficient evidence.
@@ -262,4 +262,8 @@ The independent, empty save on port 4189 reached all six contracts through norma
 
 The exact d010ba3c9eba00cc package then reported Ready to play offline. Its server was stopped and independently refused HTTP connections; two browser reloads still loaded the game and saved ending. An offline successful chop increased the purse to 66,597 and persisted. The preview server was restored. Real iOS/Android installation and storage behaviour remain open.
 
-Final export a1ccc0f61e1d9f70 changes only trailing whitespace after the campaign test. A separate fresh York profile installed this exact offline package, reopened with its server stopped, landed a successful chop and retained 10 gold and 1/3 contract progress through a second offline reload. The preview server was restored. The ZIP has 126 root-level upload files.
+Export a1ccc0f61e1d9f70 changes only trailing whitespace after the campaign test. A separate fresh York profile installed that offline package, reopened with its server stopped, landed a successful chop and retained 10 gold and 1/3 contract progress through a second offline reload. The preview server was restored. The ZIP has 126 root-level upload files.
+
+## Compact phone width (27 September)
+
+Build 1bafe9c9f44ffad4 lets the mobile HUD, menus and controls fill the phone viewport below 600px width while keeping the 1:2 game canvas centered. At heights below 600px, shorter control spacing preserves the actor view without lifting the high target and bird lanes. Browser checks at 320 × 520, 320 × 568, 360 × 640 and 390 × 844 show readable controls and a scrollable Market; a compact-screen round completed. The 320 × 520 viewport has a 288 × 49px shot button, four 80px-wide navigation buttons and no horizontal overflow. See PLAYTEST.md and compact-mobile-preview.png. Actual touch and safe-area behaviour on phones remain open.

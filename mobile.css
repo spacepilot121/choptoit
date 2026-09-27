@@ -74,5 +74,7 @@ body #start-overlay small { color:#dccdb5; font-size:12px; }
 .journal-quote { color:var(--paper)!important; font:italic 19px/1.5 Georgia,serif!important; }
 .dialog-body .wide { width:100%; margin-bottom:12px; }
 #backup-text { box-sizing:border-box; width:100%; margin-top:8px; padding:12px; border:1px solid #f4e9d155; border-radius:8px; background:#0a1b20; color:var(--paper); font:13px/1.5 monospace; user-select:text; touch-action:pan-y; resize:vertical; }
+@media(max-width:600px) { #mobile-ui { width:100vw; } }
 @media(max-height:670px) { .mobile-hud {padding-top:9px}.hud-place strong{font-size:20px}.mobile-controls{padding-top:16px}.shot-hint{font-size:9px} }
+@media(max-height:600px) { .mobile-controls{padding:8px 16px}.shot-steps{margin-bottom:4px}.shot-meter{margin-bottom:6px}.shot-hint{margin-top:4px} }
 @media(prefers-reduced-motion:reduce) { #mobile-ui * { scroll-behavior:auto; } }

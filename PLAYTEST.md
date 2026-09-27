@@ -1,6 +1,6 @@
 # Chop To It — release playtest
 
-Build under test: a1ccc0f61e1d9f70. This is a release candidate for testing, not a declaration that launch checks are complete.
+Build under test: 1bafe9c9f44ffad4. This is a release candidate for testing, not a declaration that launch checks are complete.
 
 Record phone model, OS, browser, whether installed on the home screen, and build version with every result. Export any valued save before testing a fresh story. Use a separate test profile when possible.
 
@@ -74,4 +74,10 @@ On release d010ba3c9eba00cc at local origin 4189/?offline-test=1, the Journal re
 
 ## 27 September — final exported build offline smoke
 
-The final exported build a1ccc0f61e1d9f70 differs from the completed-campaign build only by trailing whitespace cleanup. Its fresh York profile at local origin 4191/?offline-test=1 reported Ready to play offline. After the server was stopped and independently refused an HTTP request, the game reloaded, accepted an offline Perfect chop (10 gold, 1/3 first-contract progress), and reloaded again retaining both values. The server was restored. This confirms the exact final ZIP's core offline startup, input and save path; the full earned campaign was played on the immediately preceding functionally identical build.
+Build a1ccc0f61e1d9f70 differs from the completed-campaign build only by trailing whitespace cleanup. Its fresh York profile at local origin 4191/?offline-test=1 reported Ready to play offline. After the server was stopped and independently refused an HTTP request, the game reloaded, accepted an offline Perfect chop (10 gold, 1/3 first-contract progress), and reloaded again retaining both values. The server was restored. This confirms that export's core offline startup, input and save path; the full earned campaign was played on the immediately preceding functionally identical build.
+
+## 27 September — compact mobile controls and York event
+
+The 1:2 game canvas left narrow controls on short 9:16 phone viewports. The mobile HUD, menus, shot button and navigation now use the full available width at 600px and below, while the canvas retains its gameplay coordinates. At 320 × 520, the shot button measures 288 × 49px, the four navigation buttons each measure 80px wide, and the document has no horizontal overflow. Reduced spacing around the controls below 600px height, keeping the actors above them without moving the bird flight lane. Visually checked the first-story page, gameplay and Market at 320 × 568, gameplay at 320 × 520 and 360 × 640, and the stage at 390 × 844. Screenshot compact-mobile-preview.png records the shortest viewport. A timing/aim/power round completed in this layout. The source browser reported no warnings or errors.
+
+On the completed campaign save in York with blade level eight, normal rounds spawned the moving-ring guard event and several high targets. At 360 × 640 the ring, guards and targets were visible beneath the HUD. The ring collision itself and bird collisions remain to be tested in gameplay; visual appearance alone does not prove reachability. The release pipeline passed for build 1bafe9c9f44ffad4.
