@@ -1,6 +1,6 @@
 # Chop To It — release playtest
 
-Build under test: 224f64dde6d705d7. This is a release candidate for testing, not a declaration that launch checks are complete.
+Build under test: 7aed28e4f15eded1. This is a release candidate for testing, not a declaration that launch checks are complete.
 
 Record phone model, OS, browser, whether installed on the home screen, and build version with every result. Export any valued save before testing a fresh story. Use a separate test profile when possible.
 
@@ -93,3 +93,7 @@ Served the isolated upload folder on local port 4193. A new save opened, complet
 ## 27 September — offline download feedback
 
 Build 224f64dde6d705d7 adds a count after each eight-file offline batch to the Journal's Offline play card; the status settles on Ready to play offline after installation. Unit checks verify every batch reports its completed count, failed batches report none, invalid or late messages cannot replace the ready state, and an open Journal updates immediately. On a fresh local origin at port 4195, the exported build opened the story and showed Ready to play offline without warnings or errors. After its server was stopped and independently returned connection refused, the title and York game loaded from cache and an enabled CHOP button appeared. The server was restored. Screenshot offline-ready-preview.png records the card. Intermediate counts were not directly observed in this fast local browser run; a slow-network and real-phone check remain open.
+
+## 27 September — compact paintings in the exact package
+
+The 15 town and three story PNG masters remain editable in assets/, with quality-90 JPEG exports used by the game. The 18 shipped paintings are 4.9 MB instead of 38.6 MB; the full package is 23.0 MB instead of 56.7 MB. Original dimensions are retained, and the lowest measured pixel PSNR among the 18 exports is 36.9 dB. The packaged HTTP check verified all 126 files, hashes and JPEG content types. In the browser, the title, York game, Oswin opening portrait, London and Durham rendered without errors. A restored late-game test save travelled London to Durham. The Journal reported Ready to play offline. With the preview server stopped and an independent request for the Oxford JPEG refused, the game travelled Durham to Oxford, displayed the new town art and advanced nine days. Reloading with the server still down reopened Oxford with 1,000 gold and the saved date. Screenshot compact-art-offline-preview.png records Oxford after offline travel. The server was restored. This confirms desktop-browser artwork loading and offline travel for the compact export; phone decode quality, performance and storage eviction remain unverified.

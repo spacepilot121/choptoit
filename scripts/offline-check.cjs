@@ -10,6 +10,12 @@ assert.ok(!release.files.includes('./background_travel2.png'),'Unused legacy tra
 assert.ok(collectAssets(root,false).includes('background_travel2.png'),'Legacy fallback should retain its travel assets');
 assert.ok(release.files.includes('./assets/cast-heads-v2.png'),'Illustrated character sheet must be available offline');
 assert.ok(release.files.includes('./assets/cast-heads-v2.json'),'Character frame metadata must be available offline');
+for(const name of fs.readdirSync(path.join(root,'assets')).filter(name=>name.endsWith('-v2.jpg'))) {
+  const original=name.slice(0,-4)+'.png';
+  assert.ok(release.files.includes('./assets/'+name),`Compressed painting must be offline: ${name}`);
+  assert.ok(!release.files.includes('./assets/'+original),`Do not download the large source PNG: ${original}`);
+  assert.ok(fs.statSync(path.join(root,'assets',name)).size<fs.statSync(path.join(root,'assets',original)).size/2,`Painting did not compress enough: ${name}`);
+}
 assert.ok(!release.files.some(file=>/\/prisonerhead.*\.png$/.test(file)),'Replaced individual faces must not be downloaded');
 assert.ok(release.files.includes('./weapons30.png'),'Keep late-game upgrades');
 function fixture(fail=false) {

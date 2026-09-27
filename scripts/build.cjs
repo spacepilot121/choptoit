@@ -2,7 +2,10 @@ const fs=require('node:fs'), path=require('node:path'), crypto=require('node:cry
 const root=path.resolve(__dirname,'..');
 const required=new Set(['index.html','mobile.css','mobile.js','cast-art.js','audio.js','campaign.js','dayNightCycle.js','game-core.js','offline.js','manifest.webmanifest','favicon256.png','vendor/phaser-3.55.2.min.js',...require('./collect-assets.cjs')(root)]);
 // Story portraits and title scenery are DOM images, outside the Phaser loader.
-for(const name of fs.readdirSync(path.join(root,'assets'))) if(name.endsWith('.png')) required.add('assets/'+name);
+// Keep editable PNG masters in Git, but ship their smaller opaque JPEG exports.
+for(const name of fs.readdirSync(path.join(root,'assets'))) {
+  if(name.endsWith('.jpg') || (name.endsWith('.png') && !fs.existsSync(path.join(root,'assets',name.slice(0,-4)+'.jpg')))) required.add('assets/'+name);
+}
 const files=[...required];
 files.sort();
 const hash=crypto.createHash('sha256');let bytes=0;

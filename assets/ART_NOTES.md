@@ -4,6 +4,8 @@ Further destination prompts and saved paths: [Town artwork](TOWN_ART_NOTES.md).
 
 Generated with the built-in image generation tool. Saved as `assets/york-v2.png`. Original scenery retained for comparison and other cities.
 
+The game packages quality-90 JPEG exports of all fifteen opaque town paintings and the three story portraits. The PNGs remain editable masters in this repository. Run `node scripts/optimize-art.cjs` with `sharp` available to regenerate the JPEGs; transparent character and weapon sheets stay PNG. The eighteen paintings fall from 38.6 MB of PNG source to 4.9 MB in the mobile package.
+
 Prompt: Create a production background image for a portrait 9:16 mobile arcade game set in a whimsical medieval York town square. Polished indie game illustration, chunky geometric shapes, restrained teal and warm ochre palette, subtle paper texture, charming dark comedy. No text, no UI, no people, no weapons. Upper half mostly open pale teal sky for flying gameplay objects. Low contrast distant castle gate and crooked half-timber buildings framing the left and right edges below the sky. A simple horizontal wooden stage around 72 percent down the frame, cobblestones beneath. Side-on game perspective, readable simple silhouettes, atmospheric depth. Full bleed portrait art.
 
 Visual review: output has a broad open sky, edge framing, warm buildings and a stage at approximately 77% height. Match the stage position in the game. Remaining art work: character/target readability and a cohesive treatment for the other destinations.

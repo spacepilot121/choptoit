@@ -8,7 +8,7 @@ const root = releaseVersion ? path.join(projectRoot,'releases',releaseVersion,'s
 const port=Number(process.env.CHOP_PORT || 4173);
 // Local fault injection for recovery tests; never included in the web app.
 const missing=process.env.CHOP_MISSING_ASSET;
-const types = {'.html':'text/html','.js':'text/javascript','.css':'text/css','.png':'image/png','.json':'application/json','.webmanifest':'application/manifest+json'};
+const types = {'.html':'text/html','.js':'text/javascript','.css':'text/css','.png':'image/png','.jpg':'image/jpeg','.json':'application/json','.webmanifest':'application/manifest+json'};
 function createPreview(rootDirectory=root) {
 const root=path.resolve(rootDirectory);
 return http.createServer((req,res) => {

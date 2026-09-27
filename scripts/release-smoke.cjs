@@ -17,7 +17,7 @@ const server=createPreview(path.join(folder,'site'));
         const bytes=Buffer.from(await response.arrayBuffer());
         assert.equal(bytes.length,file.bytes,file.path);
         assert.equal(crypto.createHash('sha256').update(bytes).digest('hex'),file.sha256,file.path);
-        const expected={'.js':'text/javascript','.css':'text/css','.html':'text/html','.png':'image/png','.json':'application/json','.webmanifest':'application/manifest+json'}[path.extname(file.path)];
+        const expected={'.js':'text/javascript','.css':'text/css','.html':'text/html','.png':'image/png','.jpg':'image/jpeg','.json':'application/json','.webmanifest':'application/manifest+json'}[path.extname(file.path)];
         if(expected) assert.equal(response.headers.get('content-type'),expected,file.path);
       }));
     }

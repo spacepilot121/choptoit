@@ -1,6 +1,6 @@
 :root { --ink:#152b31; --paper:#f4e9d1; --gold:#f9c66b; --coral:#ec805d; --mint:#8bd1b2; }
 body { background:#0c1c22!important; }
-body #start-overlay { background:linear-gradient(180deg,#10272b66,#10272be8),url('assets/york-v2.png') center/cover; }
+body #start-overlay { background:linear-gradient(180deg,#10272b66,#10272be8),url('assets/york-v2.jpg') center/cover; }
 body #start-overlay .card { border:0; border-radius:0; background:none; box-shadow:none; }
 body #start-overlay h1 { font:900 clamp(64px,16vw,100px)/.85 Georgia,serif; letter-spacing:-5px; color:var(--paper); margin:30px 0; text-shadow:4px 5px 0 #152b31; transform:rotate(-4deg); }
 body #start-overlay h1 em { color:var(--gold); font-style:normal; }
