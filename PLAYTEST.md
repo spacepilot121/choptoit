@@ -1,6 +1,6 @@
 # Chop To It — release playtest
 
-Build under test: f7188a9fdfe27b51. This is a release candidate for testing, not a declaration that launch checks are complete.
+Build under test: 224f64dde6d705d7. This is a release candidate for testing, not a declaration that launch checks are complete.
 
 Record phone model, OS, browser, whether installed on the home screen, and build version with every result. Export any valued save before testing a fresh story. Use a separate test profile when possible.
 
@@ -89,3 +89,7 @@ The moving-ring hit check now follows both the head and ring between frames, inc
 ## 27 September — exact f7188a9fdfe27b51 export played offline
 
 Served the isolated upload folder on local port 4193. A new save opened, completed timing/aim/power, earned 10 gold and advanced the first contract to 1/3; reload retained both. A later round displayed fog and fading targets without browser warnings or errors. Enabled the export's offline mode and confirmed the Journal said “Ready to play offline.” Stopped the server and independently confirmed the connection was refused. The game still reopened, retained 10 gold and 1/3 progress, and accepted an offline chop for another 5 gold. After a second offline reload, the purse showed 15 gold and the first contract 2/3. Screenshot exact-export-offline-preview.png records the reopened save. The preview server was restored. This checks startup, input and save persistence for this exact desktop export with no server; real iPhone/Android installation, performance and storage pressure remain unverified.
+
+## 27 September — offline download feedback
+
+Build 224f64dde6d705d7 adds a count after each eight-file offline batch to the Journal's Offline play card; the status settles on Ready to play offline after installation. Unit checks verify every batch reports its completed count, failed batches report none, invalid or late messages cannot replace the ready state, and an open Journal updates immediately. On a fresh local origin at port 4195, the exported build opened the story and showed Ready to play offline without warnings or errors. After its server was stopped and independently returned connection refused, the title and York game loaded from cache and an enabled CHOP button appeared. The server was restored. Screenshot offline-ready-preview.png records the card. Intermediate counts were not directly observed in this fast local browser run; a slow-network and real-phone check remain open.

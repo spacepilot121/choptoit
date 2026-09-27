@@ -8,7 +8,15 @@ self.addEventListener('install', event => {
     try {
       // Small groups avoid saturating mobile connections with hundreds of requests.
       const files = self.CHOP_RELEASE.files;
-      for (let i = 0; i < files.length; i += 8) await cache.addAll(files.slice(i, i + 8));
+      for (let i = 0; i < files.length; i += 8) {
+        await cache.addAll(files.slice(i, i + 8));
+        // Progress is informational; a closed tab must not fail installation.
+        try {
+          const clients = await self.clients.matchAll({type:'window',includeUncontrolled:true});
+          const progress = {type:'choptoit-offline-progress',completed:Math.min(i + 8,files.length),total:files.length};
+          clients.forEach(client => client.postMessage(progress));
+        } catch (_) {}
+      }
     } catch (error) { await caches.delete(CACHE); throw error; }
   })());
 });

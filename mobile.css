@@ -63,6 +63,9 @@ body #start-overlay small { color:#dccdb5; font-size:12px; }
 .item-card .weapon-art { width:76px; height:90px; display:block; overflow:hidden; image-rendering:auto; }
 .item-card small { color:var(--gold); font-size:11px; }.item-card p { margin:8px 0 14px; font-size:13px; }
 .item-card button { width:100%; clear:both; }
+.offline-card { margin:4px 0 16px; padding:12px 14px; border:1px solid #8bd1b255; border-radius:9px; background:#8bd1b210; }
+.offline-card small { color:var(--mint); font-size:10px; font-weight:800; letter-spacing:1.4px; }
+.offline-card p { margin:5px 0 0; font-size:12px; }
 .trade-actions { display:flex; gap:8px; }.trade-actions button { font-size:12px!important; }
 .trade-bulk { margin-top:8px; }
 #mobile-ui .secondary { background:#f4e9d115; color:var(--paper); border:1px solid #f4e9d133; }
