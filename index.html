@@ -4964,6 +4964,16 @@ function cleanupYorkRingPlatformEvent(scene) {
   yorkRingPlatformEvent = null;
 }
 
+function minimumReachableYorkRingEventY(launchY, weaponMultiplier, platformHalfHeight) {
+  // Wind changes between customers while the guards stay on stage. Place the
+  // ring so a full-power shot can still reach its apex in the worst wind.
+  const fullPowerSpeed = 500 * weaponMultiplier;
+  const worstWind = 100;
+  const verticalSpeed = Math.max(0, Math.sqrt(Math.max(0, fullPowerSpeed * fullPowerSpeed - worstWind * worstWind)) - worstWind);
+  const highestHeadY = launchY - verticalSpeed * verticalSpeed / 800;
+  return Math.ceil(highestHeadY + 80 + platformHalfHeight + 56 + YORK_RING_THROW_ARC_HEIGHT);
+}
+
 function spawnYorkRingPlatformEvent(scene) {
   cleanupYorkRingPlatformEvent(scene);
   const platformScaleX = 0.48;
@@ -4971,7 +4981,10 @@ function spawnYorkRingPlatformEvent(scene) {
   const platformImage = scene.textures.get('platform').getSourceImage();
   const platformTextureWidth = platformImage.width;
   // Include the entire ring and its arc, not just the platform's centre.
-  const minEventY = Math.ceil(GAME_HEIGHT * .25 + 38 + YORK_RING_THROW_ARC_HEIGHT + 56 + platformImage.height * platformScaleY * .5);
+  const platformHalfHeight = platformImage.height * platformScaleY * .5;
+  const hudMinEventY = Math.ceil(GAME_HEIGHT * .25 + 38 + YORK_RING_THROW_ARC_HEIGHT + 56 + platformHalfHeight);
+  const reachableMinEventY = minimumReachableYorkRingEventY(CHARACTER_BASE_Y + prisonerHead.y, getWeaponPowerMultiplier(), platformHalfHeight);
+  const minEventY = Math.max(hudMinEventY, reachableMinEventY);
   const maxEventY = Math.max(minEventY, CHARACTER_BASE_Y - 180);
   const eventY = Phaser.Math.Between(minEventY, maxEventY);
   const leftStopX = 0;

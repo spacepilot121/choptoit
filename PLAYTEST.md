@@ -1,6 +1,6 @@
 # Chop To It — release playtest
 
-Build under test: 3e05ba55de20a3d6. This is a release candidate for testing, not a declaration that launch checks are complete.
+Build under test: 7ef4640225f4cbaa. This is a release candidate for testing, not a declaration that launch checks are complete.
 
 Record phone model, OS, browser, whether installed on the home screen, and build version with every result. Export any valued save before testing a fresh story. Use a separate test profile when possible.
 
@@ -117,3 +117,7 @@ Opened build 8d2e32d3c7e65026 on a fresh local browser origin at port 4202. The 
 ## 28 September — bird art and reward alignment
 
 A starter-level crow was visibly flying below the HUD in an ordinary York round on build 8d2e32d3c7e65026. The bird's drawn beak extended beyond its old 58 × 36 collision body, so build 3e05ba55de20a3d6 widens that body to 100 × 50 for both flight directions and checks a crossing at either beak position. A full-path regression now runs a flying head through the game's target collision and reward functions: a crow adds one gold, one fame and one contract target exactly once, while a dove removes fame without gold or contract progress. The release pipeline and packaged HTTP check pass. The immediately preceding build f2c03e17a32dd9de opened a fresh York story and accepted a complete timing/aim/power round without browser warnings or errors; delayed remote input missed that shot. A hit by hand in the live game remains unproven.
+
+## 28 September — York ring remains reachable in wind
+
+The ring previously used the full HUD-safe height range, but at the highest placement a level-eight shot could not climb to the ring in strong downward wind. Build 7ef4640225f4cbaa raises the minimum platform Y (lower on screen) using a worst-case wind calculation. At blade level eight, the platform starts no higher than about Y=751 instead of Y=607; stronger blades can still produce higher arcs. Checks cover blade levels 8–30, both vertical and horizontal worst-case wind, HUD clearance and a normal full-power shot reaching the ring before the fastest throw's midpoint. The exact packaged build opened from a restored blade-eight York save, spawned the two guards and a moving gold ring visibly below the HUD, and accepted a normal chop without browser errors. The restored save was for visual testing, not campaign balance. The screenshot is saved outside the repository as ring-reachability-preview.png. A live ring collision remains unverified.

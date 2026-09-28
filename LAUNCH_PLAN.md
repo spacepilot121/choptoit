@@ -19,11 +19,11 @@ Target: a polished portrait mobile game, playable in browser first, retaining ti
 
 As of 20 September, all fifteen towns have illustrated backgrounds. The executioner, main cast, jesters and ring-event guards use updated artwork. The mobile HUD, pause-safe menus, six contracts, endings, trade routes, upgrades, local save recovery, audio, install affordance and offline package are implemented. All work remains local; the public site is unchanged.
 
-Latest exported build: `3e05ba55de20a3d6`, 66 upload files, 15.8 MB. The full automated release pipeline passes, including serving every file from the isolated export. Earlier entries below are historical evidence and may describe superseded artwork, file counts or behaviour.
+Latest exported build: `7ef4640225f4cbaa`, 66 upload files, 15.8 MB. The full automated release pipeline passes, including serving every file from the isolated export. Earlier entries below are historical evidence and may describe superseded artwork, file counts or behaviour.
 
 ### Remaining launch gates, in priority order
 
-1. Finish browser checks of fog and live ring/bird hits. A starter crow is visibly below the HUD, and full-path checks show bird crossings pay the correct reward; moving-ring collision checks pass. A live ring or bird hit has not yet been landed by hand; physical touch performance remains unverified.
+1. Finish browser checks of fog and live ring/bird hits. A starter crow is visibly below the HUD, and full-path checks show bird crossings pay the correct reward. York's ring now has a reachable arc even in the worst allowed wind, and the updated event is visible in the packaged browser build. A live ring or bird hit has not yet been landed by hand; physical touch performance remains unverified.
 2. [Completed in desktop browser] A clean save earned all six contracts and the reform ending without imported progress. The final chop requirement was reduced from 100 to 50 after play revealed an unproductive stretch. Repeat on a real phone to judge feel and pacing.
 3. [Completed in desktop browser] The current compact package installed its offline cache, travelled to a town image not loaded in the page with the server stopped, and reopened in that town offline. A preceding package also accepted an offline shot and retained the reward after reload. Repeat installation, offline travel/trading and storage-pressure checks on real phones.
 4. Test real iPhone and Android touch controls, sound, app switching, safe areas, short screens and home-screen installation. Desktop viewport checks are not sufficient evidence.
