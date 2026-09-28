@@ -26,8 +26,8 @@ for(const direction of [0,1]) {
   assert.equal(bird.y,420,'Bird lane remains below the portrait HUD');
   assert.equal(bird.birdSprite.scaleX,direction?-1:1,'Bird faces its outbound path');
   assert.equal(motion.x,direction?-50:850);
-  assert.deepEqual(bird.body.size,[58,36]);
-  assert.deepEqual(bird.body.offset,[-29,-18]);
+  assert.deepEqual(bird.body.size,[100,50]);
+  assert.deepEqual(bird.body.offset,[-50,-20]);
   context.spawnBird(scene);
   assert.equal(objects.length,1,'Only one bird may cross the stage at a time');
   motion.onYoyo();
@@ -49,8 +49,10 @@ for(const direction of [0,1]) {
   const lowBird=objects.at(-1);
   assert.equal(lowBird.y,724);
   assert.equal(lowBird.birdKind,'crow','Early birds teach a positive target before doves appear');
-  Object.assign(lowBird.body,{enable:true,left:371,top:lowBird.y-18,right:429,bottom:lowBird.y+18});
+  Object.assign(lowBird.body,{enable:true,left:350,top:lowBird.y-20,right:450,bottom:lowBird.y+30});
   assert.equal(context.didHeadSegmentHitTarget({displayWidth:36},lowBird,400,lowBird.y+90,400,lowBird.y-90),true,'A full-power head crossing the starter bird lane registers');
+  assert.equal(context.didHeadSegmentHitTarget({displayWidth:36},lowBird,444,lowBird.y+90,444,lowBird.y-90),true,'The illustrated beak is hittable when the bird faces right');
+  assert.equal(context.didHeadSegmentHitTarget({displayWidth:36},lowBird,356,lowBird.y+90,356,lowBird.y-90),true,'The illustrated beak is hittable when the bird faces left');
   assert.equal(context.didHeadSegmentHitTarget({displayWidth:36},lowBird,500,lowBird.y+90,500,lowBird.y-90),false,'A shot outside the bird lane does not register');
   lowBird.destroy();
   context.currentWeather='wind';context.windForce.y=100;

@@ -5328,8 +5328,9 @@ function spawnBird(scene) {
   scene.physics.world.enable(bird);
   bird.body.setAllowGravity(false);
   bird.body.setImmovable(true);
-  bird.body.setSize(58,36);
-  bird.body.setOffset(-29,-18);
+  // The art faces either way; include its head and beak on both sides.
+  bird.body.setSize(100,50);
+  bird.body.setOffset(-50,-20);
   bird.collected = false;
   bird.jester = null;
   targetGroup.add(bird);

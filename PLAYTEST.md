@@ -1,6 +1,6 @@
 # Chop To It — release playtest
 
-Build under test: 8d2e32d3c7e65026. This is a release candidate for testing, not a declaration that launch checks are complete.
+Build under test: 3e05ba55de20a3d6. This is a release candidate for testing, not a declaration that launch checks are complete.
 
 Record phone model, OS, browser, whether installed on the home screen, and build version with every result. Export any valued save before testing a fresh story. Use a separate test profile when possible.
 
@@ -113,3 +113,7 @@ The fixed bird lane at game Y=420 could not be reached with the first blade: fro
 ## 28 September — exact release opening, reward and first purchase
 
 Opened build 8d2e32d3c7e65026 on a fresh local browser origin at port 4202. The target guide displayed the updated bird guidance legibly. Ordinary timing, aim and power input earned the first contract; the ledger paid 40 gold, taking the purse from 72 to 112 and opening chapter two. The first blade upgrade cost 10 gold, showed level two and 1.06× strength, and left 102 gold. After a full page reload and return from the title screen, the game retained 102 gold and chapter two's target objective. The workshop screenshot is saved outside the repository as current-release-opening-preview.png. Fog was shown during these rounds and cleared later, but this run did not prove a live bird or ring hit. Physical phone feel, sound and installation remain open.
+
+## 28 September — bird art and reward alignment
+
+A starter-level crow was visibly flying below the HUD in an ordinary York round on build 8d2e32d3c7e65026. The bird's drawn beak extended beyond its old 58 × 36 collision body, so build 3e05ba55de20a3d6 widens that body to 100 × 50 for both flight directions and checks a crossing at either beak position. A full-path regression now runs a flying head through the game's target collision and reward functions: a crow adds one gold, one fame and one contract target exactly once, while a dove removes fame without gold or contract progress. The release pipeline and packaged HTTP check pass. The immediately preceding build f2c03e17a32dd9de opened a fresh York story and accepted a complete timing/aim/power round without browser warnings or errors; delayed remote input missed that shot. A hit by hand in the live game remains unproven.

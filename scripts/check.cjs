@@ -8,6 +8,7 @@ require('./suspension-check.cjs');
 require('./ring-layout-check.cjs');
 require('./ring-cleanup-check.cjs');
 require('./ring-collision-check.cjs');
+require('./bird-reward-check.cjs');
 require('./bird-check.cjs');
 require('./target-retirement-check.cjs');
 require('./startup-check.cjs');
