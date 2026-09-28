@@ -1,6 +1,6 @@
 # Chop To It — release playtest
 
-Build under test: 42c4c417e99219d1. This is a release candidate for testing, not a declaration that launch checks are complete.
+Build under test: 8d2e32d3c7e65026. This is a release candidate for testing, not a declaration that launch checks are complete.
 
 Record phone model, OS, browser, whether installed on the home screen, and build version with every result. Export any valued save before testing a fresh story. Use a separate test profile when possible.
 
@@ -105,3 +105,7 @@ Build 000efd14433fd81f removes hidden legacy canvas menu art from the mobile dow
 ## 27 September — York streak and target readability
 
 On build 000efd14433fd81f, a restored blade-eight York save earned a twelve-chop streak through normal timing, aim and power controls. The moving gold ring and a crow both appeared beneath the HUD, and high pole targets paid fame on hits. However, unhit pole targets stayed through every new customer, eventually covering the stage with jesters. Build 42c4c417e99219d1 retires those targets as the next customer enters. Five successive successful rounds in the exact exported build left the stage readable with only current pole targets; screenshot tidy-york-rounds-preview.png records the result. The updated ring reward now saves and announces its three-fame bonus even when no ordinary target is cleared. The release and HTTP checks passed without browser errors. The attempted live ring and crow shots did not establish a collision, so those remain explicit playtest items rather than verified hits.
+
+## 28 September — starter bird reachability
+
+The fixed bird lane at game Y=420 could not be reached with the first blade: from a Y=956 launch, maximum vertical speed 500 px/s and gravity 400 px/s² put the highest point near Y=644. The new lane starts at Y=724 and rises with blade upgrades, never above Y=420. A strong downward wind suppresses an otherwise unreachable bird. Starter birds are rewarding crows; doves enter from blade level four, and only one bird flies at once. Regression checks cover levels 1–30, a full-power head crossing the starter bird hitbox, an outside miss, adverse wind, and bird animation cleanup. The exact 8d2e32d3c7e65026 upload folder opened a fresh York story, showed the updated Targets & tricks guide, and completed three normal shots for 35 gold and the first ready contract without browser errors. Random live play did not capture a low-lane bird collision, so bird-hit reward and phone readability still need direct playtesting.

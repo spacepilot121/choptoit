@@ -5300,13 +5300,27 @@ function spawnRoyal(scene) {
   });
 }
 
+function birdFlightLane(weaponMultiplier, launchY) {
+  // A full-power vertical shot should climb past the bird with room to aim.
+  // Stronger blades bring later flocks higher, but never into the mobile HUD.
+  const maximumRise = Math.pow(500 * weaponMultiplier, 2) / 800;
+  return Math.max(420, Math.min(760, Math.round(launchY - maximumRise + 80)));
+}
+
 function spawnBird(scene) {
+  if (targetGroup.getChildren().some(target => target.targetType === 'bird' && target.active && !target.collected)) return;
+  const launchY = prisoner.y + prisonerHead.y;
+  const weaponMultiplier = getWeaponPowerMultiplier();
+  const laneY = birdFlightLane(weaponMultiplier, launchY);
+  const windY = FEATURES.weather && currentWeather === 'wind' ? windForce.y : 0;
+  const fullPowerRise = Math.pow(Math.max(0, 500 * weaponMultiplier - windY), 2) / 800;
+  if (launchY - fullPowerRise > laneY) return;
   const fromRight = Phaser.Math.Between(0, 1) === 1;
   const startX = fromRight ? 850 : -50;
   const endX = fromRight ? -50 : 850;
-  const kind = Phaser.Math.Between(0, 1) ? 'dove' : 'crow';
-  // Keep the flight lane below the portrait HUD, where players can see and aim.
-  const bird = scene.add.container(startX, 420).setDepth(20);
+  // Teach the bonus first. Reputation-costing doves join after a few upgrades.
+  const kind = player.weaponLevel < 4 ? 'crow' : (Phaser.Math.Between(0, 1) ? 'dove' : 'crow');
+  const bird = scene.add.container(startX, laneY).setDepth(20);
   bird.targetType = 'bird';
   bird.birdKind = kind;
   bird.fromRight = fromRight;
@@ -5485,7 +5499,7 @@ function spawnTarget(scene, existingTargetXs = []) {
           }
         });
       }
-      if (FEATURES.birds && Phaser.Math.Between(1, 10) === 1) {
+      if (FEATURES.birds && Phaser.Math.Between(1, 6) === 1) {
         scene.time.delayedCall(2000, () => spawnBird(scene));
       }
     },

@@ -19,7 +19,7 @@ Target: a polished portrait mobile game, playable in browser first, retaining ti
 
 As of 20 September, all fifteen towns have illustrated backgrounds. The executioner, main cast, jesters and ring-event guards use updated artwork. The mobile HUD, pause-safe menus, six contracts, endings, trade routes, upgrades, local save recovery, audio, install affordance and offline package are implemented. All work remains local; the public site is unchanged.
 
-Latest exported build: `42c4c417e99219d1`, 66 upload files, 15.8 MB. The full automated release pipeline passes, including serving every file from the isolated export. Earlier entries below are historical evidence and may describe superseded artwork, file counts or behaviour.
+Latest exported build: `8d2e32d3c7e65026`, 66 upload files, 15.8 MB. The full automated release pipeline passes, including serving every file from the isolated export. Earlier entries below are historical evidence and may describe superseded artwork, file counts or behaviour.
 
 ### Remaining launch gates, in priority order
 
@@ -289,3 +289,7 @@ Build 000efd14433fd81f uses the portrait HTML menus without downloading or build
 ## Clear old targets between customers (27 September)
 
 Live York play with a blade-eight save reached a twelve-chop streak. Unhit pole targets accumulated until their jesters obscured the character and new targets. Build 42c4c417e99219d1 has those missed jesters leave at the next customer's arrival; birds retain their separate flight window. After five successful rounds on the exact export, the stage showed only the current targets and York ring challenge, with no browser errors. A ring pass now immediately saves its three-fame bonus even if no ordinary target remains, and announces the reward in the mobile HUD. The reward path has a deterministic regression check; a live ring pass and bird collision remain unproven. See PLAYTEST.md and tidy-york-rounds-preview.png.
+
+## Reachable birds from the first blade (28 September)
+
+The old bird lane at game Y=420 was above the highest possible full-power level-one shot: a 500 px/s vertical launch under 400 px/s² gravity rises only 312.5 px from Y=956, reaching Y≈644. Build 8d2e32d3c7e65026 gives early birds a lower lane (Y=724 at blade one) that climbs toward Y=420 as blades improve. It suppresses a spawn if downward wind would make even the best shot miss that lane. Early birds are crows, introducing the bonus before doves can cost fame; only one bird crosses at a time, with a slightly higher appearance chance. Ballistic and swept-hit tests cover all thirty blade levels, the adverse-wind case, and a head crossing the starter bird hitbox. On the exact export, a fresh game opened the updated target guide and completed three successful first-session shots to a ready first contract without browser errors. A low-lane bird hit during live play remains unverified; see PLAYTEST.md.
