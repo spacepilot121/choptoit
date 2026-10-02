@@ -27,7 +27,9 @@ The pull request also starts unsigned Android and iOS simulator builds in GitHub
 
 ## Compilation evidence — 2 October
 
-[Run 37039105893](https://github.com/spacepilot121/choptoit/actions/runs/37039105893) passed Android and iOS compilation for commit `2b9a6b4`, including the softened sky in game release `2aa0123062ebf4bb`. The next release adds Android Back navigation; it requires its own compilation and phone checks.
+[Run 37039105893](https://github.com/spacepilot121/choptoit/actions/runs/37039105893) passed Android and iOS compilation for commit `2b9a6b4`, including the softened sky in game release `2aa0123062ebf4bb`.
+
+[Run 37039549661](https://github.com/spacepilot121/choptoit/actions/runs/37039549661) passed both builds for commit `01a08c9`, game release `83239100c0da62ba`, with Android Back navigation. Its downloaded APK's 66 game files and bundled native bridge matched the current local native package byte for byte. The test APK is `releases/choptoit-android-83239100c0da62ba.apk`. It has not been installed on a physical phone. The subsequent packaging-verification change adds app ID and bridge hash to build metadata; this earlier APK's metadata does not contain those new fields.
 
 Commit `caa22d3` passed both native jobs in [run 37037158952](https://github.com/spacepilot121/choptoit/actions/runs/37037158952): Android `assembleDebug` with Java 21 and an unsigned iOS simulator build on macOS. Both use game release `0b6c0be81083503a`. The Android job now also exports a downloadable test APK in later workflow runs. Native audio suspension is explicitly tested even when the browser visibility state does not change. Signed release builds, store uploads and physical phone validation remain open.
 
