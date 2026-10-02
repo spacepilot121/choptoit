@@ -25,6 +25,8 @@ vm.runInNewContext(fs.readFileSync(require('node:path').join(__dirname,'../audio
   sandbox.document.hidden=true;events.visibilitychange();assert.equal(timers.size,0);assert.equal(context.state,'suspended');
   const hidden=started;audio.play('hit');assert.equal(started,hidden);
   sandbox.document.hidden=false;await events.pointerdown();assert.equal(timers.size,1);assert.equal(created,1);
+  audio.suspend();assert.equal(timers.size,0);assert.equal(context.state,'suspended','Native app switching suspends audio even when document.hidden is unchanged');
+  await events.pointerdown();assert.equal(timers.size,1,'Native return resumes one music loop after interaction');
   audio.toggle('music');assert.equal(timers.size,0);assert.equal(storage.get('choptoit-music'),'off');
   console.log('Audio waits for interaction; cues stop; mute, independent music, background suspension and single-loop resume pass.');
 })().catch(error=>{console.error(error);process.exitCode=1;});

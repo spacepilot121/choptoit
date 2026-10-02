@@ -51,12 +51,16 @@
   }
   document.addEventListener('pointerdown', unlock, {passive:true});
   document.addEventListener('keydown', unlock);
+  function suspend() {
+    clearTimeout(timer); timer = null;
+    context?.suspend().catch(()=>{}); unlocked = false;
+  }
   document.addEventListener('visibilitychange', () => {
     clearTimeout(timer); timer = null;
-    if (document.hidden) { context?.suspend().catch(()=>{}); unlocked = false; }
+    if (document.hidden) suspend();
   });
   window.ChopAudio = {
-    play,
+    play, suspend,
     get effects() { return effects; }, get music() { return music; },
     toggle(kind) {
       if (kind === 'music') music = !music; else effects = !effects;

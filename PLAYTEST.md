@@ -1,6 +1,6 @@
 # Chop To It — release playtest
 
-Build under test: `f8da0cecf123d73c`. This is a release candidate for testing, not a declaration that launch checks are complete. Test the same release ID on the web, Android and iPhone; update it after a later sync.
+Build under test: `dbf2e520a8156e9f`. This is a release candidate for testing, not a declaration that launch checks are complete. Test the same release ID on the web, Android and iPhone; update it after a later sync.
 
 Record phone model, OS, browser, whether installed on the home screen, and build version with every result. Export any valued save before testing a fresh story. Use a separate test profile when possible.
 

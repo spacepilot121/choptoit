@@ -19,7 +19,7 @@ Target: a polished portrait mobile game released on the web, App Store and Googl
 
 As of 20 September, all fifteen towns have illustrated backgrounds. The executioner, main cast, jesters and ring-event guards use updated artwork. The mobile HUD, pause-safe menus, six contracts, endings, trade routes, upgrades, local save recovery, audio, install affordance and offline package are implemented. All work remains local; the public site is unchanged.
 
-Latest exported build: `f8da0cecf123d73c`, 66 upload files, 15.8 MB. The full automated release pipeline passes, including serving every file from the isolated export. The matching iOS and Android projects have been generated but no native binary has been built or installed on a phone yet. Earlier entries below are historical evidence and may describe superseded artwork, file counts or behaviour.
+Latest exported build: `dbf2e520a8156e9f`, 66 upload files, 15.8 MB. The full automated release pipeline passes, including serving every file from the isolated export. The matching iOS and Android projects have been generated but no native binary has been built or installed on a phone yet. Earlier entries below are historical evidence and may describe superseded artwork, file counts or behaviour.
 
 ### Remaining launch gates, in priority order
 

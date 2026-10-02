@@ -3,7 +3,7 @@ import {Share} from '@capacitor/share';
 import {App} from '@capacitor/app';
 
 App.addListener('appStateChange', ({isActive}) => {
-  if (!isActive) window.ChopSuspend?.();
+  if (!isActive) { window.ChopSuspend?.(); window.ChopAudio?.suspend(); }
 });
 
 window.ChopNativeAPI = {
