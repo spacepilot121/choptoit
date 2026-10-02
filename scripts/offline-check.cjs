@@ -8,14 +8,13 @@ const collectAssets=require('./collect-assets.cjs');
 for(const file of collectAssets(root)) assert.ok(release.files.includes('./'+file),`Preloaded file is not available offline: ${file}`);
 assert.ok(!release.files.includes('./background_travel2.png'),'Unused legacy travel scenery must not be downloaded by mobile');
 assert.ok(collectAssets(root,false).includes('background_travel2.png'),'Legacy fallback should retain its travel assets');
-assert.ok(release.files.includes('./assets/cast-heads-v2.png'),'Illustrated character sheet must be available offline');
-assert.ok(release.files.includes('./assets/cast-heads-v2.json'),'Character frame metadata must be available offline');
-for(const name of fs.readdirSync(path.join(root,'assets')).filter(name=>name.endsWith('-v2.jpg'))) {
-  const original=name.slice(0,-4)+'.png';
-  assert.ok(release.files.includes('./assets/'+name),`Compressed painting must be offline: ${name}`);
-  assert.ok(!release.files.includes('./assets/'+original),`Do not download the large source PNG: ${original}`);
-  assert.ok(fs.statSync(path.join(root,'assets',name)).size<fs.statSync(path.join(root,'assets',original)).size/2,`Painting did not compress enough: ${name}`);
+assert.ok(release.files.includes('./assets/cast-heads-angular.png'),'Illustrated character sheet must be available offline');
+assert.ok(release.files.includes('./assets/cast-heads-angular.json'),'Character frame metadata must be available offline');
+for(const name of fs.readdirSync(path.join(root,'assets')).filter(name=>name.endsWith('-angular.png'))) {
+  assert.ok(release.files.includes('./assets/'+name),'Angular asset must be offline: '+name);
+  assert.ok(!release.files.includes('./assets/'+name.replace('.png','.svg')),'Vector masters must stay outside the upload');
 }
+assert.ok(!release.files.some(name=>name.endsWith('-v2.jpg')),'Retired painted scenery must not inflate the new release');
 assert.ok(!release.files.some(file=>/\/prisonerhead.*\.png$/.test(file)),'Replaced individual faces must not be downloaded');
 const desktopAssets=collectAssets(root,false);
 for(const file of ['weapons30.png','storage_16.png','background_storage.png','background_weapons.png','background_travelmenu.png','background.png','background_bluesky.png']) {

@@ -11,7 +11,7 @@
       <div class="hud-row hud-meta"><span id="hud-rank"></span><span id="hud-weather"></span></div><div class="rank-track"><i id="hud-xp"></i></div>
       <button id="contract-track" data-screen="journal" type="button"><small id="contract-caption"></small><span id="contract-next"></span><b aria-hidden="true">›</b></button>
     </header>
-    <div class="mobile-toast" id="game-toast" role="status" hidden></div>
+    <div id="combo-banner" aria-hidden="true"></div><div class="mobile-toast" id="game-toast" role="status" hidden></div>
     <section class="mobile-controls" aria-label="Shot controls">
       <div class="shot-steps"><span id="step-timing">01 · TIMING</span><span id="step-aim">02 · AIM</span><span id="step-power">03 · POWER</span></div>
       <div class="shot-meter" id="shot-meter" aria-hidden="true"><i class="zone outer"></i><i class="zone middle"></i><i class="zone inner"></i><i class="needle"></i></div>
@@ -27,6 +27,7 @@
   let introRead = false;
   let navigating = false;
   let travelLoading = false;
+  let activeTravel = null;
   let loadingTimer, loadingFailed = false;
   let lastReadyChapter = -1;
   try { introRead = localStorage.getItem('choptoit-intro-read') === 'yes'; } catch (_) {}
@@ -59,6 +60,7 @@
   }
   function close() {
     if (SaveManager.conflict || travelLoading) return;
+    if (activeTravel) { activeTravel.scene.resume(); screen='journey';ui.hidden=true;return; }
     screen = null; el('game-dialog').hidden = true;
     ui.querySelectorAll('.mobile-hud,.mobile-controls,.mobile-nav').forEach(node => { node.inert = false; });
     if (scene?.scene.isPaused()) scene.scene.resume();
@@ -87,11 +89,13 @@
     if (name === 'conflict') {
       el('dialog-title').textContent='Your game moved on';
       body.innerHTML='<p>Another tab has changed your saved game. This copy is paused so it cannot overwrite that progress.</p><button class="wide" data-action="reload-save">Load latest progress</button><button class="wide secondary" data-action="export">Export this copy as a backup</button>';
+    } else if (name === 'journey-pause') {
+      el('dialog-title').textContent='A rest on the road';body.innerHTML='<p>Your caravan is waiting. The journey clock is paused.</p><button class="wide" data-action="resume">Continue the journey</button>';
     } else if (name === 'workshop') {
       const wCost = getWeaponUpgradeCost(), sCost = getStorageUpgradeCost();
       body.innerHTML = `<p>A better blade makes the sweet spot wider and sends your shots further. A bigger cart makes room for trade.</p>
       <article class="item-card">${CastArt.weaponMarkup(player.weaponLevel,scene.textures.get('castWeapons'))}<small>WEAPON · LEVEL ${player.weaponLevel}</small><h3>A sharper argument</h3><p>Strike strength ${getWeaponPowerMultiplier().toFixed(2)}×. Next level adds 6% of base power and more room for a clean hit.</p><button data-buy="weapon" ${player.weaponLevel >= 30 || player.gold < wCost ? 'disabled' : ''}>${player.weaponLevel >= 30 ? 'Fully upgraded' : `Upgrade · ${wCost.toLocaleString()} gold`}</button></article>
-      <article class="item-card"><img class="item-art cart-art" src="assets/trading-cart-v2.png" alt="Your storage cart"><small>CART · LEVEL ${player.storageLevel}</small><h3>Room for ambition</h3><p>${getInventoryCount()} of ${player.maxStorage} spaces used. ${player.storageLevel >= 16 ? 'Your cart is at maximum capacity.' : 'Add 10 more spaces.'}</p><button data-buy="storage" ${player.storageLevel >= 16 || player.gold < sCost ? 'disabled' : ''}>${player.storageLevel >= 16 ? 'Fully upgraded' : `Upgrade · ${sCost.toLocaleString()} gold`}</button></article>`;
+      <article class="item-card"><img class="item-art cart-art" src="assets/cart-angular.png" alt="Your storage cart"><small>CART · LEVEL ${player.storageLevel}</small><h3>Room for ambition</h3><p>${getInventoryCount()} of ${player.maxStorage} spaces used. ${player.storageLevel >= 16 ? 'Your cart is at maximum capacity.' : 'Add 10 more spaces.'}</p><button data-buy="storage" ${player.storageLevel >= 16 || player.gold < sCost ? 'disabled' : ''}>${player.storageLevel >= 16 ? 'Fully upgraded' : `Upgrade · ${sCost.toLocaleString()} gold`}</button></article>`;
       body.insertAdjacentHTML('beforeend', `<h3>Build your reputation</h3><p>Target rewards currently earn ${fameMultiplier.toFixed(1)}× fame. The strongest boost applies; bonuses do not stack or increase penalties.</p>` + gameUpgrades.map((u,i) => {
         const covered = u.mult <= fameMultiplier;
         return `<article class="item-card"><small>FAME BOOST · ${u.mult.toFixed(1)}×</small><h3>${u.name}</h3><p>${u.desc} Requires ${u.fameReq} fame; you have ${Math.floor(fame)}.</p><button data-fame-upgrade="${i}" ${u.purchased || covered || fame < u.fameReq || player.gold < u.cost ? 'disabled' : ''}>${u.purchased ? 'Owned' : covered ? 'Stronger boost owned' : `Buy · ${u.cost} gold`}</button></article>`;
@@ -109,16 +113,16 @@
         return `<article class="item-card"><small>${m.stock || 0} IN STOCK · ${owned} OWNED</small><h3>${m.name}</h3><p>${tip}</p><p>${fame < m.fameReq ? `Requires ${m.fameReq} fame. ` : ''}Buy ${m.currentBuy} gold · Sell ${m.currentSell} gold</p><div class="trade-actions"><button data-trade="buy" data-item="${i}" ${canBuy ? '' : 'disabled'}>Buy one</button><button class="secondary" data-trade="sell" data-item="${i}" ${owned > 0 ? '' : 'disabled'}>Sell one</button></div><div class="trade-actions trade-bulk"><button data-trade="buy" data-quantity="${bulkBuy}" data-item="${i}" ${bulkBuy > 1 ? '' : 'disabled'}>${bulkBuy > 1 ? `Buy ${bulkBuy} · ${bulkBuy*m.currentBuy}g` : 'Buy batch'}</button><button class="secondary" data-trade="sell" data-quantity="${owned}" data-item="${i}" ${owned > 1 ? '' : 'disabled'}>${owned > 1 ? `Sell ${owned} · ${owned*m.currentSell}g` : 'Sell batch'}</button></div></article>`;
       }).join('');
     } else if (name === 'travel') {
-      body.innerHTML = `<p>Earn fame by hitting flying targets to open new roads. Travel advances the calendar. Your current shot will continue when you return to play.</p>` + cities.map((c,i) => {
+      body.innerHTML = `<p>Earn fame by hitting flying targets to open new roads. Travel advances the calendar. Your caravan travels through each day. Arrival begins a fresh performance.</p>` + cities.map((c,i) => {
         const unlocked = c.unlocked || fame >= c.fameReq, here = c.name === currentCity;
         const profile = ChopCore.tradeProfiles[c.name];
         return `<article class="item-card"><small>${c.region.toUpperCase()}${here ? ' · YOU ARE HERE' : ''}</small><h3>${c.name}</h3><p>${c.desc} ${here ? '' : `${getTravelDays(currentCity,c.name)} days by road.`}</p>${profile ? `<p>Exports ${profile[0]} · wants ${profile[1]}${inventory[profile[1]] ? ` · ${inventory[profile[1]]} in your cart` : ''}.</p>` : ''}<button data-travel="${i}" ${!unlocked || here ? 'disabled' : ''}>${here ? 'Current town' : unlocked ? `Travel to ${c.name}` : `Opens at ${c.fameReq} fame`}</button></article>`;
       }).join('');
     } else if (name === 'welcome') {
-      body.innerHTML = `<span class="eyebrow">CHAPTER ONE · THE PRICE OF FREEDOM</span><h3>Welcome to York.</h3><img src="assets/oswin-v2.jpg" class="journal-portrait" alt="Oswin, the royal clerk"><p class="journal-quote">“One million and one gold. Before the year is out. Then your debt—and your service—are finished.”</p><p>The royal clerk smiles. The extra coin is his fee. You take the axe. Somewhere beyond York, there must be a better way to make a living.</p><article class="item-card"><small>YOUR FIRST DAY</small><h3>Find your rhythm</h3><p>1. Stop the marker in the mint centre.<br>2. Set your aim toward a flying target.<br>3. Choose your power and let it fly.</p><p>Land clean hits, build a streak, then spend your first 10 gold on a better blade.</p></article><button class="wide" data-action="begin">Let's get to work →</button>`;
+      body.innerHTML = `<span class="eyebrow">CHAPTER ONE · THE PRICE OF FREEDOM</span><h3>Welcome to York.</h3><img src="assets/oswin-angular.png" class="journal-portrait" alt="Oswin, the royal clerk"><p class="journal-quote">“One million and one gold. Before the year is out. Then your debt—and your service—are finished.”</p><p>The royal clerk smiles. The extra coin is his fee. You take the axe. Somewhere beyond York, there must be a better way to make a living.</p><article class="item-card"><small>YOUR FIRST DAY</small><h3>Find your rhythm</h3><p>1. Stop the marker in the mint centre.<br>2. Set your aim toward a flying target.<br>3. Choose your power and let it fly.</p><p>Land clean hits, build a streak, then spend your first 10 gold on a better blade.</p></article><button class="wide" data-action="begin">Let's get to work →</button>`;
     } else if (name === 'guide') {
       el('dialog-title').textContent='Targets & tricks';
-      body.innerHTML='<article class="item-card"><small>BUILD A CROWD</small><h3>Aim for the rings</h3><p>Coral rings earn fame. Moving targets earn more, and the high mint targets in York are worth triple. Gold crown targets are worth five times a normal hit.</p></article><article class="item-card"><small>YORK CHALLENGE · BLADE LEVEL 8</small><h3>Thread the gold ring</h3><p>When guards throw a gold ring, send a flying head through its centre. A clean pass clears nearby targets and earns bonus fame.</p></article><article class="item-card"><small>MAKE YOUR SHOT COUNT</small><h3>Break through</h3><p>Wooden shields need a powerful launch. If your shot bounces, use more power or upgrade your blade. Barrels light a short fuse, then explode into nearby targets.</p></article><article class="item-card"><small>WATCH YOUR REPUTATION</small><h3>Choose your targets</h3><p>Birds fly higher as your blade improves. Crows reward a hit. White doves and the pale-robed monks cost fame and do not count toward your contract. Steer around them.</p></article><article class="item-card"><small>KEEP YOUR RHYTHM</small><h3>Protect your streak</h3><p>Each successful chop increases your gold multiplier. A miss resets the streak. Watch the weather: wind pushes your shot, rain pulls it down, and fog fades targets.</p></article><button class="wide secondary" data-action="cancel-new">Back to ledger</button>';
+      body.innerHTML='<article class="item-card"><small>BUILD A CROWD</small><h3>Aim for the rings</h3><p>Coral rings earn fame. Moving targets earn more, and the high mint targets in London are worth triple. Gold crown targets are worth five times a normal hit.</p></article><article class="item-card"><small>WINCHESTER CHALLENGE · BLADE LEVEL 8</small><h3>Thread the gold ring</h3><p>When guards throw a gold ring, send a flying head through its centre. A clean pass clears nearby targets and earns bonus fame.</p></article><article class="item-card"><small>MAKE YOUR SHOT COUNT</small><h3>New towns, new tricks</h3><p>York teaches the rhythm. Durham introduces shields; Chester and the ports bring barrels. Canterbury has monks, London has royal and high targets. Norwich unlocks the floating putting green and Winchester unlocks thrown rings at blade level 8.</p><h3>Break through</h3><p>Wooden shields need a powerful launch. If your shot bounces, use more power or upgrade your blade. Barrels light a short fuse, then explode into nearby targets.</p></article><article class="item-card"><small>WATCH YOUR REPUTATION</small><h3>Choose your targets</h3><p>Birds fly higher as your blade improves. Crows reward a hit. White doves and the pale-robed monks cost fame and do not count toward your contract. Steer around them.</p></article><article class="item-card"><small>KEEP YOUR RHYTHM</small><h3>Protect your streak</h3><p>Each successful chop increases your gold multiplier. A miss resets the streak. Watch the weather: wind pushes your shot, rain pulls it down, and fog fades targets.</p></article><button class="wide secondary" data-action="cancel-new">Back to ledger</button>';
     } else if (name === 'cast') {
       el('dialog-title').textContent='People on the road';
       const people=[
@@ -126,7 +130,7 @@
         ['merrin','Merrin','The travelling fool','A good joke, a painted target, and a crowd willing to listen. There is usually more to his performance than the punchline.'],
         ['agnes','Agnes','The Durham merchant','She has spent a lifetime on the trading road. Ask her what something is worth, and expect a very honest answer.']
       ];
-      body.innerHTML=people.map(([key,name,role,about])=>`<article class="item-card cast-card"><div class="cast-heading"><img class="journal-portrait" src="assets/${key}-v2.jpg" alt="${name}"><div><small>${role}</small><h3>${name}</h3></div></div><p>${about}</p></article>`).join('')+'<button class="wide secondary" data-action="cancel-new">Back to ledger</button>';
+      body.innerHTML=people.map(([key,name,role,about])=>`<article class="item-card cast-card"><div class="cast-heading"><img class="journal-portrait" src="assets/${key}-angular.png" alt="${name}"><div><small>${role}</small><h3>${name}</h3></div></div><p>${about}</p></article>`).join('')+'<button class="wide secondary" data-action="cancel-new">Back to ledger</button>';
     } else if (name === 'recovery') {
       el('dialog-title').textContent='Your save needs attention';
       body.innerHTML='<p>This game could not read your saved progress or its recovery copy. Your saved data has been left untouched. A save from a newer version may need an updated game.</p><p>Restore an exported backup, or start a new story. Until then, automatic saving is paused.</p><button class="wide" data-action="import">Restore a save backup</button><button class="wide secondary" data-action="new-game">Start a new story</button>';
@@ -200,7 +204,7 @@
     ui.querySelector('.needle').style.left = `${Math.max(0,Math.min(1,fraction))*100}%`;
     ['outer','middle','inner'].forEach((z,i) => { ui.querySelector(`.zone.${z}`).style.width = phase === 'timing' ? `${[redZone,yellowZone,greenZone][i].displayWidth/3}%` : '0'; });
     // Keep legacy display objects alive for simulation callbacks, but use the accessible HUD.
-    [scene.popupText,goldText,fameText,missText,killText,weatherIndicator,weatherIndicatorBg,menuIcon,dateText,dateBg,locationText,xpText,xpBarFill,streakMultiplierText,chest,storageButton,weaponsButton,shopButton,travelButton,swingBar,redZone,yellowZone,greenZone,cursor].forEach(o => o?.setVisible(false));
+    [scene.popupText,versionText,goldText,fameText,missText,killText,weatherIndicator,weatherIndicatorBg,menuIcon,dateText,dateBg,locationText,xpText,xpBarFill,streakMultiplierText,chest,storageButton,weaponsButton,shopButton,travelButton,swingBar,redZone,yellowZone,greenZone,cursor].forEach(o => o?.setVisible(false));
     [storageButton,weaponsButton,shopButton,travelButton,menuIcon].forEach(o => o?.disableInteractive());
     requestAnimationFrame(update);
   }
@@ -262,11 +266,7 @@
         travelLoading = false;
         el('dialog-close').disabled = false;
         city.unlocked = true;
-        // Change towns only when its artwork is ready; a failed download must
-        // leave the calendar, market and saved location untouched.
-        currentCity = city.name; Campaign.visit(city.name); advanceDays(days); updateBackground(scene); dailyMarketUpdate();
-        cleanupYorkFlyingIslandEvent(scene); cleanupYorkRingPlatformEvent(scene);
-        save(); close(); toast(`Welcome to ${city.name} · ${days} days travelled`);
+        scene.scene.launch('TravelScene',{city,days,mainScene:scene});
       }).catch(error => {
         travelLoading = false;
         el('dialog-close').disabled = false;
@@ -336,6 +336,7 @@
   });
   function suspendGame() {
     if (!scene) return;
+    if (activeTravel) { activeTravel.scene.pause();ui.hidden=false;show('journey-pause');return; }
     if (!screen) show('pause'); // show saves and pauses the entire scene.
     else save(); // Preserve an existing menu or unsent backup form.
   }
@@ -344,6 +345,7 @@
     // Keep loading and save-conflict recovery intact. The next Back from the
     // pause screen may minimize the app after its progress has been saved.
     if (!scene || travelLoading || SaveManager.conflict) return true;
+    if (activeTravel) { if(screen==='journey-pause'){save();return false;}suspendGame();return true; }
     if (!screen) { suspendGame(); return true; }
     if (screen === 'pause') { save(); return false; }
     if (['import','cast','guide'].includes(screen)) show('journal');
@@ -386,6 +388,9 @@
       el('loading-retry').hidden=false;
     },
     ready(s) { clearTimeout(loadingTimer); el('game-loading')?.remove(); scene = s; ui.hidden = false; update(); if (SaveManager.unreadable) show('recovery'); else if (!introRead) show('welcome'); if (document.hidden) suspendGame(); if (SaveManager.recovered) toast('Recovered your progress from the last backup.'); else showPendingHint(); },
+    journeyStart(travel) { activeTravel=travel;screen='journey';ui.hidden=true; },
+    journeyFinish(city) { activeTravel=null;screen=null;el('game-dialog').hidden=true;ui.hidden=false;ui.querySelectorAll('.mobile-hud,.mobile-controls,.mobile-nav').forEach(n=>{n.inert=false;});toast('Welcome to '+city+' · new challenges await'); },
+    combo(count,gold,kind) { const banner=el('combo-banner');banner.textContent=kind==='targets'?count+' TARGET COMBO · +'+gold+' GOLD':count>=3?count+'× COMBO · +'+gold+' GOLD':count+'× STREAK';banner.classList.remove('burst');void banner.offsetWidth;banner.classList.add('burst'); },
     strike, isPaused:() => !!screen,
     hint(message) { pendingHint = message; showPendingHint(); },
     rankUp(rank) { toast(`Rank ${rank} reached · your reputation is growing`); ChopAudio.play('reward'); },

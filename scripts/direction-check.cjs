@@ -1,0 +1,35 @@
+const fs=require('node:fs'),path=require('node:path'),vm=require('node:vm'),assert=require('node:assert/strict');
+const html=fs.readFileSync(path.join(__dirname,'../index.html'),'utf8');
+const context={FEATURES:{specialTargets:true},currentCity:'York',Phaser:{Math:{Between:()=>1},Scene:class{}},player:{weaponLevel:8},yorkFlyingIslandEvent:null,yorkRingPlatformEvent:null,YORK_ISLAND_EVENT_TEST_CHANCE:45};vm.createContext(context);
+vm.runInContext(html.slice(html.indexOf('function chooseTargetType()'),html.indexOf('function createTargetAppearance(')),context);
+for(let r=1;r<=100;r++){context.Phaser.Math.Between=()=>r;assert.equal(context.chooseTargetType(),'standard','York must introduce rhythm before advanced target types');}
+context.Phaser.Math.Between=()=>1;
+for(const [town,type]of [['Durham','woodenShield'],['Chester','explodingBarrel'],['Canterbury','holyMonk'],['London','royal']]){context.currentCity=town;assert.equal(context.chooseTargetType(),type);}
+vm.runInContext(html.slice(html.indexOf('function shouldSpawnYorkFlyingIslandEvent()'),html.indexOf('function getFlyingIslandMetrics(')),context);
+context.currentCity='York';assert.equal(context.shouldSpawnYorkFlyingIslandEvent(),false);
+context.currentCity='Norwich';assert.equal(context.shouldSpawnYorkFlyingIslandEvent(),true);
+context.player.weaponLevel=7;assert.equal(context.shouldSpawnYorkFlyingIslandEvent(),false);
+let days=0,visits=0,saves=0,resumes=0,arrivals=0;
+Object.assign(context,{currentDay:29,currentMonth:0,months:['Jan','Feb'],advanceDays(n){days+=n;},selectCity(){},dailyMarketUpdate(){},Campaign:{visit(){visits++;}},SaveManager:{performSave(){saves++;}},window:{MobileGame:{journeyFinish(){arrivals++;}}}});
+vm.runInContext(html.slice(html.indexOf('class TravelScene extends'),html.indexOf('/* Legacy desktop instructions'))+'\nthis.TravelTest=TravelScene;',context);
+const trip=new context.TravelTest();trip.init({city:{name:'Durham'},days:4,mainScene:{scene:{resume(){resumes++;}}}});
+trip.duration=4400;trip.clouds=[];trip.dayNight={update(){}};trip.date={setText(t){this.text=t;}};trip.progress={};trip.scene={stop(){}};
+trip.update(0,2200);assert.equal(days,0,'Departure must not debit the whole journey before its animation');assert.match(trip.date.text,/1 Feb/);assert.equal(trip.progress.displayWidth,300);
+trip.update(2200,2200);assert.equal(days,4);assert.equal(visits,1);assert.equal(saves,1);assert.equal(resumes,1);assert.equal(arrivals,1);
+trip.finish();assert.equal(days,4,'Repeated finish must not advance the calendar twice');
+console.log('Town challenges unlock progressively; animated travel counts calendar days and commits arrival once.');
+Object.assign(context,{GROUND_Y:1588,CastArt:{expression(head,mood){head.mood=mood;}}});
+vm.runInContext(html.slice(html.indexOf('function settleHead('),html.indexOf('function showAimArrow(')),context);
+const pileScene={headPileCounts:Array(20).fill(0)};
+function fallen(){return {x:88,displayHeight:58,setAlpha(){return this;},setScale(){return this;},setAngle(){return this;},setDepth(){return this;},body:{enable:true,stop(){},setAllowGravity(value){this.gravity=value;}}};}
+const first=fallen(),second=fallen();context.settleHead(pileScene,first);context.settleHead(pileScene,second);
+assert.equal(first.y,1559);assert.equal(second.y,1547,'Heads in the same landing column stack upward from the bottom');
+assert.equal(first.mood,'dazed');assert.equal(first.body.enable,false);assert.equal(first.body.gravity,false);
+context.settleHead(pileScene,first);assert.equal(pileScene.headPileCounts[2],2,'A settled head is retained without being added to the pile again');
+const display=()=>({setDepth(){return this;},setScale(){return this;},setAlpha(){return this;},setOrigin(){return this;},setDisplaySize(){return this;},setText(){return this;}});
+Object.assign(context,{CENTER_X:400,CENTER_Y:800,GAME_WIDTH:800,GAME_HEIGHT:1600,createCloudTextures(){},DayNightCycle:class{init(){}},player:{storageLevel:5}});
+context.CastArt.caravan=()=>display();context.window.MobileGame.journeyStart=()=>{};
+const createdTrip=new context.TravelTest();createdTrip.init({city:{name:'Durham'},days:3,mainScene:{dayNight:{timeOfDay:.3}}});
+createdTrip.add={rectangle:display,image:display,text:display};createdTrip.tweens={add(){}};createdTrip.create();
+assert.equal(createdTrip.dayNight.timeOfDay,.3,'Journey initialization reads the actual main-scene clock');
+assert.equal(createdTrip.duration,3300,'Longer routes play longer journeys');

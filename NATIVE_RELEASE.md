@@ -38,3 +38,7 @@ The pull request also starts unsigned Android and iOS simulator builds in GitHub
 Commit `caa22d3` passed both native jobs in [run 37037158952](https://github.com/spacepilot121/choptoit/actions/runs/37037158952): Android `assembleDebug` with Java 21 and an unsigned iOS simulator build on macOS. Both use game release `0b6c0be81083503a`. The Android job now also exports a downloadable test APK in later workflow runs. Native audio suspension is explicitly tested even when the browser visibility state does not change. Signed release builds, store uploads and physical phone validation remain open.
 
 [Run 37037340394](https://github.com/spacepilot121/choptoit/actions/runs/37037340394) also passed both builds and exported `choptoit-android-test`. Its APK was downloaded and all 66 bundled game files matched the local native package byte for byte. Source line endings are now fixed to LF to keep the web release ID identical on Windows, Android builders and macOS. The downloadable APK is a development build for testing, not a Play Store release bundle.
+
+## Angular content revision - 2 October
+
+Current local native content is game release ea4bff74b56b387e. Both platform projects pass content sync and exact-package checks. Previously downloaded APK 83239100c0da62ba has the older artwork. A new platform compilation is required for the angular revision; physical-device testing and signed store builds remain open.

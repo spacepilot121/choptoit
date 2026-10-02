@@ -3,13 +3,13 @@ const root=path.resolve(__dirname,'..'),html=fs.readFileSync(path.join(root,'ind
 const ChopCore=require('../game-core.js');
 const png=fs.readFileSync(path.join(root,'platform.png'));
 const dimensions={width:png.readUInt32BE(16),height:png.readUInt32BE(20)};
-const context={currentCity:'York',player:{weaponLevel:7},yorkRingPlatformEvent:null,YORK_RING_EVENT_TEST_CHANCE:45,Phaser:{Math:{Between:()=>1}}};
+const context={currentCity:'Winchester',player:{weaponLevel:7},yorkRingPlatformEvent:null,YORK_RING_EVENT_TEST_CHANCE:45,Phaser:{Math:{Between:()=>1}}};
 vm.createContext(context);
 vm.runInContext(html.slice(html.indexOf('function shouldSpawnYorkRingPlatformEvent('),html.indexOf('function createYorkRingGuard(')),context);
 assert.equal(context.shouldSpawnYorkRingPlatformEvent(),false);
 context.player.weaponLevel=8;assert.equal(context.shouldSpawnYorkRingPlatformEvent(),true);
 context.currentCity='London';assert.equal(context.shouldSpawnYorkRingPlatformEvent(),false);
-context.currentCity='York';context.yorkRingPlatformEvent={active:true};assert.equal(context.shouldSpawnYorkRingPlatformEvent(),false);
+context.currentCity='Winchester';context.yorkRingPlatformEvent={active:true};assert.equal(context.shouldSpawnYorkRingPlatformEvent(),false);
 Object.assign(context,{GAME_HEIGHT:1600,CHARACTER_BASE_Y:1020,YORK_RING_THROW_ARC_HEIGHT:108,prisonerHead:{y:-64},getWeaponPowerMultiplier:()=>1.42,cleanupYorkRingPlatformEvent(){},scene:{textures:{get(){return {getSourceImage:()=>dimensions};}}}});
 vm.runInContext(html.slice(html.indexOf('function minimumReachableYorkRingEventY('),html.indexOf('function spawnYorkRingPlatformEvent(')),context);
 const start=html.indexOf('function spawnYorkRingPlatformEvent(');
@@ -35,4 +35,4 @@ for(let level=8;level<=30;level++) {
     assert.ok(hitTime>0 && hitTime<1.4,'The head reaches the ring after it is thrown and before the fastest throw midpoint');
   }
 }
-console.log('York rings unlock at blade 8, avoid overlapping events and stay below the HUD and within reach in adverse wind.');
+console.log('Winchester rings unlock at blade 8, avoid overlapping events and stay below the HUD and within reach in adverse wind.');

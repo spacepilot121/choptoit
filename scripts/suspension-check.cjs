@@ -1,7 +1,7 @@
 const fs=require('node:fs'),path=require('node:path'),vm=require('node:vm'),assert=require('node:assert/strict');
 const source=fs.readFileSync(path.join(__dirname,'../mobile.js'),'utf8');
 const events={};let saves=0,pauses=0;
-const context={scene:null,screen:null,travelLoading:false,SaveManager:{conflict:false},document:{hidden:false,addEventListener(name,fn){events[name]=fn;}},window:{addEventListener(name,fn){events[name]=fn;}},save(){saves++;},close(){context.screen=null;},show(name){context.screen=name;pauses++;context.save();}};
+const context={scene:null,screen:null,travelLoading:false,activeTravel:null,SaveManager:{conflict:false},document:{hidden:false,addEventListener(name,fn){events[name]=fn;}},window:{addEventListener(name,fn){events[name]=fn;}},save(){saves++;},close(){context.screen=null;},show(name){context.screen=name;pauses++;context.save();}};
 vm.createContext(context);
 vm.runInContext(source.slice(source.indexOf('  function suspendGame()'),source.indexOf("  window.addEventListener('storage'")),context);
 events.pagehide();assert.equal(saves,0,'Leaving during loading must not touch an uninitialized game');
@@ -22,3 +22,9 @@ for(const name of ['import','cast','guide']) { context.screen=name;context.windo
 context.screen='travel';context.travelLoading=true;context.window.ChopBack();assert.equal(context.screen,'travel');
 context.travelLoading=false;context.SaveManager.conflict=true;context.screen='conflict';context.window.ChopBack();assert.equal(context.screen,'conflict');
 console.log('Interruptions preserve paused play and forms; Android Back pauses, returns from menus and protects loading and save conflicts.');
+let journeyPauses=0,journeyResumes=0;
+context.SaveManager.conflict=false;context.ui={hidden:true};context.activeTravel={scene:{pause(){journeyPauses++;},resume(){journeyResumes++;}}};context.screen='journey';
+events.pagehide();assert.equal(journeyPauses,1);assert.equal(context.screen,'journey-pause');assert.equal(context.ui.hidden,false);
+assert.equal(context.window.ChopBack(),false,'Back from a paused journey permits minimizing without advancing it');
+vm.runInContext(source.slice(source.indexOf('  function close()'),source.indexOf('  function show(')),context);
+context.close();assert.equal(journeyResumes,1);assert.equal(context.screen,'journey');assert.equal(context.ui.hidden,true);

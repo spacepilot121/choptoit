@@ -8,9 +8,9 @@ for(const [mobile,city,expected] of [[true,'York',1],[true,'Chester',1],[false,'
   const loader={load:{on(){},image(key,file){if(key.startsWith('background-')&&!key.startsWith('background-travel'))files.push(file);},atlas(){}}};
   vm.runInNewContext(`${cities}\n${travel}\n${preload}\npreload.call(loader);`,{window:mobile?{MobileGame:{}}:{},currentCity:city,loader},{timeout:1000});
   assert.equal(files.length,expected);
-  if(mobile)assert.equal(files[0],`assets/${city.toLowerCase()}-v2.jpg`);
+  if(mobile)assert.equal(files[0],`assets/${city.toLowerCase()}-angular.png`);
 }
 const offline=require('./collect-assets.cjs')(path.join(__dirname,'..'));
-assert.equal(offline.filter(file=>/^assets\/(york|durham|chester|london|hull|newcastle|lincoln|canterbury|dover|norwich|winchester|colchester|oxford|southampton|gloucester)-v2\.jpg$/.test(file)).length,15);
+assert.equal(offline.filter(file=>/^assets\/(york|durham|chester|london|hull|newcastle|lincoln|canterbury|dover|norwich|winchester|colchester|oxford|southampton|gloucester)-angular\.png$/.test(file)).length,15);
 for(const file of ['background.png','background_bluesky.png','background_storage.png','background_weapons.png']) assert.ok(!offline.includes(file),`Do not preload hidden mobile scenery: ${file}`);
 console.log('Mobile startup loads only the saved town and skips legacy menus; all fifteen towns remain offline.');

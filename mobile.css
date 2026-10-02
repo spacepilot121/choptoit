@@ -1,6 +1,6 @@
 :root { --ink:#152b31; --paper:#f4e9d1; --gold:#f9c66b; --coral:#ec805d; --mint:#8bd1b2; }
 body { background:#0c1c22!important; }
-body #start-overlay { background:linear-gradient(180deg,#10272b66,#10272be8),url('assets/york-v2.jpg') center/cover; }
+body #start-overlay { background:linear-gradient(180deg,#10272b66,#10272be8),url('assets/york-angular.png') center/cover; }
 body #start-overlay .card { border:0; border-radius:0; background:none; box-shadow:none; }
 body #start-overlay h1 { font:900 clamp(64px,16vw,100px)/.85 Georgia,serif; letter-spacing:-5px; color:var(--paper); margin:30px 0; text-shadow:4px 5px 0 #152b31; transform:rotate(-4deg); }
 body #start-overlay h1 em { color:var(--gold); font-style:normal; }
@@ -37,7 +37,7 @@ body #start-overlay small { color:#dccdb5; font-size:12px; }
 #contract-track b { position:absolute; right:10px; top:10px; font-size:21px; color:var(--gold); }
 #mobile-ui #contract-track.reward-ready { border-color:var(--gold); background:#4b4229; color:var(--gold); }
 #mobile-ui .mobile-nav button.reward-ready { color:var(--gold); background:#f9c66b16; box-shadow:inset 0 3px var(--gold); }
-.mobile-controls { position:absolute; bottom:59px; left:0; right:0; padding:25px 16px 12px; background:linear-gradient(transparent,#152b31ee 20%,#152b31); pointer-events:auto; }
+.mobile-controls { position:absolute; bottom:139px; left:0; right:0; padding:25px 16px 12px; background:linear-gradient(transparent,#152b31ee 20%,#152b31); pointer-events:auto; }
 .shot-steps { display:flex; justify-content:space-between; font-size:9px; letter-spacing:1px; color:#9daaa8; margin-bottom:9px; }
 .shot-steps .active { color:var(--gold); font-weight:900; }
 .shot-meter { height:18px; background:#394c4e; position:relative; border:1px solid #a9b4a344; border-radius:5px; margin-bottom:10px; overflow:hidden; }
@@ -82,3 +82,13 @@ body #start-overlay small { color:#dccdb5; font-size:12px; }
 @media(max-height:670px) { .mobile-hud {padding-top:9px}.hud-place strong{font-size:20px}.mobile-controls{padding-top:16px}.shot-hint{font-size:9px} }
 @media(max-height:600px) { .mobile-controls{padding:8px 16px}.shot-steps{margin-bottom:4px}.shot-meter{margin-bottom:6px}.shot-hint{margin-top:4px} }
 @media(prefers-reduced-motion:reduce) { #mobile-ui * { scroll-behavior:auto; } }
+
+/* Leave a visible foreground shelf for the accumulating heads and ketchup. */
+#combo-banner {position:absolute;top:23%;left:8%;right:8%;text-align:center;font:900 25px Georgia;color:var(--gold);text-shadow:3px 3px var(--ink);opacity:0;pointer-events:none;}
+#combo-banner.burst {animation:combo-burst 1.5s ease-out;}
+@keyframes combo-burst {0%{opacity:0;transform:scale(.65) rotate(-5deg)}15%{opacity:1;transform:scale(1.2) rotate(2deg)}35%,70%{opacity:1;transform:scale(1)}100%{opacity:0;transform:translateY(-22px)}}
+@media(prefers-reduced-motion:reduce){#combo-banner.burst{animation:none;opacity:0;}}
+@media(max-height:690px){.mobile-controls{bottom:109px;padding-top:14px}.mobile-nav{height:59px}}
+
+@media(max-height:690px){.mobile-controls{bottom:89px;padding-top:10px}}
+@media(max-height:560px){.mobile-controls{bottom:69px;padding:4px 12px 6px}.shot-steps{margin-bottom:3px;font-size:8px}.shot-meter{height:12px;margin-bottom:5px}#mobile-ui #shot-button{min-height:44px;padding:6px 10px;font-size:14px}.shot-hint{margin-top:4px;font-size:9px;min-height:10px}}
