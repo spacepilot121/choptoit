@@ -1582,17 +1582,17 @@ function createTargetAppearance(scene, target, type) {
       break;
     }
     case 'holyMonk': {
-      const robe = scene.add.triangle(0, 5, 0, 30, 15, 0, 30, 30, 0xf4e9d1).setStrokeStyle(2, 0x152b31);
-      const face = scene.add.circle(0, -11, 7, 0xe0b77e);
-      const halo = scene.add.ellipse(0, -21, 22, 6, 0xf9c66b).setStrokeStyle(2, 0x152b31);
+      const robe = CastArt.body(scene.add.image(0,64,'castBodies','10').setOrigin(.5,1),'priestBody');
+      const face = CastArt.head(scene.add.image(0,-64,'castHeads','12'),'priestHead1');
+      const halo = scene.add.ellipse(0,-94,36,8,0xf9c66b).setStrokeStyle(2,0x152b31);
       target.add([robe, face, halo]);
       break;
     }
       case 'royal': {
-        const o = scene.add.circle(0, 0, 20, 0xf9c66b).setStrokeStyle(3, 0x152b31);
-        const crown = scene.add.polygon(0, 0, [0,0,8,7,14,-3,20,7,28,0,24,17,4,17], 0x152b31);
-        target.add([o, crown]);
-        target.add(scene.add.polygon(8,5,[0,-20,10,-12,12,2,5,12,0,15],0xb58b4d,.5));
+        const robe=CastArt.body(scene.add.image(0,64,'castBodies','9').setOrigin(.5,1),'prisonerBody1','Lord');
+        const face=CastArt.head(scene.add.image(0,-64,'castHeads','0'),'head1');
+        const crown = scene.add.polygon(0,-90,[0,0,8,7,14,-3,20,7,28,0,24,17,4,17],0xe2bd6b).setStrokeStyle(2,0x715448);
+        target.add([robe,face,crown]);
         break;
       }
       case 'bird': {
@@ -5314,6 +5314,8 @@ function spawnHolyMonk(scene) {
   monk.targetType = 'holyMonk';
   createTargetAppearance(scene, monk, 'holyMonk');
   scene.physics.world.enable(monk);
+  monk.body.setSize(46,157).setOffset(-23,-93);
+  CastArt.walk(scene,monk,12000);
   monk.body.setAllowGravity(false);
   monk.body.setImmovable(true);
   monk.body.setVelocityX(fromRight ? -30 : 30);
@@ -5355,6 +5357,8 @@ function spawnRoyal(scene) {
   royal.targetType = 'royal';
   createTargetAppearance(scene, royal, 'royal');
   scene.physics.world.enable(royal);
+  royal.body.setSize(46,157).setOffset(-23,-93);
+  CastArt.walk(scene,royal,12000);
   royal.body.setAllowGravity(false);
   royal.body.setImmovable(true);
   royal.body.setVelocityX(fromRight ? -40 : 40);

@@ -34,7 +34,8 @@
     actor.walkTween=scene.tweens.add({targets:actor,y:base-(joy?10:4),angle:{from:joy?-5:-2,to:joy?5:2},duration:joy?110:170,yoyo:true,repeat:-1,ease:'Sine.easeInOut'});
     const body=actor.list?.find(part=>part.texture?.key==='castBodies');
     if(body){const angle=body.angle;actor.stepTween=scene.tweens.add({targets:body,angle:{from:-3,to:3},duration:170,yoyo:true,repeat:-1});scene.time.delayedCall(duration,()=>{actor.stepTween?.stop();body.setAngle(angle);});}
-    scene.time.delayedCall(duration,()=>{actor.walkTween?.stop();actor.setY(base).setAngle(0);});
+    scene.time.delayedCall(duration,()=>{actor.walkTween?.stop();if(actor.active!==false)actor.setY(base).setAngle(0);});
+    actor.once('destroy',()=>{actor.walkTween?.stop();actor.stepTween?.stop();});
   }
   function nervous(scene,head,body) {
     head.personaTween?.stop();body.personaTween?.stop();
