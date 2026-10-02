@@ -1,6 +1,6 @@
 # Chop To It — release playtest
 
-Build under test: `dbf2e520a8156e9f`. This is a release candidate for testing, not a declaration that launch checks are complete. Test the same release ID on the web, Android and iPhone; update it after a later sync.
+Build under test: `0b6c0be81083503a`. This is a release candidate for testing, not a declaration that launch checks are complete. Test the same release ID on the web, Android and iPhone; update it after a later sync.
 
 Record phone model, OS, browser, whether installed on the home screen, and build version with every result. Export any valued save before testing a fresh story. Use a separate test profile when possible.
 
@@ -29,6 +29,10 @@ For the store apps, confirm the Journal says the game is included for offline pl
 ## Result
 
 For every issue, record the exact action, expected result, actual result and whether it repeats. Attach a short recording when useful. Passing automated checks does not replace these playtests; failed or unperformed checks remain open.
+
+## 2 October — native projects compile
+
+Game release `0b6c0be81083503a`, commit `caa22d3`: GitHub Actions built the Android debug app and unsigned iOS simulator app successfully in run 37037158952. Native copy/config checks, the full web release pipeline and native audio suspension regression check pass. This proves compilation and packaging consistency. No phone installation, native share sheet, file picker or touch test has been performed yet.
 
 ## 25 September — opening contract earned in browser
 

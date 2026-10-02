@@ -22,3 +22,9 @@ Use a Mac with Xcode 26 or newer. Run `npm ci`, then `npm run native:sync`. Open
 This Windows workspace has no Android Studio, Android SDK, JDK or Xcode, so native compilation and device installation must happen on equipped machines. The generated native projects and copied content have been checked here; that is not a substitute for installing signed builds on phones.
 
 The pull request also starts unsigned Android and iOS simulator builds in GitHub Actions. A passing result confirms that both projects compile; it still does not prove touch feel, audio, storage or store signing on physical phones.
+
+## Compilation evidence — 2 October
+
+Commit `caa22d3` passed both native jobs in [run 37037158952](https://github.com/spacepilot121/choptoit/actions/runs/37037158952): Android `assembleDebug` with Java 21 and an unsigned iOS simulator build on macOS. Both use game release `0b6c0be81083503a`. The Android job now also exports a downloadable test APK in later workflow runs. Native audio suspension is explicitly tested even when the browser visibility state does not change. Signed release builds, store uploads and physical phone validation remain open.
+
+[Run 37037340394](https://github.com/spacepilot121/choptoit/actions/runs/37037340394) also passed both builds and exported `choptoit-android-test`. Its APK was downloaded and all 66 bundled game files matched the local native package byte for byte. Source line endings are now fixed to LF to keep the web release ID identical on Windows, Android builders and macOS. The downloadable APK is a development build for testing, not a Play Store release bundle.
