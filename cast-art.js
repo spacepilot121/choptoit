@@ -45,12 +45,12 @@
     const group=scene.add.container(x,y),parts=[];
     const block=(x,y,w,h,c)=>scene.add.rectangle(x,y,w,h,c);
     // Every journey keeps the companion dog; upgrades add a horse and cart.
-    parts.push(block(65,22,52,22,0xb88b59),block(89,10,24,24,0xb88b59),block(100,5,12,8,0x25343b));
-    const legs=[];for(const x of[48,78]){const leg=block(x,40,8,24,0x25343b);parts.push(leg);legs.push(leg);}
+    parts.push(block(65,50,52,22,0xb88b59),block(89,38,24,24,0xb88b59),block(100,33,12,8,0x25343b));
+    const legs=[];for(const x of[48,78]){const leg=block(x,68,8,24,0x25343b);parts.push(leg);legs.push(leg);}
     if(level>=2){parts.push(block(-105,4,110,42,0x967454),block(-47,-31,23,70,0x967454),block(-30,-57,49,24,0x967454),scene.add.triangle(-47,-79,0,17,4,0,13,17,0x25343b),block(-24,-59,5,5,0x25343b));for(const x of[-144,-70]){const leg=block(x,49,12,65,0x25343b);parts.push(leg);legs.push(leg);}}
     if(level>=3){const width=90+Math.min(160,(level-3)*15);parts.push(block(-210-width/2,5,width,66,0xb88b59),block(-153,18,130,6,0x25343b));for(const x of[-200-width,-210]){const wheel=scene.add.circle(x,52,25,0x25343b);const spoke=block(x,52,4,42,0xe9d8b4);parts.push(wheel,spoke);scene.tweens.add({targets:spoke,angle:360,duration:650,repeat:-1});}}
     if(level>=2){parts.push(scene.add.polygon(-106,6,[0,-22,50,-12,49,14,6,21],0x6e5348),block(-48,-35,7,50,0xc0a07b),block(-25,-57,7,5,0xe9d8b4));const tail=scene.add.polygon(-165,13,[0,0,-15,20,-9,37,5,13],0x39434a);parts.push(tail);scene.tweens.add({targets:tail,angle:{from:-9,to:14},duration:220,yoyo:true,repeat:-1});}
-    const dogTail=scene.add.polygon(40,16,[0,0,-19,-14,-12,-22,8,-5],0xb88b59);parts.push(dogTail,block(91,7,3,3,0x25343b));scene.tweens.add({targets:dogTail,angle:{from:-18,to:18},duration:130,yoyo:true,repeat:-1});
+    const dogTail=scene.add.polygon(40,44,[0,0,-19,-14,-12,-22,8,-5],0xb88b59);parts.push(dogTail,block(91,35,3,3,0x25343b));scene.tweens.add({targets:dogTail,angle:{from:-18,to:18},duration:130,yoyo:true,repeat:-1});
     if(level===2)parts.push(block(-105,-24,65,26,0x46736c),block(-105,-26,5,29,0xe9d8b4));
     if(level>=3){const width=90+Math.min(160,(level-3)*15),left=-210-width;parts.push(block(left+width/2,12,width,4,0xe3bc7e),block(left+width/2,-21,width+10,9,0xd3ab6c));for(let i=1;i<5;i++)parts.push(block(left+width*i/5,7,3,54,0x8d644c));}
     if(level>=4){parts.push(block(-250,-46,40,41,0x627b71),block(-216,-49,33,45,0xbb8758),block(-245,-47,4,42,0xe9d8b4),block(-216,-49,30,4,0x70574a));}
@@ -65,7 +65,7 @@
     const life=scene.add.container(0,0).setDepth(-1.9);scene.townLife=life;
     const animate=(object,config)=>{const tween=scene.tweens.add({targets:object,...config});object.once('destroy',()=>tween.stop());return object;};
     for(let i=0;i<4;i++){
-      const x=i%2?690:100,y=1010-i*18;
+      const x=i%2?690:100,y=1016.5;
       const figure=scene.add.container(x,y);const coat=scene.add.polygon(0,0,[4,0,20,0,24,25,0,25],[0xa46c5d,0x799688,0xc1a16a,0x7b8098][i]).setOrigin(.5,0);
       const face=scene.add.image(0,-9,'castHeads',String((city.length+i*3)%16)).setDisplaySize(20,20);
       figure.add([coat,face,scene.add.rectangle(-5,29,5,9,0x3d4d51),scene.add.rectangle(5,29,5,9,0x3d4d51)]);life.add(figure);
@@ -74,6 +74,39 @@
     for(const x of[180,610]){const pole=scene.add.rectangle(x,785,4,115,0x665548),flag=scene.add.polygon(x+21,745,[0,0,40,0,32,51,0,43],city.length%2?0xba6857:0x728ea0).setOrigin(0,.5);life.add([pole,flag]);animate(flag,{scaleX:{from:.86,to:1},angle:{from:-3,to:3},duration:900,yoyo:true,repeat:-1,ease:'Sine.easeInOut'});}
     for(let i=0;i<3;i++){const smoke=scene.add.ellipse(97+i*6,670-i*25,16+i*11,24+i*10,0xd0d3bd,.2);life.add(smoke);animate(smoke,{y:smoke.y-60,x:smoke.x+25,alpha:0,duration:2600+i*450,repeat:-1});}
     return life;
+  }
+  function poseExecutioner(g,axe) {
+    if(!g || !axe)return;
+    g.clear();
+    const a=axe.rotation,grips=[{x:axe.x,y:axe.y},{x:axe.x+Math.sin(a)*24,y:axe.y-Math.cos(a)*24}];
+    grips.forEach((hand,i)=>{
+      const shoulder={x:i?32:-32,y:-46},elbow={x:(shoulder.x+hand.x)/2+(i?12:-12),y:(shoulder.y+hand.y)/2+13};
+      for(const [width,color]of [[14,0x25343b],[10,i?0x344751:0x6b7a7c]])g.lineStyle(width,color,1).beginPath().moveTo(shoulder.x,shoulder.y).lineTo(elbow.x,elbow.y).lineTo(hand.x,hand.y).strokePath();
+      g.fillStyle(i?0xab7e5e:0xc3926d,1).fillEllipse(hand.x,hand.y,12,10);
+      g.lineStyle(2,0x715448,1).lineBetween(hand.x-3,hand.y,hand.x+3,hand.y);
+    });
+  }
+  function roadLife(scene) {
+    const animate=(actor,config)=>{const tween=scene.tweens.add({targets:actor,...config,onComplete:()=>actor.destroy(true)});actor.once('destroy',()=>tween.stop());};
+    const spawn=()=>{
+      const roll=Math.random();
+      if(roll<.4){
+        const birdArt=bird(scene,'dove',false).setPosition(-60,430+Math.random()*180).setScale(.65).setDepth(-.5);
+        animate(birdArt,{x:860,y:birdArt.y-35,duration:4800});
+      }else if(roll<.75){
+        const passer=scene.add.container(880,1186).setDepth(9);
+        const coat=body(scene.add.image(0,64,'castBodies','0').setOrigin(.5,1),'prisonerBody'+(1+Math.floor(Math.random()*8)));
+        const face=head(scene.add.image(0,-64,'castHeads','0'),'head'+(1+Math.floor(Math.random()*12)));
+        passer.add([coat,face]);walk(scene,passer,6200);animate(passer,{x:-80,duration:6200});
+      }else{
+        const deer=scene.add.container(900,1050).setDepth(-.4);
+        deer.add([scene.add.ellipse(0,-24,65,27,0xb89768),scene.add.rectangle(30,-46,12,42,0xb89768),scene.add.ellipse(39,-65,27,15,0xb89768),scene.add.triangle(37,-78,0,12,4,0,10,12,0xb89768)]);
+        for(const x of [-23,20]){const leg=scene.add.rectangle(x,-8,6,28,0x584c40);deer.add(leg);const gait=scene.tweens.add({targets:leg,angle:{from:-25,to:25},duration:160,yoyo:true,repeat:-1});leg.once('destroy',()=>gait.stop());}
+        animate(deer,{x:-100,duration:3100});
+      }
+    };
+    scene.time.delayedCall(1000,spawn);
+    scene.time.addEvent({delay:4500,loop:true,callback:spawn});
   }
   function bird(scene,kind,fromRight) {
     const dove=kind==='dove', outline=0x152b31;
@@ -90,5 +123,5 @@
     art.once('destroy',()=>flap.stop());
     return art;
   }
-  window.CastArt={head,body,jester,weapon,weaponMarkup,bird,expression,nervous,walk,caravan,townLife};
+  window.CastArt={head,body,jester,weapon,weaponMarkup,bird,expression,nervous,walk,caravan,townLife,poseExecutioner,roadLife};
 })();

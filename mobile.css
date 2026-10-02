@@ -37,8 +37,8 @@ body #start-overlay small { color:#dccdb5; font-size:12px; }
 #contract-track b { position:absolute; right:10px; top:10px; font-size:21px; color:#85623e; }
 #mobile-ui #contract-track.reward-ready { border-color:var(--gold); background:#4b4229; color:var(--gold); }
 #mobile-ui .mobile-nav button.reward-ready { color:var(--gold); background:#f9c66b16; box-shadow:inset 0 3px var(--gold); }
-.mobile-controls { position:absolute; bottom:139px; left:0; right:0; padding:25px 16px 12px; background:linear-gradient(transparent,#294644ed 20%,#203c3a); pointer-events:auto; }
-.shot-steps { display:flex; justify-content:space-between; font-size:9px; letter-spacing:1px; color:#9daaa8; margin-bottom:9px; }
+.mobile-controls { position:absolute; bottom:139px; left:0; right:0; padding:6px 16px; background:transparent; text-shadow:0 1px 3px #152b31; pointer-events:auto; }
+.shot-steps { display:flex; justify-content:space-between; font-size:9px; letter-spacing:1px; color:#d2d9cb; margin-bottom:5px; }
 .shot-steps .active { color:var(--gold); font-weight:900; }
 .shot-meter { height:18px; background:#394c4e; position:relative; border:1px solid #a9b4a344; border-radius:5px; margin-bottom:10px; overflow:hidden; }
 .shot-meter .zone { position:absolute; top:0; bottom:0; left:50%; transform:translateX(-50%); }
@@ -92,3 +92,4 @@ body #start-overlay small { color:#dccdb5; font-size:12px; }
 
 @media(max-height:690px){.mobile-controls{bottom:89px;padding-top:10px}}
 @media(max-height:560px){.mobile-controls{bottom:69px;padding:4px 12px 6px}.shot-steps{margin-bottom:3px;font-size:8px}.shot-meter{height:12px;margin-bottom:5px}#mobile-ui #shot-button{min-height:44px;padding:6px 10px;font-size:14px}.shot-hint{margin-top:4px;font-size:9px;min-height:10px}}
+@media(max-height:560px){.shot-steps,.shot-hint{display:none}#mobile-ui #shot-button{min-height:40px}}
