@@ -26,6 +26,14 @@ jobs:
       - run: npm run native:sync
       - run: ./gradlew assembleDebug
         working-directory: android
+      - uses: actions/upload-artifact@v7
+        with:
+          name: choptoit-android-test
+          path: |
+            android/app/build/outputs/apk/debug/app-debug.apk
+            native-web/native-build.json
+          if-no-files-found: error
+          retention-days: 30
 
   ios:
     runs-on: macos-26
