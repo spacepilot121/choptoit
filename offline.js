@@ -1,5 +1,12 @@
 (() => {
   'use strict';
+  const nativeApp = window.Capacitor?.isNativePlatform?.() === true;
+  window.ChopNative = nativeApp;
+  if (nativeApp) {
+    window.ChopInstall = {available:false, installed:true, prompt:async ()=>'unavailable'};
+    window.ChopOffline = {status:'Ready to play offline · game included with app'};
+    return;
+  }
   let installEvent=null, installed=window.matchMedia('(display-mode: standalone)').matches || navigator.standalone === true;
   window.addEventListener('beforeinstallprompt', event=>{event.preventDefault();installEvent=event;});
   window.addEventListener('appinstalled', ()=>{installed=true;installEvent=null;});

@@ -1,6 +1,6 @@
 # Chop To It — launch work
 
-Target: a polished portrait mobile game, playable in browser first, retaining timing/aim/power, day/night, a running calendar, varied characters, upgrades, markets and travel. Ridiculous Fishing is a reference for satisfying arcade progression, not a visual or mechanical template to copy.
+Target: a polished portrait mobile game released on the web, App Store and Google Play together, retaining timing/aim/power, day/night, a running calendar, varied characters, upgrades, markets and travel. Ridiculous Fishing is a reference for satisfying arcade progression, not a visual or mechanical template to copy.
 
 ## Required before calling this near finished
 
@@ -19,7 +19,7 @@ Target: a polished portrait mobile game, playable in browser first, retaining ti
 
 As of 20 September, all fifteen towns have illustrated backgrounds. The executioner, main cast, jesters and ring-event guards use updated artwork. The mobile HUD, pause-safe menus, six contracts, endings, trade routes, upgrades, local save recovery, audio, install affordance and offline package are implemented. All work remains local; the public site is unchanged.
 
-Latest exported build: `7ef4640225f4cbaa`, 66 upload files, 15.8 MB. The full automated release pipeline passes, including serving every file from the isolated export. Earlier entries below are historical evidence and may describe superseded artwork, file counts or behaviour.
+Latest exported build: `f8da0cecf123d73c`, 66 upload files, 15.8 MB. The full automated release pipeline passes, including serving every file from the isolated export. The matching iOS and Android projects have been generated but no native binary has been built or installed on a phone yet. Earlier entries below are historical evidence and may describe superseded artwork, file counts or behaviour.
 
 ### Remaining launch gates, in priority order
 
@@ -28,7 +28,12 @@ Latest exported build: `7ef4640225f4cbaa`, 66 upload files, 15.8 MB. The full au
 3. [Completed in desktop browser] The current compact package installed its offline cache, travelled to a town image not loaded in the page with the server stopped, and reopened in that town offline. A preceding package also accepted an offline shot and retained the reward after reload. Repeat installation, offline travel/trading and storage-pressure checks on real phones.
 4. Test real iPhone and Android touch controls, sound, app switching, safe areas, short screens and home-screen installation. Desktop viewport checks are not sufficient evidence.
 5. Weapon, cart and bird artwork have been replaced. Inspect the remaining weapon grips in motion and birds during actual target collisions; isolated artwork previews do not prove gameplay readability.
-6. Publish only after the intended release is reviewed. Keep a recoverable previous build and verify the live site, saved progress and update behaviour after deployment.
+6. Build and test signed Android and iOS candidates from the same release. Check native save sharing/restoration, app switching, launch screens, icons and all core play paths. Confirm the final package ID, signing and store accounts; the current `io.github.spacepilot121.choptoit` ID is provisional.
+7. Publish the web build and submit both stores as one coordinated launch after the intended release is reviewed. Keep a recoverable previous web build and verify the live site, saved progress and update behaviour after deployment. Store review dates may differ.
+
+## Native app packaging (28 September)
+
+Capacitor 8 projects under `android/` and `ios/` package the exact verified web release through `npm run native:sync`. Both are portrait. Android targets API 36. The generated platform icons and splash screens use the existing axe emblem. Native apps skip browser installation/service-worker messaging because their game files are bundled; app switching calls the existing pause/save path. The Journal shares save backups as JSON files through the native share sheet and can open a JSON backup for restoration. `npm run native:check` verifies the copied game assets, native bridge and basic platform settings. No device build, signing, store review or real-phone test has been claimed. See `NATIVE_RELEASE.md`.
 
 ## Evidence so far (11 September)
 

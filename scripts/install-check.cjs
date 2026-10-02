@@ -3,6 +3,14 @@ const listeners={};let prompts=0;
 const sandbox={window:{addEventListener:(name,fn)=>listeners[name]=fn,matchMedia:()=>({matches:false})},navigator:{},location:{hostname:'localhost',search:''},URLSearchParams};
 vm.runInNewContext(fs.readFileSync(path.join(__dirname,'../offline.js'),'utf8'),sandbox);
 (async()=>{
+  const nativeListeners={};
+  const nativeSandbox={window:{Capacitor:{isNativePlatform:()=>true},addEventListener:(name,fn)=>nativeListeners[name]=fn},navigator:{serviceWorker:{register:()=>{throw new Error('Native app must not install a service worker');}}},location:{hostname:'localhost',search:''}};
+  vm.runInNewContext(fs.readFileSync(path.join(__dirname,'../offline.js'),'utf8'),nativeSandbox);
+  assert.equal(nativeSandbox.window.ChopNative,true);
+  assert.equal(nativeSandbox.window.ChopInstall.installed,true);
+  assert.equal(nativeSandbox.window.ChopInstall.available,false);
+  assert.match(nativeSandbox.window.ChopOffline.status,/included with app/);
+  assert.equal(Object.keys(nativeListeners).length,0,'Native app must not register web install or service worker events');
   const install=sandbox.window.ChopInstall;
   assert.equal(install.available,false);assert.equal(await install.prompt(),'unavailable');
   listeners.beforeinstallprompt({preventDefault(){},prompt(){prompts++;},userChoice:Promise.resolve({outcome:'dismissed'})});

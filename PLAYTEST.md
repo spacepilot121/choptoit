@@ -1,6 +1,6 @@
 # Chop To It — release playtest
 
-Build under test: 7ef4640225f4cbaa. This is a release candidate for testing, not a declaration that launch checks are complete.
+Build under test: `f8da0cecf123d73c`. This is a release candidate for testing, not a declaration that launch checks are complete. Test the same release ID on the web, Android and iPhone; update it after a later sync.
 
 Record phone model, OS, browser, whether installed on the home screen, and build version with every result. Export any valued save before testing a fresh story. Use a separate test profile when possible.
 
@@ -23,6 +23,8 @@ Visit all fifteen towns. Inspect daytime and night visibility. In fog, new targe
 ## Offline and persistence
 
 Wait for the ledger to report offline readiness while connected. Close the game, turn off connectivity and reopen it. Play a shot, buy or sell goods, then reopen and check purse, inventory and quotes. Reconnect and verify normal play resumes. Test home-screen installation separately on each platform. Record download failures, unusually long startup or device heating.
+
+For the store apps, confirm the Journal says the game is included for offline play and shows no browser-install prompt. Share a save backup to Files/Drive, start a new story, choose the saved JSON in Restore a backup, and verify the old story returns. Switch apps during a shot and return; the game should be paused and require an explicit resume. Repeat after updating a store test build with existing progress.
 
 ## Result
 

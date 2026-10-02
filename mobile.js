@@ -132,11 +132,11 @@
       body.innerHTML='<p>This game could not read your saved progress or its recovery copy. Your saved data has been left untouched. A save from a newer version may need an updated game.</p><p>Restore an exported backup, or start a new story. Until then, automatic saving is paused.</p><button class="wide" data-action="import">Restore a save backup</button><button class="wide secondary" data-action="new-game">Start a new story</button>';
     } else if (name === 'import') {
       el('dialog-title').textContent='Restore a backup';
-      body.innerHTML='<p>Paste the contents of your exported save below. A valid backup replaces this device’s current progress. Your current save is kept as a recovery copy.</p><label for="backup-text">Save data</label><textarea id="backup-text" rows="9" spellcheck="false" placeholder="Paste your save JSON here"></textarea><p id="import-message" role="status"></p><button class="wide" data-action="restore">Restore this save</button><button class="wide secondary" data-action="cancel-new">Back to ledger</button>';
+      body.innerHTML='<p>Choose a saved backup file or paste its contents below. A valid backup replaces this device’s current progress. Your current save is kept as a recovery copy.</p><label for="backup-file">Choose backup file</label><input id="backup-file" type="file" accept=".json,application/json"><label for="backup-text">Save data</label><textarea id="backup-text" rows="9" spellcheck="false" placeholder="Paste your save JSON here"></textarea><p id="import-message" role="status"></p><button class="wide" data-action="restore">Restore this save</button><button class="wide secondary" data-action="cancel-new">Back to ledger</button>';
     } else {
       body.innerHTML = campaignMarkup()+`<button class="wide" data-action="resume">Resume game</button><button class="wide secondary" data-action="sound">Effects ${ChopAudio.effects ? 'on' : 'off'} · tap to change</button><button class="wide secondary" data-action="music">Music ${ChopAudio.music ? 'on' : 'off'} · tap to change</button><button class="wide secondary" data-action="export">Export save backup</button><button class="wide secondary" data-action="tutorial">Read the opening & controls</button><button class="wide secondary" data-action="new-game">Start a new story</button><p>Your progress saves on this device. The clock pauses while a menu is open or the game is in the background.</p>`;
       body.insertAdjacentHTML('beforeend','<button class="wide secondary" data-action="import">Restore a save backup</button><article class="offline-card"><small>OFFLINE PLAY</small><p id="offline-status" role="status"></p></article>');
-      body.insertAdjacentHTML('beforeend',window.ChopInstall?.installed ? '<p>Playing from your home screen.</p>' : window.ChopInstall?.available ? '<button class="wide" data-action="install">Add game to home screen</button>' : '<p>Keep the game with your apps: on iPhone or iPad, open it in Safari and choose Share → Add to Home Screen. On Android, look in your browser menu for Install app or Add to Home Screen.</p>');
+      body.insertAdjacentHTML('beforeend',window.ChopNative ? '<p>Installed on this device.</p>' : window.ChopInstall?.installed ? '<p>Playing from your home screen.</p>' : window.ChopInstall?.available ? '<button class="wide" data-action="install">Add game to home screen</button>' : '<p>Keep the game with your apps: on iPhone or iPad, open it in Safari and choose Share → Add to Home Screen. On Android, look in your browser menu for Install app or Add to Home Screen.</p>');
       el('offline-status').textContent=window.ChopOffline?.status || 'Offline support is starting…';
       body.insertAdjacentHTML('beforeend','<button class="wide secondary" data-action="cast">People on the road</button>');
       body.insertAdjacentHTML('beforeend','<button class="wide secondary" data-action="guide">Targets & tricks</button>');
@@ -306,16 +306,29 @@
     if (action === 'begin') { introRead = true; try { localStorage.setItem('choptoit-intro-read','yes'); } catch (_) {} close(); }
     if (action === 'resume') close();
     if (action === 'sound' || action === 'music') { ChopAudio.toggle(action); show('journal'); }
-    if (action === 'export') SaveManager.download();
+    if (action === 'export') {
+      if (window.ChopNative) {
+        if (!window.ChopNativeAPI?.exportSave) toast('Backup sharing is unavailable. Try again after restarting the app.');
+        else window.ChopNativeAPI.exportSave(SaveManager.export()).catch(() => toast('Could not share the backup. Try again.'));
+      } else SaveManager.download();
+    }
     if (action === 'tutorial') show('welcome');
     if (action === 'cast') show('cast');
     if (action === 'guide') show('guide');
+  });
+  ui.addEventListener('change', async event => {
+    if (event.target.id !== 'backup-file') return;
+    const file=event.target.files?.[0], message=el('import-message');
+    if (!file) return;
+    if (file.size > 1000000) { message.textContent='This backup is too large.'; return; }
+    try { el('backup-text').value=await file.text(); message.textContent=`Ready to restore ${file.name}.`; }
+    catch (_) { message.textContent='Could not open that backup file. Try pasting its contents.'; }
   });
   document.addEventListener('keydown', event => {
     if (!screen) return;
     if (event.key === 'Escape') close();
     if (event.key === 'Tab') {
-      const nodes = [...el('game-dialog').querySelectorAll('button:not(:disabled),textarea')];
+      const nodes = [...el('game-dialog').querySelectorAll('button:not(:disabled),input:not(:disabled),textarea')];
       const first = nodes[0], last = nodes[nodes.length-1];
       if (event.shiftKey && document.activeElement === first) { event.preventDefault(); last.focus(); }
       else if (!event.shiftKey && document.activeElement === last) { event.preventDefault(); first.focus(); }
@@ -326,6 +339,7 @@
     if (!screen) show('pause'); // show saves and pauses the entire scene.
     else save(); // Preserve an existing menu or unsent backup form.
   }
+  window.ChopSuspend = suspendGame;
   document.addEventListener('visibilitychange', () => { if (document.hidden) suspendGame(); });
   window.addEventListener('pagehide', suspendGame);
   window.addEventListener('storage', event => {
