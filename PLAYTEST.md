@@ -34,6 +34,14 @@ For every issue, record the exact action, expected result, actual result and whe
 
 ## 2 October — native projects compile
 
+## 2 October — current opening and fog playtest
+
+Release `83239100c0da62ba` opened from a fresh origin at port 4291, 390×844. A perfect chop paid 10 gold; purchasing blade level two spent that 10 and showed 1.06× strength. The workshop preserved the active aim phase. Ordinary controls earned three chops and two target hits; the first contract added 40 gold (22→62) and opened chapter two. Reloading retained chapter two, 62 gold, rank two, blade level two and target progress 2/5. No browser warnings or errors were captured.
+
+Fog appeared during ordinary rounds and remained visible across midnight. The soft mist, fading target markers, painted stage and cast were readable at phone viewport size in daytime and at night. Screenshot: `current-fog-preview.png` outside the repository. These observations cover desktop browser rendering; they do not prove physical-phone performance or a live bird/ring collision. An accelerated button-input sequence was used for some rounds and is not evidence of human difficulty or balance.
+
+### Earlier native compilation
+
 Game release `0b6c0be81083503a`, commit `caa22d3`: GitHub Actions built the Android debug app and unsigned iOS simulator app successfully in run 37037158952. Native copy/config checks, the full web release pipeline and native audio suspension regression check pass. This proves compilation and packaging consistency. No phone installation, native share sheet, file picker or touch test has been performed yet.
 
 ## 25 September — opening contract earned in browser

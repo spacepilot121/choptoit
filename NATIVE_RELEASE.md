@@ -12,6 +12,8 @@ Use Android Studio with Android SDK API 36. Run `npm ci`, then `npm run native:s
 
 ## iPhone
 
+The owner currently has neither a Mac nor an Apple Developer membership. Hosted Mac builds already compile the project, so buying a Mac is not a prerequisite for continuing development. TestFlight and App Store distribution require membership and signing setup under the owner's account; see [Apple's distribution guidance](https://developer.apple.com/tutorials/develop-in-swift/welcome-to-app-distribution). Signed hosted builds still need to be configured and verified after that setup. Browser testing on iPhone is useful but does not replace testing the native app.
+
 Use a Mac with Xcode 26 or newer. Run `npm ci`, then `npm run native:sync`. Open `ios/App/App.xcodeproj` in Xcode, set the owner's Apple development team, install on real iPhones, and run the scenarios in `PLAYTEST.md`. Archive and upload a signed build to TestFlight after device checks. The repository includes a privacy manifest entry for the file-sharing plugin; confirm the final App Store privacy answers with the owner before submission.
 
 ## Coordinated launch gates
@@ -26,6 +28,8 @@ This Windows workspace has no Android Studio, Android SDK, JDK or Xcode, so nati
 The pull request also starts unsigned Android and iOS simulator builds in GitHub Actions. A passing result confirms that both projects compile; it still does not prove touch feel, audio, storage or store signing on physical phones.
 
 ## Compilation evidence — 2 October
+
+[Run 37039832841](https://github.com/spacepilot121/choptoit/actions/runs/37039832841) passed both platform builds for commit `0d08145`, including exact native bridge and app-identity verification. Game release remains `83239100c0da62ba`.
 
 [Run 37039105893](https://github.com/spacepilot121/choptoit/actions/runs/37039105893) passed Android and iOS compilation for commit `2b9a6b4`, including the softened sky in game release `2aa0123062ebf4bb`.
 
