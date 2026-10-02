@@ -6,6 +6,7 @@ require('./weather-check.cjs');
 require('./progression-check.cjs');
 require('./suspension-check.cjs');
 require('./direction-check.cjs');
+require('./persona-check.cjs');
 require('./native-bridge-check.cjs');
 require('./ring-layout-check.cjs');
 require('./ring-cleanup-check.cjs');
@@ -30,7 +31,7 @@ assert.ok(appManifest.icons.some(i=>i.purpose.includes('maskable')));
 const appleIcon=fs.readFileSync(path.join(root,'assets/app-icon-180.png'));
 assert.equal(appleIcon.readUInt32BE(16),180);assert.equal(appleIcon.readUInt32BE(20),180);
 console.log('Home-screen manifest references correctly sized standard, maskable and Apple icons.');
-for(const [name,count] of [['heads',48],['bodies',12],['jesters',4],['weapons',30]]) {
+for(const [name,count] of [['heads',64],['bodies',12],['jesters',4],['weapons',30]]) {
   const atlas=JSON.parse(fs.readFileSync(path.join(root,`assets/cast-${name}-angular.json`),'utf8'));
   const png=fs.readFileSync(path.join(root,`assets/cast-${name}-angular.png`));
   assert.equal(Object.keys(atlas.frames).length,count);
@@ -39,7 +40,7 @@ for(const [name,count] of [['heads',48],['bodies',12],['jesters',4],['weapons',3
     assert.ok(frame.x+frame.w<=png.readUInt32BE(16)&&frame.y+frame.h<=png.readUInt32BE(20));
   }
 }
-console.log('Angular cast atlases contain 48 expression frames, twelve costumes, four jesters and 30 weapons inside their image bounds.');
+console.log('Angular cast atlases contain 64 expression frames, twelve costumes, four jesters and 30 weapons inside their image bounds.');
 for (const match of html.matchAll(/<script(?:\s[^>]*)?>([\s\S]*?)<\/script>/g)) new vm.Script(match[1]);
 for (const filename of ['mobile.js','cast-art.js','audio.js','dayNightCycle.js','game-core.js','campaign.js','offline.js','sw.js']) new vm.Script(fs.readFileSync(path.join(root,filename),'utf8'));
 const {advanceMeter} = require('../game-core.js');

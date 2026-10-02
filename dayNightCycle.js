@@ -49,10 +49,10 @@ class DayNightCycle {
     // the wash while remaining below characters and gameplay targets.
     this.container = scene.add.container(0, 0).setDepth(celestialDepth);
     this.stars = scene.add.graphics();
-    for (let i=0;i<24;i++) {
-      const x=scene.scale.width*(.26+((i*37)%101)/210);
-      const y=scene.scale.height*(.26+((i*23)%97)/740);
-      this.stars.fillStyle(0xdce9ee,.45+(i%3)*.15).fillCircle(x,y,i%5===0?2.2:1.3);
+    for (let i=0;i<90;i++) {
+      const x=scene.scale.width*((i*37)%101)/100;
+      const y=scene.scale.height*(.03+((i*23)%97)/165);
+      this.stars.fillStyle(0xf4ead5,.75+(i%3)*.1).fillCircle(x,y,i%5===0?3.4:2.1);
     }
     this.container.add(this.stars);
 
@@ -155,15 +155,15 @@ class DayNightCycle {
   updateCelestials() {
     const { sunriseStart, sunriseEnd, sunsetStart, sunsetEnd } = this.config;
     const width = this.scene.scale.width;
-    const baseY = this.scene.scale.height * .33;
-    const arc = 80;
+    const baseY = this.scene.scale.height * .43;
+    const arc = this.scene.scale.height * .19;
     const t = this.timeOfDay;
 
     // --- Sun ---
     if (t >= sunriseStart && t <= sunsetEnd) {
       const sunT = Phaser.Math.Clamp((t - sunriseStart) / (sunsetEnd - sunriseStart), 0, 1);
       const angle = sunT * Math.PI;
-      this.sun.setPosition(width * (.25 + .5*sunT), baseY - Math.sin(angle) * arc);
+      this.sun.setPosition(-60 + (width+120)*sunT, baseY - Math.sin(angle) * arc);
       if (t < sunriseEnd) {
         const p = (t - sunriseStart) / (sunriseEnd - sunriseStart);
         this.sun.setAlpha(Phaser.Math.Easing.Quadratic.InOut(p));
@@ -178,15 +178,15 @@ class DayNightCycle {
     }
 
     // --- Moon ---
-    const nightLength = (1 - sunsetEnd) + sunriseStart;
+    const nightLength = (1 - sunsetStart) + sunriseEnd;
     let moonT;
-    if (t >= sunsetEnd) {
-      moonT = (t - sunsetEnd) / nightLength;
+    if (t >= sunsetStart) {
+      moonT = (t - sunsetStart) / nightLength;
     } else {
-      moonT = (t + (1 - sunsetEnd)) / nightLength;
+      moonT = (t + (1 - sunsetStart)) / nightLength;
     }
     const moonAngle = moonT * Math.PI;
-    this.moon.setPosition(width * (.25 + .5*moonT), baseY - Math.sin(moonAngle) * arc);
+    this.moon.setPosition(-60 + (width+120)*moonT, baseY - Math.sin(moonAngle) * arc);
 
     let moonAlpha = 0;
     if (t >= sunsetStart && t <= sunsetEnd) {
@@ -205,4 +205,3 @@ class DayNightCycle {
 
 // Expose globally
 window.DayNightCycle = DayNightCycle;
-

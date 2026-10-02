@@ -3,50 +3,80 @@ const fs=require('node:fs'),path=require('node:path'),sharp=require('sharp');
 const root=path.resolve(__dirname,'..'),out=path.join(root,'assets');
 const ink='#25343b',paper='#e9d8b4';
 const skins=['#dca875','#edc69c','#ab775b','#875744','#c68d65','#e0b18b'];
-const clothes=['#8d453c','#46736c','#d5ad57','#424e69','#a26d48','#658057','#755777','#ce8152'];
+const clothes=['#af594a','#54877d','#d2a44e','#596a90','#ba815c','#829262','#956b8d','#de9870'];
 const poly=(p,c)=>`<polygon points="${p}" fill="${c}"/>`;
 const rect=(x,y,w,h,c)=>`<rect x="${x}" y="${y}" width="${w}" height="${h}" fill="${c}"/>`;
 const svg=(w,h,s)=>`<svg xmlns="http://www.w3.org/2000/svg" width="${w}" height="${h}" viewBox="0 0 ${w} ${h}">${s}</svg>`;
-function face(i,mood=0){const skin=skins[i%6],hair=['#473c38','#d6ab62','#703e31','#bab6a0'][i%4];
- let s=poly('23,20 94,14 109,40 101,94 78,119 40,109 19,78',skin)+poly('23,20 94,14 109,40 82,32 54,36 26,52',hair);
- s+=poly('23,50 39,101 78,119 40,109 19,78','#00000018');
- if(i%4===1)s+=poly('20,16 37,3 90,3 110,20 108,34 18,34',clothes[i%8]);
- if(i%4===2)s+=poly('19,25 39,9 93,12 109,39 84,28 73,42 40,31',hair);
- if(i%4===3)s+=poly('29,88 43,96 87,94 102,85 90,110 77,119 43,111',hair);
- const left=mood===0?'38,56 53,49 55,53 39,60':'37,46 55,43 55,47 37,50';
- s+=poly(left,ink)+poly(mood===0?'72,50 89,59 89,63 71,54':'72,44 91,47 91,51 72,48',ink);
- s+=rect(43,64,mood===1?9:5,mood===1?12:6,ink)+rect(77,64,mood===1?9:5,mood===1?12:6,ink);
- s+=poly('64,64 57,83 70,83','#b57b5c');
- s+=mood===1?poly('51,92 76,90 79,106 54,108',ink):mood===2?poly('48,100 61,93 80,100 77,104 61,98 49,105',ink):poly('49,100 62,93 79,99 79,103 62,97 49,104',ink);
- if(mood===2)s+=`<path d="M39 64l12 8m0-8l-12 8m35-8l12 8m0-8l-12 8" stroke="${ink}" stroke-width="3"/>`;
+const line=(d,c=ink,w=3)=>`<path d="${d}" fill="none" stroke="${c}" stroke-width="${w}" stroke-linecap="round" stroke-linejoin="round"/>`;
+function face(i,mood=0){const skin=skins[i%6],hair=['#493f42','#d7ac64','#854b37','#bbb9a7'][i%4];
+ let s=poly('29,27 82,16 101,36 106,75 90,105 66,118 37,102 23,71',skin);
+ s+=poly('29,27 54,37 42,75 52,105 37,102 23,71','#00000016')+poly('82,16 101,36 106,75 90,105 76,88 84,52','#00000020')+poly('54,37 82,29 80,55 61,70 42,75','#ffffff20');
+ s+=poly('18,58 28,55 30,77 23,83 17,70',skin)+poly('101,55 111,58 113,71 105,81 101,76',skin);
+ s+=poly('25,45 29,24 46,12 82,11 101,32 104,49 84,34 51,28 32,49',hair)+poly('29,24 46,12 82,11 67,24 43,31','#ffffff22');
+ if(i%4===1)s+=poly('24,29 34,10 84,6 101,26 89,35 47,31',clothes[i%8])+line('M29 28L94 25',paper,4);
+ if(i%4===3)s+=poly('32,87 50,99 67,94 92,87 87,110 67,119 41,108',hair)+poly('67,94 92,87 87,110 67,119','#00000022');
+ s+=line(mood===0?'M37 55L52 49 M76 49L91 55':'M37 49L52 46 M77 46L91 49',hair,4);
+ if(mood===2)s+=line('M40 64l10 9m0-9l-10 9m36-9l10 9m0-9l-10 9',ink,3);
+ else if(mood===3)s+=line('M39 69Q46 59 53 69 M76 69Q83 59 90 69',ink,3);
+ else s+=rect(43,64,mood===1?8:5,mood===1?11:6,ink)+rect(79,64,mood===1?8:5,mood===1?11:6,ink);
+ s+=poly('63,62 56,84 69,86 73,80','#00000022')+line('M57 86L70 87',skin,2);
+ s+=poly('32,78 48,76 50,84 35,87','#d977682e')+poly('80,77 96,79 92,87 79,84','#d977682e');
+ s+=mood===1?poly('53,94 73,92 78,106 58,109',ink):mood===3?poly('48,94 78,94 72,105 60,108 51,101',ink)+rect(53,95,21,4,paper):line('M49 101L61 95L77 99',ink,3);
+ if(i%3===0)s+=line('M48 88L60 85L73 88',hair,4);
+ if(i%5===0)s+=rect(89,71,3,3,hair);
  return s;
 }
-function body(i){let c=clothes[i%8];return poly('29,14 95,14 117,65 101,122 25,122 10,67',c)+poly('29,14 63,31 95,14 77,52 48,52',paper)+rect(26,100,76,12,ink)+rect(26,121,27,47,ink)+rect(76,121,27,47,ink)+rect(18,160,36,16,'#443b34')+rect(75,160,36,16,'#443b34')+poly('10,67 27,73 28,100 14,105',skins[i%6])+poly('102,72 117,65 114,105 101,100',skins[i%6])+ (i>7?rect(44,48,39,45,i===11?'#879a9d':'#ddb967'):'');}
+function body(i){const c=clothes[i%8];let s=poly('38,10 86,10 106,32 115,80 103,107 98,132 29,132 24,104 13,82 20,33',c);
+ s+=poly('38,10 52,24 45,106 29,132 24,104 20,33','#ffffff19')+poly('86,10 106,32 115,80 103,107 98,132 76,126 82,33','#00000025');
+ s+=poly('48,10 64,22 80,10 73,34 56,34',paper)+line('M64 24L64 98','#00000020',2)+line('M36 63L31 99 M94 63L98 99','#00000025',3);
+ s+=rect(28,105,72,9,'#544338')+rect(58,104,13,12,'#d8b768')+rect(61,107,7,6,'#665342');
+ s+=poly('30,130 57,130 54,166 28,166','#424b51')+poly('72,130 97,130 102,165 76,165','#343c45')+poly('28,157 52,158 55,174 17,174 17,166','#584839')+poly('76,157 102,158 111,172 75,174','#493a32')+line('M21 171L52 171 M78 171L107 170','#bc9562',2);
+ s+=poly('15,78 31,80 32,98 23,106 13,99',skins[i%6])+poly('99,80 113,77 116,97 107,105 98,99',skins[i%6]);
+ if(i%3===0)s+=poly('46,42 78,42 83,101 42,101','#c9bba0')+line('M49 71L76 71 M50 76L74 76','#9f9079',2);
+ if(i%3===1)s+=rect(45,46,8,6,'#ddb967')+rect(45,66,8,6,'#ddb967');
+ if(i===9)s+=poly('40,25 63,39 90,23 80,73 64,84 45,70','#d6b45f')+line('M47 38L64 50L83 37','#f0d99b',4);
+ if(i===10)s+=poly('33,20 61,36 88,21 80,99 51,98','#ded4b7')+line('M64 39L64 63 M55 49L73 49','#aa8757',4);
+ if(i===11)s+=poly('37,28 64,22 92,28 88,87 63,101 38,86','#91a8aa')+poly('64,22 92,28 88,87 63,101','#607a87')+line('M45 38L81 38 M45 52L81 52 M44 68L82 68','#c3d2cd',3);
+ return s;
+}
 async function atlas(name,count,w,h,draw){let parts='',frames={};const cols=8,rows=Math.ceil(count/cols);
  for(let i=0;i<count;i++){let x=i%cols*w,y=Math.floor(i/cols)*h;parts+=`<g transform="translate(${x} ${y})">${draw(i)}</g>`;frames[i]={frame:{x,y,w,h},rotated:false,trimmed:false,spriteSourceSize:{x:0,y:0,w,h},sourceSize:{w,h}};}
  const source=svg(cols*w,rows*h,parts);fs.writeFileSync(path.join(out,name+'.svg'),source);await sharp(Buffer.from(source)).png().toFile(path.join(out,name+'.png'));fs.writeFileSync(path.join(out,name+'.json'),JSON.stringify({frames,meta:{image:name+'.png',size:{w:cols*w,h:rows*h},scale:'1'}}));
 }
 async function image(name,w,h,s){let source=svg(w,h,s);fs.writeFileSync(path.join(out,name+'.svg'),source);await sharp(Buffer.from(source)).png().toFile(path.join(out,name+'.png'));}
+function weapon(i){const tier=Math.floor(i/5),metal=['#8eaaa9','#b6c5c0','#cab788','#e2cf86','#bfced5','#e8d7ab'][tier],variant=i%5;
+ let s=rect(36,20,9,151,'#825841')+poly('36,20 40,20 40,171 36,171','#c49968')+rect(33,117,15,32,ink)+line('M34 124L47 129 M34 137L47 142','#c3a071',3);
+ const shapes=['19,17 40,10 67,18 76,35 64,62 41,52 26,44','7,16 34,9 44,24 62,9 78,16 74,54 53,64 41,43 24,64 8,54','32,3 45,3 45,29 69,19 76,29 66,57 43,57 43,81 32,81','21,12 42,6 73,21 76,57 64,75 42,58 22,44','30,4 50,4 51,15 74,19 77,43 50,48 48,63 28,63 25,46 6,43 8,19 29,15'];
+ s+=poly(shapes[variant],metal)+poly('41,10 45,25 42,53 26,44 19,17','#ffffff29')+line(variant===2?'M69 19L76 29L66 57':'M67 18L76 35L64 62','#f7ecd0',3)+rect(30,43,20,8,'#786442');
+ if(tier>=2)s+=rect(35,19,10,8,'#e4bc65');if(tier>=3)s+=poly('39,25 45,31 40,38 34,31',tier===5?'#cb6066':'#6db9af');
+ if(tier>=4)s+=line('M48 29L60 34L53 43',ink,2);return s;
+}
+function house(x,y,w,h,i){const walls=['#d4aa7d','#b9bea1','#cba28b','#b4c7ba'],roofs=['#8a5960','#526778','#77625f'];const c=walls[i%4];let s=rect(x,y,w,h,c)+poly(`${x+w*.7},${y} ${x+w},${y} ${x+w},${y+h} ${x+w*.7},${y+h}`,'#00000020');
+ s+=poly(`${x-8},${y} ${x+w*.5},${y-65} ${x+w+8},${y}`,roofs[i%3])+poly(`${x+w*.5},${y-65} ${x+w+8},${y} ${x+w*.55},${y}`,'#00000025');
+ for(let j=0;j<3;j++){s+=rect(x+10+j*(w-20)/3,y+15,7,h-15,'#695647');if(j<2)s+=rect(x+23+j*w*.43,y+25,17,30,'#475c5b')+rect(x+25+j*w*.43,y+27,5,24,'#d2b477');}
+ s+=rect(x,y+65,w,7,'#695647')+line(`M${x+10} ${y+65}L${x+w*.45} ${y+h-5}M${x+w-10} ${y+65}L${x+w*.55} ${y+h-5}`,'#89705b',5);return s;
+}
+function town(i){const kind=[0,1,2,3,1,0,2,2,3,2,2,1,4,3,1][i],stone=['#b1b6a0','#c8b58f','#aebfc0','#c2a89a','#a9bfae'][kind];let s='';
+ s+=poly('0,870 90,755 220,830 370,700 520,830 680,730 800,820 800,1080 0,1080','#9bafa0');
+ for(let j=0;j<12;j++)s+=house(j*78-40,890-(j*47+i*31)%120,74,200+(j*47+i*31)%120,j+i);
+ if(kind===0||kind===1||kind===4){const x=300+(i%3)*35,y=540+(i%3)*25;s+=rect(x,y,125,540,stone)+poly(`${x+88},${y} ${x+125},${y} ${x+125},1080 ${x+88},1080`,'#00000022');s+=poly(`${x-12},${y} ${x+60},${y-110} ${x+137},${y}`,'#526778')+poly(`${x+60},${y-110} ${x+137},${y} ${x+88},${y}`,'#394e60');for(let j=0;j<6;j++)s+=rect(x+24+j%2*55,y+35+Math.floor(j/2)*95,18,48,'#4e6464')+rect(x+27+j%2*55,y+38+Math.floor(j/2)*95,5,40,'#e1c48f');s+=line(`M${x+8} ${y+80}L${x+117} ${y+80}M${x+8} ${y+175}L${x+117} ${y+175}`, '#ffffff20',3);if(kind===1)s+=rect(x+48,y+270,30,115,'#d6b6a1')+line(`M${x+63} ${y+279}L${x+63} ${y+345}M${x+49} ${y+300}L${x+77} ${y+300}`,'#7d6158',6);}
+ if(kind===2){s+=rect(225,720,310,360,stone)+rect(220,691,320,36,stone);for(let j=0;j<8;j++)s+=rect(225+j*41,668,26,37,stone);for(const x of[215,490]){s+=rect(x,630,85,450,stone)+poly(`${x+54},630 ${x+85},630 ${x+85},1080 ${x+54},1080`,'#00000020');for(let j=0;j<3;j++)s+=rect(x+33,680+j*100,15,45,'#42535a');}s+=poly('340,1080 340,926 362,901 396,897 419,925 419,1080','#42535a');}
+ if(kind===3){s+=poly('0,965 800,915 800,1080 0,1080','#5b929a');for(let j=0;j<9;j++)s+=line(`M${j*105} ${982+j%3*25}l65 -4`,'#b0c9bd',3);for(let j=0;j<3;j++){const x=180+j*175;s+=rect(x,615+j*35,7,390,'#72594b')+poly(`${x+7},${640+j*35} ${x+7},930 ${x+135},925`,'#e9d8b4')+poly(`${x-7},${680+j*35} ${x-7},916 ${x-75},916`,'#bc8872')+poly(`${x-95},980 ${x+143},980 ${x+105},1027 ${x-55},1027`,'#5f4d45');}}
+ // Different foreground quarters and stalls frame a clear performance lane.
+ s+=house(-75,760,225,320,i)+house(650,740,240,340,i+2);
+ s+=rect(0,1080,800,22,'#ddbb85')+rect(0,1102,800,26,'#98735a')+rect(0,1128,800,72,'#665248');for(let j=0;j<12;j++)s+=rect(j*72,1110,3,84,'#423d39')+poly(`${j*72},1110 ${j*72+64},1110 ${j*72+59},1115 ${j*72+4},1115`,'#aa8865');
+ s+=rect(0,1200,800,400,'#697b72');for(let j=0;j<60;j++){const x=(j*127+i*11)%800,y=1210+Math.floor(j/10)*63;s+=poly(`${x},${y} ${x+58},${y-3} ${x+68},${y+16} ${x+7},${y+20}`,'#7e8d80')+line(`M${x+7} ${y+20}L${x+63} ${y+16}`,'#536c65',2);}return s;
+}
 async function main(){
- await atlas('cast-heads-angular',48,128,128,i=>face(i%16,Math.floor(i/16)));
+ await atlas('cast-heads-angular',64,128,128,i=>face(i%16,Math.floor(i/16)));
  await atlas('cast-bodies-angular',12,128,180,body);
- await atlas('cast-jesters-angular',4,128,240,i=>`<g transform="translate(0 68) scale(1 .93)">${body(i+4)}</g><g transform="translate(29 0) scale(.55)">${face(i+4)}</g>`+poly('27,26 8,8 15,52 45,37 61,3 73,44 103,7 119,50 82,47 57,36',clothes[i]));
- await atlas('cast-weapons-angular',30,80,180,i=>rect(36,20,10,154,'#b28657')+poly(`32,${12+i%4*2} 59,8 77,26 67,66 43,54 24,46 17,25`,i<10?'#b8c4bc':i<20?'#e4c577':'#e1dfc9')+rect(30,44,21,10,ink));
- await image('executioner-angular',160,240,poly('38,75 118,75 149,117 138,189 23,189 10,117','#38434c')+poly('44,14 116,14 136,53 122,87 38,87 25,53',ink)+poly('46,50 115,50 111,69 49,69','#b89271')+rect(56,53,10,5,ink)+rect(96,53,10,5,ink)+rect(24,171,113,15,'#9e7256')+rect(32,185,37,47,ink)+rect(92,185,37,47,ink)+rect(8,131,26,27,'#c3926d')+rect(129,131,24,27,'#c3926d'));
+ await atlas('cast-jesters-angular',4,128,240,i=>`<g transform="translate(0 65) scale(1 .97)">${body(i+4)}</g><g transform="translate(27 8) scale(.58)">${face(i+4)}</g>`+poly('36,25 42,7 69,2 87,13 97,28 82,29 72,16 59,17 52,29',clothes[i])+`<circle cx="91" cy="28" r="5" fill="#e4bd6c"/>`);
+ await atlas('cast-weapons-angular',30,80,180,weapon);
+ await image('executioner-angular',160,240,poly('47,77 111,77 133,104 141,156 120,184 34,184 18,153 27,104','#50616a')+poly('47,77 72,89 58,168 34,184 18,153 27,104','#6b7a7c')+poly('111,77 133,104 141,156 120,184 88,168 91,94','#344751')+poly('46,19 79,5 110,19 126,57 113,89 48,89 32,57','#344751')+poly('79,5 110,19 126,57 113,89 82,76 91,33','#22353f')+poly('46,19 79,5 69,36 40,64 32,57','#61737b')+poly('48,52 111,49 107,72 53,72','#bb9271')+poly('84,50 111,49 107,72 85,72','#95785f')+line('M58 58L67 56 M94 56L103 58',ink,4)+poly('48,89 80,82 113,89 100,162 62,165','#41535c')+line('M79 91L76 155','#829091',2)+rect(33,166,89,13,'#82644c')+rect(72,165,18,17,'#d3b476')+rect(76,169,10,9,'#665548')+poly('35,181 68,181 62,221 32,224',ink)+poly('91,181 120,181 125,224 96,223','#31434d')+poly('32,212 61,212 65,235 19,235 20,224','#4c4440')+poly('96,213 125,213 139,232 96,235','#443c38')+line('M23 230L61 230 M99 230L135 228','#bba57e',3)+poly('18,132 38,134 35,154 23,163 14,150','#c3926d')+poly('123,133 141,130 145,151 134,163 122,154','#ab7e5e'));
  for(const [n,i]of [['oswin',1],['merrin',4],['agnes',6]])await image(n+'-angular',256,256,rect(0,0,256,256,'#526f6a')+`<g transform="translate(64 120)">${body(i)}</g><g transform="translate(47 2) scale(1.3)">${face(i)}</g>`);
- await image('cart-angular',480,200,rect(25,45,240,80,'#b88b59')+rect(265,110,140,8,ink)+rect(350,55,80,40,'#967454')+rect(410,15,16,75,'#967454')+rect(415,9,45,24,'#967454')+rect(357,90,12,65,ink)+rect(414,90,12,65,ink)+`<circle cx="65" cy="138" r="33" fill="${ink}"/><circle cx="225" cy="138" r="33" fill="${ink}"/>`);
+ await image('cart-angular',480,200,rect(25,72,240,65,'#b88b59')+poly('195,72 265,72 265,137 195,137','#91664f')+rect(20,68,250,10,'#dfb87d')+poly('25,60 39,14 250,14 265,60','#739c90')+poly('145,14 250,14 265,60 145,60','#4e746c')+line('M145 15L145 60',paper,5)+line('M45 80L45 132 M95 80L95 132 M145 80L145 132 M195 80L195 132 M245 80L245 132','#795846',3)+rect(265,114,90,7,ink)+poly('336,69 393,59 425,82 417,107 349,104','#a78762')+poly('390,65 395,30 418,17 451,26 461,43 429,47 426,80','#a78762')+poly('393,59 425,82 417,107 386,103','#7e604e')+poly('410,25 411,8 420,21','#39434a')+rect(443,31,4,4,ink)+poly('344,96 358,98 355,157 343,159',ink)+poly('409,99 421,100 428,155 414,156',ink)+line('M336 78L324 106L322 130',ink,8)+rect(348,56,45,25,'#64867b')+rect(367,56,5,26,paper)+`<circle cx="65" cy="148" r="30" fill="${ink}"/><circle cx="225" cy="148" r="30" fill="${ink}"/><circle cx="65" cy="148" r="19" fill="#bba57e"/><circle cx="225" cy="148" r="19" fill="#bba57e"/>`+line('M65 130L65 166 M47 148L83 148 M225 130L225 166 M207 148L243 148',ink,4));
  const towns=['york','canterbury','london','dover','durham','norwich','winchester','chester','hull','newcastle','colchester','lincoln','oxford','southampton','gloucester'];
- for(let i=0;i<towns.length;i++){const c=clothes[i%8];let s='';
-  for(let j=0;j<13;j++){let x=j*70-45,h=110+(j*53+i*31)%220; s+=rect(x,1080-h,66,h,'#76938b')+poly(`${x-5},${1080-h} ${x+33},${1040-h} ${x+71},${1080-h}`,'#4d706a');}
-  const towerX=260+(i%4)*70,towerY=640-(i%3)*55;
-  s+=rect(towerX,towerY,100,440,c)+poly(`${towerX-10},${towerY} ${towerX+50},${towerY-90} ${towerX+110},${towerY}`,ink);
-  for(let j=0;j<4;j++)s+=rect(towerX+20+(j%2)*40,towerY+40+Math.floor(j/2)*100,18,55,'#d4ba80');
-  for(const x of[-80,640]){s+=rect(x,680,220,400,'#b68d61')+poly(`${x-20},680 ${x+100},560 ${x+240},680`,ink);for(let j=0;j<3;j++)s+=rect(x+25+j*65,680,9,400,ink)+rect(x+10,820,210,12,ink);}
-  s+=rect(0,1080,800,520,'#52605b')+rect(0,1080,800,20,'#c1a379')+rect(0,1100,800,100,'#554539');
-  for(let j=0;j<8;j++)s+=rect(j*110,1110,12,90,'#332f2d');
-  for(let j=0;j<9;j++)s+=poly(`0,${1210+j*44} 800,${1205+j*44} 800,${1212+j*44} 0,${1217+j*44}`,'#68706a');
-  await image(towns[i]+'-angular',800,1600,s);
- }
+ for(let i=0;i<towns.length;i++)await image(towns[i]+'-angular',800,1600,town(i));
  await image('road-angular',800,1600,poly('0,680 130,510 290,740 470,440 800,650 800,1600 0,1600','#72846d')+poly('0,960 240,780 410,1030 680,800 800,880 800,1600 0,1600','#4f685d')+poly('0,1260 800,1180 800,1490 0,1600','#c3ac83'));
  console.log('Original angular cast, expressions, weapons, portraits, towns and road rendered.');
 }

@@ -46,7 +46,7 @@
     for(let frame=1;frame<=40;frame++) {
       if(rain && vy>0) fallingInRain=true;
       vx=Math.sign(vx)*Math.max(0,Math.abs(vx)-50*dt);
-      vy+=(fallingInRain?700:400)*dt;
+      vy+=(fallingInRain?(rain==='snow'?520:700):400)*dt;
       x+=vx*dt;y+=vy*dt;
       if(frame%5===0) points.push({x,y});
     }

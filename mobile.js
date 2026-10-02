@@ -189,7 +189,7 @@
     el('hud-date').textContent = `${getDateString()} · ${String(Math.floor(t*24)).padStart(2,'0')}:${String(Math.floor(t*1440)%60).padStart(2,'0')}`;
     el('hud-gold').textContent = Math.floor(player.gold).toLocaleString();
     el('hud-rank').textContent = `RANK ${level} · ${killStreak ? `${killStreak} streak` : 'Find your rhythm'}`;
-    const weatherNames = { clear: 'Clear skies', rain: 'Rain · heavier falls', wind: 'Wind · drifting shots', fog: 'Fog · fading targets' };
+    const weatherNames = { clear: 'Clear skies', rain: 'Rain · heavier falls', wind: 'Wind '+arrowForWind(windForce.x,windForce.y)+' · drifting shots', fog: 'Fog · fading targets', snow:'Snow · heavier falls' };
     el('hud-weather').textContent = weatherNames[currentWeather];
     el('hud-xp').style.width = `${Math.min(100,xp/xpThreshold*100)}%`;
     let phase = awaitingAngle ? 'aim' : awaitingPower ? 'power' : swingActive ? 'timing' : 'wait';
@@ -197,7 +197,7 @@
     const button = el('shot-button');
     button.textContent = {timing:'CHOP',aim:'LOCK AIM',power:'LET IT FLY',wait:'GET READY'}[phase];
     button.disabled = phase === 'wait' || !inputEnabled || !!screen;
-    el('shot-hint').textContent = {timing:'Tap when the marker reaches the mint centre.',aim:'Watch the arrow. Point it at a flying target.',power:'Dots preview the start of your flight. Tap to launch.',wait:'Your next customer is on the way.'}[phase];
+    el('shot-hint').textContent = {timing:'Tap when the marker reaches the mint centre.',aim:'Turn the brass pointer toward a target.',power:'The ribbon previews your arc. Tap to launch.',wait:'Your next customer is on the way.'}[phase];
     let fraction = (cursor.x - 250)/300;
     if (phase === 'aim') fraction = (aimArrow.angle + 90)/180;
     if (phase === 'power') fraction = (aimArrow.scaleY-.5)/1.5;

@@ -27,7 +27,15 @@
     const frame=texture.get(String(Math.max(0,Math.min(29,level-1))));
     return `<svg class="item-art weapon-art" role="img" aria-label="Your current weapon" viewBox="${frame.cutX} ${frame.cutY} ${frame.cutWidth} ${frame.cutHeight}"><image href="assets/cast-weapons-angular.png" width="${frame.source.width}" height="${frame.source.height}" /></svg>`;
   }
-  function expression(sprite,mood) { sprite.setFrame(String((sprite.castFaceIndex || 0)+(mood==='startled'?16:mood==='dazed'?32:0))); }
+  function expression(sprite,mood) { sprite.setFrame(String((sprite.castFaceIndex || 0)+(mood==='startled'?16:mood==='dazed'?32:mood==='happy'?48:0))); }
+  function walk(scene,actor,duration=1500,joy=false) {
+    actor.walkTween?.stop();actor.stepTween?.stop();
+    const base=actor.y;
+    actor.walkTween=scene.tweens.add({targets:actor,y:base-(joy?10:4),angle:{from:joy?-5:-2,to:joy?5:2},duration:joy?110:170,yoyo:true,repeat:-1,ease:'Sine.easeInOut'});
+    const body=actor.list?.find(part=>part.texture?.key==='castBodies');
+    if(body){const angle=body.angle;actor.stepTween=scene.tweens.add({targets:body,angle:{from:-3,to:3},duration:170,yoyo:true,repeat:-1});scene.time.delayedCall(duration,()=>{actor.stepTween?.stop();body.setAngle(angle);});}
+    scene.time.delayedCall(duration,()=>{actor.walkTween?.stop();actor.setY(base).setAngle(0);});
+  }
   function nervous(scene,head,body) {
     head.personaTween?.stop();body.personaTween?.stop();
     head.personaTween=scene.tweens.add({targets:head,angle:{from:-4,to:3},duration:650+(head.castFaceIndex%4)*170,yoyo:true,repeat:-1,ease:'Sine.easeInOut'});
@@ -41,9 +49,31 @@
     const legs=[];for(const x of[48,78]){const leg=block(x,40,8,24,0x25343b);parts.push(leg);legs.push(leg);}
     if(level>=2){parts.push(block(-105,4,110,42,0x967454),block(-47,-31,23,70,0x967454),block(-30,-57,49,24,0x967454),scene.add.triangle(-47,-79,0,17,4,0,13,17,0x25343b),block(-24,-59,5,5,0x25343b));for(const x of[-144,-70]){const leg=block(x,49,12,65,0x25343b);parts.push(leg);legs.push(leg);}}
     if(level>=3){const width=90+Math.min(160,(level-3)*15);parts.push(block(-210-width/2,5,width,66,0xb88b59),block(-153,18,130,6,0x25343b));for(const x of[-200-width,-210]){const wheel=scene.add.circle(x,52,25,0x25343b);const spoke=block(x,52,4,42,0xe9d8b4);parts.push(wheel,spoke);scene.tweens.add({targets:spoke,angle:360,duration:650,repeat:-1});}}
-    if(level===2)parts.push(block(-105,-24,65,26,0x46736c));
+    if(level>=2){parts.push(scene.add.polygon(-106,6,[0,-22,50,-12,49,14,6,21],0x6e5348),block(-48,-35,7,50,0xc0a07b),block(-25,-57,7,5,0xe9d8b4));const tail=scene.add.polygon(-165,13,[0,0,-15,20,-9,37,5,13],0x39434a);parts.push(tail);scene.tweens.add({targets:tail,angle:{from:-9,to:14},duration:220,yoyo:true,repeat:-1});}
+    const dogTail=scene.add.polygon(40,16,[0,0,-19,-14,-12,-22,8,-5],0xb88b59);parts.push(dogTail,block(91,7,3,3,0x25343b));scene.tweens.add({targets:dogTail,angle:{from:-18,to:18},duration:130,yoyo:true,repeat:-1});
+    if(level===2)parts.push(block(-105,-24,65,26,0x46736c),block(-105,-26,5,29,0xe9d8b4));
+    if(level>=3){const width=90+Math.min(160,(level-3)*15),left=-210-width;parts.push(block(left+width/2,12,width,4,0xe3bc7e),block(left+width/2,-21,width+10,9,0xd3ab6c));for(let i=1;i<5;i++)parts.push(block(left+width*i/5,7,3,54,0x8d644c));}
+    if(level>=4){parts.push(block(-250,-46,40,41,0x627b71),block(-216,-49,33,45,0xbb8758),block(-245,-47,4,42,0xe9d8b4),block(-216,-49,30,4,0x70574a));}
+    if(level>=6){const width=100+Math.min(160,(level-3)*15);parts.push(block(-270,-53,width,5,0x72594b),scene.add.polygon(-270,-82,[0,41,13,0,width-13,0,width,41],0x739c90),scene.add.polygon(-270,-82,[0,0,width/2-13,0,width/2,41,0,41],0x4e746c),block(-270,-77,5,40,0xe9d8b4));}
+    if(level>=9){parts.push(block(-165,-38,12,26,0xe4bd6c),block(-165,-38,6,16,0xf4e9d1));}
+    if(level>=12){parts.push(block(-230,-133,4,66,0x72594b));const flag=scene.add.polygon(-208,-157,[0,-12,39,-5,30,12,0,7],0xba6857);parts.push(flag);scene.tweens.add({targets:flag,scaleX:{from:.8,to:1},duration:320,yoyo:true,repeat:-1});}
     group.add(parts);scene.tweens.add({targets:legs,angle:{from:-18,to:18},duration:180,yoyo:true,repeat:-1});
     scene.tweens.add({targets:group,y:y-3,duration:260,yoyo:true,repeat:-1});return group;
+  }
+  function townLife(scene,city) {
+    scene.townLife?.destroy(true);
+    const life=scene.add.container(0,0).setDepth(-1.9);scene.townLife=life;
+    const animate=(object,config)=>{const tween=scene.tweens.add({targets:object,...config});object.once('destroy',()=>tween.stop());return object;};
+    for(let i=0;i<4;i++){
+      const x=i%2?690:100,y=1010-i*18;
+      const figure=scene.add.container(x,y);const coat=scene.add.polygon(0,0,[4,0,20,0,24,25,0,25],[0xa46c5d,0x799688,0xc1a16a,0x7b8098][i]).setOrigin(.5,0);
+      const face=scene.add.image(0,-9,'castHeads',String((city.length+i*3)%16)).setDisplaySize(20,20);
+      figure.add([coat,face,scene.add.rectangle(-5,29,5,9,0x3d4d51),scene.add.rectangle(5,29,5,9,0x3d4d51)]);life.add(figure);
+      animate(figure,{x:x+(i%2?-45:45),duration:4000+i*700,yoyo:true,repeat:-1,ease:'Sine.easeInOut'});animate(coat,{angle:{from:-3,to:3},duration:250,yoyo:true,repeat:-1});
+    }
+    for(const x of[180,610]){const pole=scene.add.rectangle(x,785,4,115,0x665548),flag=scene.add.polygon(x+21,745,[0,0,40,0,32,51,0,43],city.length%2?0xba6857:0x728ea0).setOrigin(0,.5);life.add([pole,flag]);animate(flag,{scaleX:{from:.86,to:1},angle:{from:-3,to:3},duration:900,yoyo:true,repeat:-1,ease:'Sine.easeInOut'});}
+    for(let i=0;i<3;i++){const smoke=scene.add.ellipse(97+i*6,670-i*25,16+i*11,24+i*10,0xd0d3bd,.2);life.add(smoke);animate(smoke,{y:smoke.y-60,x:smoke.x+25,alpha:0,duration:2600+i*450,repeat:-1});}
+    return life;
   }
   function bird(scene,kind,fromRight) {
     const dove=kind==='dove', outline=0x152b31;
@@ -60,5 +90,5 @@
     art.once('destroy',()=>flap.stop());
     return art;
   }
-  window.CastArt={head,body,jester,weapon,weaponMarkup,bird,expression,nervous,caravan};
+  window.CastArt={head,body,jester,weapon,weaponMarkup,bird,expression,nervous,walk,caravan,townLife};
 })();

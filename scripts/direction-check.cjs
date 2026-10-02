@@ -30,6 +30,6 @@ const display=()=>({setDepth(){return this;},setScale(){return this;},setAlpha()
 Object.assign(context,{CENTER_X:400,CENTER_Y:800,GAME_WIDTH:800,GAME_HEIGHT:1600,createCloudTextures(){},DayNightCycle:class{init(){}},player:{storageLevel:5}});
 context.CastArt.caravan=()=>display();context.window.MobileGame.journeyStart=()=>{};
 const createdTrip=new context.TravelTest();createdTrip.init({city:{name:'Durham'},days:3,mainScene:{dayNight:{timeOfDay:.3}}});
-createdTrip.add={rectangle:display,image:display,text:display};createdTrip.tweens={add(){}};createdTrip.create();
+createdTrip.add={rectangle:display,image:display,text:display,polygon:display};createdTrip.tweens={add(){}};createdTrip.create();
 assert.equal(createdTrip.dayNight.timeOfDay,.3,'Journey initialization reads the actual main-scene clock');
 assert.equal(createdTrip.duration,3300,'Longer routes play longer journeys');
