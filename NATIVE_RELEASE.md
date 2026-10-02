@@ -42,3 +42,5 @@ Commit `caa22d3` passed both native jobs in [run 37037158952](https://github.com
 ## Angular content revision - 2 October
 
 Current local native content is game release ea4bff74b56b387e. Both platform projects pass content sync and exact-package checks. Previously downloaded APK 83239100c0da62ba has the older artwork. A new platform compilation is required for the angular revision; physical-device testing and signed store builds remain open.
+
+Both platform jobs passed for commit 91461a4 in run 37045057786 (https://github.com/spacepilot121/choptoit/actions/runs/37045057786). The Android development APK is releases/choptoit-android-ea4bff74b56b387e.apk. Every one of its 64 game files, native bridge and build metadata matched the local verified package byte for byte. This confirms compilation and packaging; physical installation, touch feel and store signing remain unverified.
