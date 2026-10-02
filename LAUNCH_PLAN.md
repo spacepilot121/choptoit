@@ -19,7 +19,11 @@ Target: a polished portrait mobile game released on the web, App Store and Googl
 
 As of 20 September, all fifteen towns have illustrated backgrounds. The executioner, main cast, jesters and ring-event guards use updated artwork. The mobile HUD, pause-safe menus, six contracts, endings, trade routes, upgrades, local save recovery, audio, install affordance and offline package are implemented. All work remains local; the public site is unchanged.
 
-Latest exported build: `0b6c0be81083503a`, 66 upload files, 15.8 MB. The full automated release pipeline passes, including serving every file from the isolated export. The matching Android debug app and iOS simulator app compile in GitHub Actions. Neither has been installed or tested on a physical phone yet. Earlier entries below are historical evidence and may describe superseded artwork, file counts or behaviour.
+Latest exported build: `2aa0123062ebf4bb`, 66 upload files, 15.8 MB. The full automated release pipeline passes, including serving every file from the isolated export, and both native projects contain this release. The preceding release's Android debug app and iOS simulator app compiled in GitHub Actions. Neither has been installed or tested on a physical phone yet. Earlier entries below are historical evidence and may describe superseded artwork, file counts or behaviour.
+
+### Scenery polish — 2 October
+
+Replaced clipped circular clouds with feathered canvas wisps shared by gameplay and travel. Clouds stay in the upper sky and use lower opacity to keep the painted towns, characters and targets readable. Inspected the fresh packaged game at 390×844 through dawn and night; the calendar, moon, stars and targets remained visible, and no browser warnings or errors were captured. The complete release and native-copy checks pass. Live special-target hits and real-phone playtests remain open.
 
 ### Remaining launch gates, in priority order
 
@@ -33,7 +37,7 @@ Latest exported build: `0b6c0be81083503a`, 66 upload files, 15.8 MB. The full au
 
 ## Native app packaging (28 September)
 
-Capacitor 8 projects under `android/` and `ios/` package the exact verified web release through `npm run native:sync`. Both are portrait. Android targets API 36. The generated platform icons and splash screens use the existing axe emblem. Native apps skip browser installation/service-worker messaging because their game files are bundled; app switching calls the existing pause/save path. The Journal shares save backups as JSON files through the native share sheet and can open a JSON backup for restoration. `npm run native:check` verifies the copied game assets, native bridge and basic platform settings. No device build, signing, store review or real-phone test has been claimed. See `NATIVE_RELEASE.md`.
+Capacitor 8 projects under `android/` and `ios/` package the exact verified web release through `npm run native:sync`. Both are portrait. Android targets API 36. The generated platform icons and splash screens use the existing axe emblem. Native apps skip browser installation/service-worker messaging because their game files are bundled; app switching calls the existing pause/save path. The Journal shares save backups as JSON files through the native share sheet and can open a JSON backup for restoration. `npm run native:check` verifies the copied game assets, native bridge and basic platform settings. No signed build, store review or real-phone test has been claimed. See `NATIVE_RELEASE.md`.
 
 ## Evidence so far (11 September)
 

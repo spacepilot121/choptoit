@@ -195,12 +195,28 @@ const FEATURES = {
 const ATMOS_TOP_Y = SAFE_TOP;
 const ATMOS_BOTTOM_Y = SAFE_BOTTOM;
 const CLOUD_MIN_Y = ATMOS_TOP_Y + 20;
-const CLOUD_MAX_Y = Math.floor(ATMOS_TOP_Y + ((ATMOS_BOTTOM_Y - ATMOS_TOP_Y) * 0.6));
+const CLOUD_MAX_Y = Math.min(Math.floor(GAME_HEIGHT * .45), Math.floor(ATMOS_TOP_Y + ((ATMOS_BOTTOM_Y - ATMOS_TOP_Y) * 0.6)));
 const WEATHER_MIN_Y = ATMOS_TOP_Y;
 const WEATHER_MAX_Y = ATMOS_BOTTOM_Y;
 const FOG_MIN_Y = ATMOS_TOP_Y + 80;
 const FOG_MAX_Y = ATMOS_BOTTOM_Y;
 const WIND_MIN_Y = ATMOS_TOP_Y - 20;
+function createCloudTextures(scene) {
+  for (const [key,width,height] of [['cloud-small',180,90],['cloud-big',260,110]]) {
+    if (scene.textures.exists(key)) continue;
+    const texture=scene.textures.createCanvas(key,width,height), ctx=texture.context;
+    // Feathered overlapping wisps leave no clipped circles or hard texture edges.
+    for (const [x,y,rx,ry,alpha] of [[.27,.55,.22,.22,.4],[.46,.4,.25,.28,.5],[.68,.52,.22,.2,.4],[.5,.63,.39,.16,.35]]) {
+      ctx.save();ctx.translate(width*x,height*y);ctx.scale(width*rx,height*ry);
+      const gradient=ctx.createRadialGradient(0,0,0,0,0,1);
+      gradient.addColorStop(0,`rgba(250,247,230,${alpha})`);
+      gradient.addColorStop(.5,`rgba(250,247,230,${alpha*.65})`);
+      gradient.addColorStop(1,'rgba(250,247,230,0)');
+      ctx.fillStyle=gradient;ctx.beginPath();ctx.arc(0,0,1,0,Math.PI*2);ctx.fill();ctx.restore();
+    }
+    texture.refresh();
+  }
+}
 const WIND_MAX_Y = ATMOS_BOTTOM_Y;
 const MAX_COIN_ANIMS = 150;
 
@@ -2023,29 +2039,7 @@ function create() {
 
   // Parallax cloud layers
   if (FEATURES.clouds) {
-    const gfx = scene.make.graphics({ x: 0, y: 0, add: false });
-    // draw a more detailed small cloud with subtle shading
-    gfx.fillStyle(0xdddddd, 0.6);
-    gfx.fillEllipse(50, 45, 60, 20);
-    gfx.fillStyle(0xffffff, 0.9);
-    gfx.fillCircle(30, 30, 20);
-    gfx.fillCircle(50, 20, 25);
-    gfx.fillCircle(70, 30, 20);
-    gfx.fillCircle(40, 40, 18);
-    gfx.fillCircle(60, 40, 18);
-    gfx.generateTexture('cloud-small', 100, 60);
-    gfx.clear();
-    // draw a more detailed large cloud
-    gfx.fillStyle(0xdddddd, 0.6);
-    gfx.fillEllipse(70, 45, 80, 25);
-    gfx.fillStyle(0xffffff, 0.9);
-    gfx.fillCircle(40, 30, 25);
-    gfx.fillCircle(70, 20, 35);
-    gfx.fillCircle(100, 30, 25);
-    gfx.fillCircle(55, 45, 20);
-    gfx.fillCircle(85, 45, 20);
-    gfx.generateTexture('cloud-big', 140, 60);
-    gfx.destroy();
+    createCloudTextures(scene);
 
     cloudLayerFar = scene.add.group();
     cloudLayerNear = scene.add.group();
@@ -2070,7 +2064,7 @@ function create() {
         'cloud-big'
       );
       cloud.setDepth(-1);
-      cloud.setAlpha(Phaser.Math.FloatBetween(0.6, 0.9));
+      cloud.setAlpha(Phaser.Math.FloatBetween(0.4, 0.6));
       cloud.setScale(Phaser.Math.FloatBetween(0.8, 1.2));
       cloudLayerNear.add(cloud);
     }
@@ -5639,7 +5633,7 @@ function update(time, delta) {
       if (cloud.x < -cloud.width / 2) {
         cloud.x = config.width + cloud.width / 2;
         cloud.y = Phaser.Math.Between(CLOUD_MIN_Y, CLOUD_MAX_Y);
-        cloud.setAlpha(Phaser.Math.FloatBetween(0.6, 0.9));
+        cloud.setAlpha(Phaser.Math.FloatBetween(0.4, 0.6));
         cloud.setScale(Phaser.Math.FloatBetween(0.8, 1.2));
       }
     });
@@ -5649,7 +5643,7 @@ function update(time, delta) {
       if (cloud.x < -cloud.width / 2) {
         cloud.x = config.width + cloud.width / 2;
         cloud.y = Phaser.Math.Between(CLOUD_MIN_Y + 20, CLOUD_MAX_Y);
-        cloud.setAlpha(Phaser.Math.FloatBetween(0.6, 0.9));
+        cloud.setAlpha(Phaser.Math.FloatBetween(0.4, 0.6));
         cloud.setScale(Phaser.Math.FloatBetween(0.8, 1.2));
       }
     });
@@ -5760,29 +5754,7 @@ class TravelScene extends Phaser.Scene {
 
     // Parallax clouds that drift during travel
     if (FEATURES.clouds) {
-      if (!this.textures.exists('cloud-small')) {
-        const gfx = this.make.graphics({ x: 0, y: 0, add: false });
-        gfx.fillStyle(0xdddddd, 0.6);
-        gfx.fillEllipse(50, 45, 60, 20);
-        gfx.fillStyle(0xffffff, 0.9);
-        gfx.fillCircle(30, 30, 20);
-        gfx.fillCircle(50, 20, 25);
-        gfx.fillCircle(70, 30, 20);
-        gfx.fillCircle(40, 40, 18);
-        gfx.fillCircle(60, 40, 18);
-        gfx.generateTexture('cloud-small', 100, 60);
-        gfx.clear();
-        gfx.fillStyle(0xdddddd, 0.6);
-        gfx.fillEllipse(70, 45, 80, 25);
-        gfx.fillStyle(0xffffff, 0.9);
-        gfx.fillCircle(40, 30, 25);
-        gfx.fillCircle(70, 20, 35);
-        gfx.fillCircle(100, 30, 25);
-        gfx.fillCircle(55, 45, 20);
-        gfx.fillCircle(85, 45, 20);
-        gfx.generateTexture('cloud-big', 140, 60);
-        gfx.destroy();
-      }
+      createCloudTextures(this);
       this.travelCloudLayerFar = this.add.group();
       this.travelCloudLayerNear = this.add.group();
       for (let i = 0; i < 4; i++) {
@@ -5804,7 +5776,7 @@ class TravelScene extends Phaser.Scene {
           'cloud-big'
         );
         cloud.setDepth(-1);
-        cloud.setAlpha(Phaser.Math.FloatBetween(0.6, 0.9));
+        cloud.setAlpha(Phaser.Math.FloatBetween(0.4, 0.6));
         cloud.setScale(Phaser.Math.FloatBetween(0.8, 1.2));
         this.travelCloudLayerNear.add(cloud);
       }
@@ -5914,7 +5886,7 @@ class TravelScene extends Phaser.Scene {
         if (cloud.x < -cloud.width / 2) {
           cloud.x = config.width + cloud.width / 2;
           cloud.y = Phaser.Math.Between(CLOUD_MIN_Y, CLOUD_MAX_Y);
-          cloud.setAlpha(Phaser.Math.FloatBetween(0.6, 0.9));
+          cloud.setAlpha(Phaser.Math.FloatBetween(0.4, 0.6));
           cloud.setScale(Phaser.Math.FloatBetween(0.8, 1.2));
         }
       });
@@ -5923,7 +5895,7 @@ class TravelScene extends Phaser.Scene {
         if (cloud.x < -cloud.width / 2) {
           cloud.x = config.width + cloud.width / 2;
           cloud.y = Phaser.Math.Between(CLOUD_MIN_Y + 20, CLOUD_MAX_Y);
-          cloud.setAlpha(Phaser.Math.FloatBetween(0.6, 0.9));
+          cloud.setAlpha(Phaser.Math.FloatBetween(0.4, 0.6));
           cloud.setScale(Phaser.Math.FloatBetween(0.8, 1.2));
         }
       });
