@@ -10,6 +10,8 @@ const sha=data=>crypto.createHash('sha256').update(data).digest('hex');
 assert.equal(report.version,manifest.version);
 assert.equal(report.files.length,manifest.files);
 assert.equal(config.webDir,'native-web');
+assert.equal(manifest.appId,config.appId,'Native build belongs to a different app');
+assert.match(manifest.nativeBridgeSha256,/^[a-f0-9]{64}$/,'Native build must identify its phone integration');
 for(const file of report.files) {
   for(const dir of ['native-web','android/app/src/main/assets/public','ios/App/App/public']) {
     const content=fs.readFileSync(path.join(root,dir,file.path));
@@ -21,8 +23,8 @@ for(const file of report.files) {
 for(const dir of ['native-web','android/app/src/main/assets/public','ios/App/App/public']) {
   const html=fs.readFileSync(path.join(root,dir,'index.html'),'utf8');
   assert.ok(html.includes('native-bridge.js'),`${dir} is missing native backup support`);
-  assert.ok(fs.statSync(path.join(root,dir,'native-bridge.js')).size>1000);
-  assert.equal(JSON.parse(fs.readFileSync(path.join(root,dir,'native-build.json'),'utf8')).version,manifest.version);
+  assert.equal(sha(fs.readFileSync(path.join(root,dir,'native-bridge.js'))),manifest.nativeBridgeSha256,`${dir} has stale phone controls`);
+  assert.deepEqual(JSON.parse(fs.readFileSync(path.join(root,dir,'native-build.json'),'utf8')),manifest,`${dir} has stale build metadata`);
   if(dir!=='native-web') assert.equal(html,fs.readFileSync(path.join(root,'native-web','index.html'),'utf8'),`${dir} has a stale entry page`);
 }
 const gradle=fs.readFileSync(path.join(root,'android','variables.gradle'),'utf8');

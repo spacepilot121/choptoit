@@ -29,5 +29,5 @@ esbuild.buildSync({absWorkingDir:root,entryPoints:['./scripts/native-bridge.js']
 const html=path.join(nativeWeb,'index.html');
 fs.writeFileSync(html,fs.readFileSync(html,'utf8').replace('<script src="offline.js"></script>','<script src="native-bridge.js"></script><script src="offline.js"></script>'));
 if(!fs.readFileSync(html,'utf8').includes('<script src="native-bridge.js"></script>')) throw new Error('Native bridge was not added to app page');
-fs.writeFileSync(path.join(nativeWeb, 'native-build.json'), JSON.stringify({version:manifest.version, files:report.files.length}) + '\n');
+fs.writeFileSync(path.join(nativeWeb, 'native-build.json'), JSON.stringify({version:manifest.version, files:report.files.length, appId:JSON.parse(fs.readFileSync(path.join(root,'capacitor.config.json'),'utf8')).appId, nativeBridgeSha256:hash(fs.readFileSync(path.join(nativeWeb,'native-bridge.js')))}) + '\n');
 console.log(`Native app assets prepared from verified web release ${manifest.version} (${report.files.length} files).`);

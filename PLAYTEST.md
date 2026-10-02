@@ -1,6 +1,6 @@
 # Chop To It — release playtest
 
-Build under test: `0b6c0be81083503a`. This is a release candidate for testing, not a declaration that launch checks are complete. Test the same release ID on the web, Android and iPhone; update it after a later sync.
+Build under test: `83239100c0da62ba`. This is a release candidate for testing, not a declaration that launch checks are complete. Test the same release ID on the web, Android and iPhone; update it after a later sync. Record the app's source commit and native bridge hash too, because phone integration can change without changing browser assets.
 
 Record phone model, OS, browser, whether installed on the home screen, and build version with every result. Export any valued save before testing a fresh story. Use a separate test profile when possible.
 
@@ -15,6 +15,8 @@ Earn all six contracts through ordinary play. Record elapsed playtime, total att
 ## Interruptions and controls
 
 Switch apps during timing, aim and power; return and explicitly resume. Open each menu mid-shot. Check that the stage and calendar stay paused, the shot resumes in its prior phase and no accidental tap fires it. Lock and unlock the phone, rotate it, and test a short screen with browser bars visible. Keep any unfinished backup form open during an interruption and check its contents remain.
+
+On Android, test both the Back button and the Back gesture. During a shot, the first Back should show the pause screen; the next should minimize the app. Reopen and explicitly resume with the same shot phase and saved progress. Back from Workshop, Market, Travel or Journal should return to play; from the guide, cast or backup page it should return to the Journal. Back during startup, a town download or save-conflict recovery should preserve that operation.
 
 ## Artwork and feedback
 

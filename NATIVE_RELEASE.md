@@ -2,6 +2,8 @@
 
 The game uses one verified web release for the website and both store apps. `npm run native:sync` runs the browser tests, creates the upload folder, copies that release into each native app, adds the native save-sharing bridge, and refreshes the game icon and launch screens. `npm run native:check` verifies both copies match the release. The `releases/` and `native-web/` folders are generated and are intentionally not committed.
 
+`native-build.json` records the web release, app ID and SHA-256 hash of the bundled phone integration. Native checks reject mismatched integration or metadata in either platform, not just stale game files. Record this metadata and the source commit when testing an app. A deliberate stale Android bridge was rejected, then the restored package passed verification.
+
 Development ID: `io.github.spacepilot121.choptoit`. Confirm the permanent ID with the owner before creating store listings, signing or uploading a build. Store IDs are hard to change once released. Native project version numbers currently start at 1.0 / build 1 and must be increased for later store submissions.
 
 ## Android
