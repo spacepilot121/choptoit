@@ -1,10 +1,19 @@
 import {Filesystem, Directory, Encoding} from '@capacitor/filesystem';
 import {Share} from '@capacitor/share';
 import {App} from '@capacitor/app';
+import {Capacitor} from '@capacitor/core';
 
 App.addListener('appStateChange', ({isActive}) => {
   if (!isActive) { window.ChopSuspend?.(); window.ChopAudio?.suspend(); }
 });
+
+if (Capacitor.getPlatform() === 'android') {
+  App.addListener('backButton', async () => {
+    if (window.ChopBack?.() !== false) return;
+    window.ChopAudio?.suspend();
+    await App.minimizeApp();
+  });
+}
 
 window.ChopNativeAPI = {
   async exportSave(json) {

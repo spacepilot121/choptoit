@@ -5,6 +5,7 @@ require('./calendar-check.cjs');
 require('./weather-check.cjs');
 require('./progression-check.cjs');
 require('./suspension-check.cjs');
+require('./native-bridge-check.cjs');
 require('./ring-layout-check.cjs');
 require('./ring-cleanup-check.cjs');
 require('./ring-collision-check.cjs');

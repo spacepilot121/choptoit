@@ -1,6 +1,6 @@
 self.CHOP_RELEASE = {
-  "version": "2aa0123062ebf4bb",
-  "bytes": 16562392,
+  "version": "83239100c0da62ba",
+  "bytes": 16562873,
   "files": [
     "./assets/agnes-v2.jpg",
     "./assets/app-icon-180.png",

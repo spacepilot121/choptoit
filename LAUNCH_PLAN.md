@@ -19,7 +19,11 @@ Target: a polished portrait mobile game released on the web, App Store and Googl
 
 As of 20 September, all fifteen towns have illustrated backgrounds. The executioner, main cast, jesters and ring-event guards use updated artwork. The mobile HUD, pause-safe menus, six contracts, endings, trade routes, upgrades, local save recovery, audio, install affordance and offline package are implemented. All work remains local; the public site is unchanged.
 
-Latest exported build: `2aa0123062ebf4bb`, 66 upload files, 15.8 MB. The full automated release pipeline passes, including serving every file from the isolated export, and both native projects contain this release. The preceding release's Android debug app and iOS simulator app compiled in GitHub Actions. Neither has been installed or tested on a physical phone yet. Earlier entries below are historical evidence and may describe superseded artwork, file counts or behaviour.
+Latest exported build: `83239100c0da62ba`, 66 upload files, 15.8 MB. The full automated release pipeline passes, including serving every file from the isolated export, and both native projects contain this release. The preceding release's Android debug app and iOS simulator app compiled in GitHub Actions. Neither has been installed or tested on a physical phone yet. Earlier entries below are historical evidence and may describe superseded artwork, file counts or behaviour.
+
+### Android navigation — 2 October
+
+Back closes a menu or returns from a guide/backup page to the ledger. During play it pauses and saves; a second Back from the pause screen saves again and minimizes the app with sound suspended. Startup, town downloads and save-conflict recovery consume Back without leaving those operations. Closing a menu by keyboard also respects an in-progress town download. Focused tests cover game navigation and the native event bridge; hardware Back and gesture navigation still need physical Android validation.
 
 ### Scenery polish — 2 October
 

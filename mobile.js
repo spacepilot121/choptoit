@@ -58,7 +58,7 @@
     return `<span class="eyebrow">CHAPTER ${state.claimed+1} / ${Campaign.chapters.length} · ${Math.max(0,360-state.days)} DAYS LEFT</span><h3>${chapter.title}</h3><img class="journal-portrait" src="${chapter.portrait}" alt="${chapter.speaker}"><p><strong>${chapter.speaker}</strong></p><p class="journal-quote">${chapter.text}</p><article class="item-card"><small>YOUR CURRENT CONTRACT</small>${progress.map(g=>`<p>${g.current>=g.value?'✓':'○'} ${g.label}<br><small>${Math.min(g.current,g.value)} / ${g.value}</small></p>`).join('')}<button data-action="claim" ${complete?'':'disabled'}>Collect ${chapter.reward.toLocaleString()} gold</button></article><p>Contract rewards count toward your freedom. Open the ledger when a contract is ready.</p>`;
   }
   function close() {
-    if (SaveManager.conflict) return;
+    if (SaveManager.conflict || travelLoading) return;
     screen = null; el('game-dialog').hidden = true;
     ui.querySelectorAll('.mobile-hud,.mobile-controls,.mobile-nav').forEach(node => { node.inert = false; });
     if (scene?.scene.isPaused()) scene.scene.resume();
@@ -340,6 +340,16 @@
     else save(); // Preserve an existing menu or unsent backup form.
   }
   window.ChopSuspend = suspendGame;
+  window.ChopBack = () => {
+    // Keep loading and save-conflict recovery intact. The next Back from the
+    // pause screen may minimize the app after its progress has been saved.
+    if (!scene || travelLoading || SaveManager.conflict) return true;
+    if (!screen) { suspendGame(); return true; }
+    if (screen === 'pause') { save(); return false; }
+    if (['import','cast','guide'].includes(screen)) show('journal');
+    else close();
+    return true;
+  };
   document.addEventListener('visibilitychange', () => { if (document.hidden) suspendGame(); });
   window.addEventListener('pagehide', suspendGame);
   window.addEventListener('storage', event => {

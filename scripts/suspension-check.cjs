@@ -1,7 +1,7 @@
 const fs=require('node:fs'),path=require('node:path'),vm=require('node:vm'),assert=require('node:assert/strict');
 const source=fs.readFileSync(path.join(__dirname,'../mobile.js'),'utf8');
 const events={};let saves=0,pauses=0;
-const context={scene:null,screen:null,document:{hidden:false,addEventListener(name,fn){events[name]=fn;}},window:{addEventListener(name,fn){events[name]=fn;}},save(){saves++;},show(name){context.screen=name;pauses++;context.save();}};
+const context={scene:null,screen:null,travelLoading:false,SaveManager:{conflict:false},document:{hidden:false,addEventListener(name,fn){events[name]=fn;}},window:{addEventListener(name,fn){events[name]=fn;}},save(){saves++;},close(){context.screen=null;},show(name){context.screen=name;pauses++;context.save();}};
 vm.createContext(context);
 vm.runInContext(source.slice(source.indexOf('  function suspendGame()'),source.indexOf("  window.addEventListener('storage'")),context);
 events.pagehide();assert.equal(saves,0,'Leaving during loading must not touch an uninitialized game');
@@ -12,4 +12,13 @@ events.pagehide();assert.equal(pauses,1,'Repeated lifecycle events must preserve
 context.document.hidden=false;events.visibilitychange();assert.equal(context.screen,'pause','Returning must not automatically resume a shot');
 context.screen='import';events.pagehide();assert.equal(context.screen,'import','A backup form must survive an interruption');
 context.screen=null;events.pagehide();assert.equal(context.screen,'pause','Pagehide must pause even without visibilitychange');
-console.log('Page interruptions pause active play, preserve menus, ignore loading and require explicit resume.');
+context.scene=null;assert.equal(context.window.ChopBack(),true,'Back during startup must not leave the app');
+context.scene={};context.screen=null;
+assert.equal(context.window.ChopBack(),true);assert.equal(context.screen,'pause','First Back pauses the shot');
+const savesBeforeBack=saves;
+assert.equal(context.window.ChopBack(),false,'Back from pause permits minimizing');assert.equal(saves,savesBeforeBack+1);
+context.screen='workshop';assert.equal(context.window.ChopBack(),true);assert.equal(context.screen,null);
+for(const name of ['import','cast','guide']) { context.screen=name;context.window.ChopBack();assert.equal(context.screen,'journal'); }
+context.screen='travel';context.travelLoading=true;context.window.ChopBack();assert.equal(context.screen,'travel');
+context.travelLoading=false;context.SaveManager.conflict=true;context.screen='conflict';context.window.ChopBack();assert.equal(context.screen,'conflict');
+console.log('Interruptions preserve paused play and forms; Android Back pauses, returns from menus and protects loading and save conflicts.');
