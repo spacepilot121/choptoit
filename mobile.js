@@ -392,6 +392,7 @@
     journeyFinish(city) { activeTravel=null;screen=null;el('game-dialog').hidden=true;ui.hidden=false;ui.querySelectorAll('.mobile-hud,.mobile-controls,.mobile-nav').forEach(n=>{n.inert=false;});toast('Welcome to '+city+' · new challenges await'); },
     combo(count,gold,kind) {
       if(count<2)return;
+      el('game-toast').hidden=true;
       const banner=el('combo-banner'),name=kind==='basket'?'HEAD IN A BASKET!':ChopCore.comboName(count,kind);
       banner.replaceChildren();const title=document.createElement('b'),detail=document.createElement('small');
       title.textContent=name;detail.textContent=kind==='basket'?count+'× CHOP GOLD · +'+gold+' BONUS':(kind==='targets'?count+' TARGETS':count+' CHOPS')+' · +'+gold+' GOLD';
