@@ -52,7 +52,34 @@
     }
     return points;
   }
-  const api = { advanceMeter, tradeProfiles, tradeRole, marketQuote, affordableQuantity, launchVelocity, launchPreview };
+  function targetProfile(city,rank=1,blade=1,roll=50) {
+    const veteran=rank>=7,advanced=blade>=4;
+    const highTown=['London','Lincoln','Newcastle','Gloucester'].includes(city);
+    const lively=['Chester','Norwich','Hull','Southampton'].includes(city);
+    const high=advanced && (highTown || veteran) && roll<= (highTown?45:25);
+    const moving=roll<= (lively?70:highTown?55:veteran?45:city==='York'?15:35);
+    return {high,moving,amplitude:high?50:lively?42:26,duration:Math.max(650,(lively?1100:1500)-Math.min(8,rank-1)*65),reward:high?(highTown?3:2):moving?2:1};
+  }
+  function basketMultiplier(city,rank=1) {
+    if(city==='Hull'||city==='Southampton')return 2;
+    if(city==='Chester'||city==='Norwich')return rank>=3?3:2;
+    if(city==='Oxford')return rank>=6?4:3;
+    if(city==='York'&&rank>=7)return 2;
+    return 0;
+  }
+  function basketCatch(previous,current,basket,radius=12) {
+    if(!basket || current.y<=previous.y)return false;
+    const before=previous.y+radius-basket.y,after=current.y+radius-basket.y;
+    if(before>0 || after<0)return false;
+    const t=-before/(after-before || 1),headX=previous.x+(current.x-previous.x)*t;
+    const basketX=(basket.previousX??basket.x)+(basket.x-(basket.previousX??basket.x))*t;
+    return Math.abs(headX-basketX)<=Math.max(0,basket.halfWidth-radius);
+  }
+  function comboName(count,kind='chops') {
+    const tiers=kind==='targets'?[[5,'CROWD PLEASER!'],[4,'HEAD PARADE!'],[3,'HAT TRICK!'],[2,'DOUBLE TROUBLE!']]:[[20,'AXE LEGEND!'],[12,'ROYAL FLUSH!'],[8,'GRAVY TRAIN!'],[5,'HEADS WILL ROLL!'],[3,'CHOP CHOP!'],[2,'A CUT ABOVE!']];
+    return tiers.find(([threshold])=>count>=threshold)?.[1] || 'NICE CHOP!';
+  }
+  const api = { advanceMeter, tradeProfiles, tradeRole, marketQuote, affordableQuantity, launchVelocity, launchPreview,targetProfile,basketMultiplier,basketCatch,comboName };
   if (typeof module !== 'undefined') module.exports = api;
   else root.ChopCore = api;
 })(typeof window !== 'undefined' ? window : globalThis);

@@ -7,6 +7,7 @@ require('./progression-check.cjs');
 require('./suspension-check.cjs');
 require('./direction-check.cjs');
 require('./persona-check.cjs');
+require('./arcade-check.cjs');
 require('./native-bridge-check.cjs');
 require('./ring-layout-check.cjs');
 require('./ring-cleanup-check.cjs');

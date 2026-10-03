@@ -1,6 +1,6 @@
 self.CHOP_RELEASE = {
-  "version": "2ee5f44ffb93e282",
-  "bytes": 4159762,
+  "version": "b794776125ba8cc9",
+  "bytes": 4167018,
   "files": [
     "./assets/agnes-angular.png",
     "./assets/canterbury-angular.png",

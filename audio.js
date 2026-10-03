@@ -44,6 +44,7 @@
     if (kind === 'launch') { note(420,.22,.035,0,85); note(100,.15,.045,.03,45,'sine'); }
     else if (kind === 'shield') { note(180,.16,.035,0,75,'square'); note(730,.08,.015); }
     else if (kind === 'reward') [523.25,659.25,783.99,1046.5].forEach((f,i)=>note(f,.2,.035,i*.075));
+    else if (kind === 'combo') [392,523.25,659.25,1046.5].forEach((f,i)=>note(f,.13,.045,i*.06,f*1.08,'triangle'));
     else if (kind === 'chop') { note(150,.14,.065,0,45,'sine'); note(650,.045,.025,0,100); }
     else if (kind === 'miss') note(190,.22,.03,0,85);
     else if (kind === 'aim') note(480,.06,.025);

@@ -26,12 +26,12 @@ function face(i,mood=0){const skin=skins[i%6],hair=['#493f42','#d7ac64','#854b37
  if(i%5===0)s+=rect(89,71,3,3,hair);
  return s;
 }
-function body(i){const c=clothes[i%8];let s=poly('38,10 86,10 106,32 115,80 103,107 98,132 29,132 24,104 13,82 20,33',c);
- s+=poly('38,10 52,24 45,106 29,132 24,104 20,33','#ffffff19')+poly('86,10 106,32 115,80 103,107 98,132 76,126 82,33','#00000025');
+function body(i,carrier=false){const c=clothes[i%8];let s=poly(carrier?'38,10 86,10 92,32 98,132 29,132 33,32':'38,10 86,10 106,32 115,80 103,107 98,132 29,132 24,104 13,82 20,33',c);
+ s+=poly(carrier?'38,10 52,24 45,106 29,132 33,32':'38,10 52,24 45,106 29,132 24,104 20,33','#ffffff19')+poly(carrier?'86,10 92,32 98,132 76,126 82,33':'86,10 106,32 115,80 103,107 98,132 76,126 82,33','#00000025');
  s+=poly('48,10 64,22 80,10 73,34 56,34',paper)+line('M64 24L64 98','#00000020',2)+line('M36 63L31 99 M94 63L98 99','#00000025',3);
  s+=rect(28,105,72,9,'#544338')+rect(58,104,13,12,'#d8b768')+rect(61,107,7,6,'#665342');
  s+=poly('30,130 57,130 54,166 28,166','#424b51')+poly('72,130 97,130 102,165 76,165','#343c45')+poly('28,157 52,158 55,174 17,174 17,166','#584839')+poly('76,157 102,158 111,172 75,174','#493a32')+line('M21 171L52 171 M78 171L107 170','#bc9562',2);
- s+=poly('15,78 31,80 32,98 23,106 13,99',skins[i%6])+poly('99,80 113,77 116,97 107,105 98,99',skins[i%6]);
+ if(!carrier)s+=poly('15,78 31,80 32,98 23,106 13,99',skins[i%6])+poly('99,80 113,77 116,97 107,105 98,99',skins[i%6]);
  if(i%3===0)s+=poly('46,42 78,42 83,101 42,101','#c9bba0')+line('M49 71L76 71 M50 76L74 76','#9f9079',2);
  if(i%3===1)s+=rect(45,46,8,6,'#ddb967')+rect(45,66,8,6,'#ddb967');
  if(i===9)s+=poly('40,25 63,39 90,23 80,73 64,84 45,70','#d6b45f')+line('M47 38L64 50L83 37','#f0d99b',4);
@@ -47,19 +47,25 @@ async function image(name,w,h,s){let source=svg(w,h,s);fs.writeFileSync(path.joi
 function weapon(i){const tier=Math.floor(i/5),metal=['#8eaaa9','#b6c5c0','#cab788','#e2cf86','#bfced5','#e8d7ab'][tier],variant=i%5;
  let s=rect(36,20,9,151,'#825841')+poly('36,20 40,20 40,171 36,171','#c49968')+rect(33,117,15,32,ink)+line('M34 124L47 129 M34 137L47 142','#c3a071',3);
  const shapes=['19,17 40,10 67,18 76,35 64,62 41,52 26,44','7,16 34,9 44,24 62,9 78,16 74,54 53,64 41,43 24,64 8,54','32,3 45,3 45,29 69,19 76,29 66,57 43,57 43,81 32,81','21,12 42,6 73,21 76,57 64,75 42,58 22,44','30,4 50,4 51,15 74,19 77,43 50,48 48,63 28,63 25,46 6,43 8,19 29,15'];
- s+=poly(shapes[variant],metal)+poly('41,10 45,25 42,53 26,44 19,17','#ffffff29')+line(variant===2?'M69 19L76 29L66 57':'M67 18L76 35L64 62','#f7ecd0',3)+rect(30,43,20,8,'#786442');
+ const edges=['67,18 76,35 64,62 62,56 71,34','78,16 74,54 53,64 54,58 69,51 73,17','69,19 76,29 66,57 63,51 71,29','73,21 76,57 64,75 62,68 71,55 69,24','74,19 77,43 50,48 50,44 72,39 70,21'];
+ s+=poly(shapes[variant],metal)+`<defs><clipPath id="blade-${i}"><polygon points="${shapes[variant]}"/></clipPath></defs><g clip-path="url(#blade-${i})">`+poly('41,10 45,25 42,53 26,44 19,17','#ffffff29')+poly(edges[variant],'#f1e6c7')+'</g>'+rect(30,43,20,8,'#786442');
  if(tier>=2)s+=rect(35,19,10,8,'#e4bc65');if(tier>=3)s+=poly('39,25 45,31 40,38 34,31',tier===5?'#cb6066':'#6db9af');
  if(tier>=4)s+=line('M48 29L60 34L53 43',ink,2);return s;
 }
-function house(x,y,w,h,i){const walls=['#d4aa7d','#b9bea1','#cba28b','#b4c7ba'],roofs=['#8a5960','#526778','#77625f'];const c=walls[i%4];let s=rect(x,y,w,h,c)+poly(`${x+w*.7},${y} ${x+w},${y} ${x+w},${y+h} ${x+w*.7},${y+h}`,'#00000020');
+function house(x,y,w,h,i){const walls=['#d4aa7d','#b9bea1','#cba28b','#b4c7ba'],roofs=['#8a5960','#526778','#77625f'];const c=walls[i%4],beam=y+h*.52;let s=rect(x,y,w,h,c)+poly(`${x+w*.7},${y} ${x+w},${y} ${x+w},${y+h} ${x+w*.7},${y+h}`,'#00000020');
  s+=poly(`${x-8},${y} ${x+w*.5},${y-65} ${x+w+8},${y}`,roofs[i%3])+poly(`${x+w*.5},${y-65} ${x+w+8},${y} ${x+w*.55},${y}`,'#00000025');
- for(let j=0;j<3;j++){s+=rect(x+10+j*(w-20)/3,y+15,7,h-15,'#695647');if(j<2)s+=rect(x+23+j*w*.43,y+25,17,30,'#475c5b')+rect(x+25+j*w*.43,y+27,5,24,'#d2b477');}
- s+=rect(x,y+65,w,7,'#695647')+line(`M${x+10} ${y+65}L${x+w*.45} ${y+h-5}M${x+w-10} ${y+65}L${x+w*.55} ${y+h-5}`,'#89705b',5);return s;
+ s+=line(`M${x+w*.5} ${y-53}L${x+w*.5} ${y-8}M${x+w*.25} ${y-8}L${x+w*.5} ${y-38}L${x+w*.75} ${y-8}`,'#5b524a',4);
+ for(const fraction of[.04,.5,.96])s+=rect(x+w*fraction-3,y,6,h,'#695647');
+ s+=rect(x,y,w,6,'#695647')+rect(x,beam,w,6,'#695647')+rect(x,y+h-6,w,6,'#695647');
+ const ww=Math.min(34,w*.22),wh=Math.min(38,h*.52-18),wy=y+10;
+ for(const fraction of[.26,.74]){const wx=x+w*fraction-ww/2;s+=rect(wx-3,wy-2,ww+6,wh+4,'#765e49')+rect(wx,wy,ww,wh,'#415955')+rect(wx+3,wy+3,ww*.35,wh-6,'#d2b477')+rect(wx+ww*.49,wy,2,wh,'#765e49')+rect(wx-4,wy+wh,ww+8,3,'#dac292');}
+ s+=line(`M${x+w*.08} ${beam+12}L${x+w*.44} ${y+h-12}`,'#89705b',4);
+ s+=rect(x+w*.66,beam+10,w*.17,Math.max(10,y+h-beam-16),'#725948')+rect(x+w*.68,beam+13,3,Math.max(5,y+h-beam-22),'#ad8860');return s;
 }
 function tower(x,y,w,h,c,spire=false){let s=rect(x,y,w,h,c)+poly(`${x+w*.68},${y} ${x+w},${y} ${x+w},${y+h} ${x+w*.68},${y+h}`,'#00000022');
  s+=spire?poly(`${x-6},${y} ${x+w/2},${y-130} ${x+w+6},${y}`,'#526778'):rect(x-4,y-12,w+8,14,c);
  if(!spire)for(let j=0;j<4;j++)s+=rect(x+j*w/4,y-25,w/7,20,c);
- for(let k=0;k<Math.floor(h/70);k++)s+=rect(x+w*.22,y+22+k*65,w*.18,30,'#455c60')+rect(x+w*.59,y+22+k*65,w*.13,30,'#455c60');return s;}
+ for(let k=0;k<Math.floor(h/70);k++){const wy=y+22+k*65;s+=rect(x+w*.22,wy,w*.18,30,'#455c60')+rect(x+w*.59,wy,w*.13,30,'#455c60')+poly(`${x+w*.22},${wy} ${x+w*.31},${wy-9} ${x+w*.4},${wy}`,'#455c60')+line(`M${x+w*.2} ${wy+33}h${w*.23} M${x+w*.56} ${wy+33}h${w*.2}`,'#e4d5b9',2)+rect(x+3,wy-8,7,18,'#ffffff20')+line(`M${x+12} ${wy+44}h${w-22}`,'#00000016',2);}return s;}
 function town(i){const stone=['#c4bea5','#d0c0a0','#b8bdad','#c6b39b','#b9b69c','#c5b995','#c6bba8','#b2846e','#c6bca1','#b4a889','#b69a7d','#d2c3a2','#b9b89c','#c3b29b','#c9b99b'][i];let s='';
  s+=poly('0,850 120,740 230,810 400,720 570,810 710,760 800,830 800,1080 0,1080','#9bafa0');
  // Recognisable medieval landmarks with varied skyline heights.
@@ -85,7 +91,7 @@ function town(i){const stone=['#c4bea5','#d0c0a0','#b8bdad','#c6b39b','#b9b69c',
 async function main(){
  await atlas('cast-heads-angular',64,128,128,i=>face(i%16,Math.floor(i/16)));
  await atlas('cast-bodies-angular',12,128,180,body);
- await atlas('cast-jesters-angular',4,128,240,i=>`<g transform="translate(0 65) scale(1 .97)">${body(i+4)}</g><g transform="translate(27 8) scale(.58)">${face(i+4)}</g>`+poly('36,25 42,7 69,2 87,13 97,28 82,29 72,16 59,17 52,29',clothes[i])+`<circle cx="91" cy="28" r="5" fill="#e4bd6c"/>`);
+ await atlas('cast-jesters-angular',4,128,240,i=>`<g transform="translate(0 65) scale(1 .97)">${body(i+4,true)}</g><g transform="translate(27 8) scale(.58)">${face(i+4)}</g>`+poly('36,25 42,7 69,2 87,13 97,28 82,29 72,16 59,17 52,29',clothes[i])+`<circle cx="91" cy="28" r="5" fill="#e4bd6c"/>`);
  await atlas('cast-weapons-angular',30,80,180,weapon);
  await image('executioner-angular',160,240,poly('47,77 111,77 133,104 141,156 120,184 34,184 18,153 27,104','#50616a')+poly('47,77 72,89 58,168 34,184 18,153 27,104','#6b7a7c')+poly('111,77 133,104 141,156 120,184 88,168 91,94','#344751')+poly('46,19 79,5 110,19 126,57 113,89 48,89 32,57','#344751')+poly('79,5 110,19 126,57 113,89 82,76 91,33','#22353f')+poly('46,19 79,5 69,36 40,64 32,57','#61737b')+poly('48,52 111,49 107,72 53,72','#bb9271')+poly('84,50 111,49 107,72 85,72','#95785f')+line('M58 58L67 56 M94 56L103 58',ink,4)+poly('48,89 80,82 113,89 100,162 62,165','#41535c')+line('M79 91L76 155','#829091',2)+rect(33,166,89,13,'#82644c')+rect(72,165,18,17,'#d3b476')+rect(76,169,10,9,'#665548')+poly('35,181 68,181 62,221 32,224',ink)+poly('91,181 120,181 125,224 96,223','#31434d')+poly('32,212 61,212 65,235 19,235 20,224','#4c4440')+poly('96,213 125,213 139,232 96,235','#443c38')+line('M23 230L61 230 M99 230L135 228','#bba57e',3));
  for(const [n,i]of [['oswin',1],['merrin',4],['agnes',6]])await image(n+'-angular',256,256,rect(0,0,256,256,'#526f6a')+`<g transform="translate(64 120)">${body(i)}</g><g transform="translate(47 2) scale(1.3)">${face(i)}</g>`);

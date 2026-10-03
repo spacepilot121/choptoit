@@ -46,9 +46,9 @@
     const group=scene.add.container(x,y),parts=[];
     const block=(x,y,w,h,c)=>scene.add.rectangle(x,y,w,h,c);
     // Every journey keeps the companion dog; upgrades add a horse and cart.
-    parts.push(block(65,50,52,22,0xb88b59),block(89,38,24,24,0xb88b59),block(100,33,12,8,0x25343b));
+    parts.push(scene.add.polygon(64,49,[0,6,10,0,43,3,54,13,43,25,7,22],0xb88b59),scene.add.polygon(75,55,[0,0,24,3,18,14,0,13],0x8a624a),scene.add.polygon(91,35,[0,7,9,0,25,6,31,18,18,27,1,23],0xd0a575),scene.add.polygon(86,28,[0,0,10,6,7,25,0,18],0x705440),block(104,36,9,6,0x25343b),block(89,43,3,18,0x6d8b7b));
     const legs=[];for(const x of[48,78]){const leg=block(x,68,8,24,0x25343b);parts.push(leg);legs.push(leg);}
-    if(level>=2){parts.push(block(-105,4,110,42,0x967454),block(-47,-31,23,70,0x967454),block(-30,-57,49,24,0x967454),scene.add.triangle(-47,-79,0,17,4,0,13,17,0x25343b),block(-24,-59,5,5,0x25343b));for(const x of[-144,-70]){const leg=block(x,49,12,65,0x25343b);parts.push(leg);legs.push(leg);}}
+    if(level>=2){parts.push(scene.add.polygon(-108,5,[0,14,18,0,90,4,113,25,98,48,16,45],0x967454),scene.add.polygon(-47,-29,[0,67,5,9,20,0,30,19,24,77],0xb28a60),scene.add.polygon(-26,-55,[0,3,32,0,51,14,43,27,11,25],0xb28a60),scene.add.polygon(-42,-66,[0,22,0,0,8,4,12,22],0x67554b),scene.add.polygon(-55,-63,[0,19,0,0,7,3,11,20],0x67554b),block(-24,-59,4,4,0x25343b),scene.add.polygon(-11,-46,[0,0,15,3,12,13,0,12],0x7c5d4b));for(const x of[-144,-70]){const leg=scene.add.polygon(x,49,[0,0,13,0,10,51,17,65,2,65,0,48],0x4c4942);parts.push(leg);legs.push(leg);}}
     if(level>=3){const width=90+Math.min(160,(level-3)*15);parts.push(block(-210-width/2,5,width,66,0xb88b59),block(-153,18,130,6,0x25343b));for(const x of[-200-width,-210]){const wheel=scene.add.circle(x,52,25,0x25343b);const spoke=block(x,52,4,42,0xe9d8b4);parts.push(wheel,spoke);scene.tweens.add({targets:spoke,angle:360,duration:650,repeat:-1});}}
     if(level>=2){parts.push(scene.add.polygon(-106,6,[0,-22,50,-12,49,14,6,21],0x6e5348),block(-48,-35,7,50,0xc0a07b),block(-25,-57,7,5,0xe9d8b4));const tail=scene.add.polygon(-165,13,[0,0,-15,20,-9,37,5,13],0x39434a);parts.push(tail);scene.tweens.add({targets:tail,angle:{from:-9,to:14},duration:220,yoyo:true,repeat:-1});}
     const dogTail=scene.add.polygon(40,44,[0,0,-19,-14,-12,-22,8,-5],0xb88b59);parts.push(dogTail,block(91,35,3,3,0x25343b));scene.tweens.add({targets:dogTail,angle:{from:-18,to:18},duration:130,yoyo:true,repeat:-1});
@@ -65,16 +65,37 @@
     scene.townLife?.destroy(true);
     const life=scene.add.container(0,0).setDepth(-1.9);scene.townLife=life;
     const animate=(object,config)=>{const tween=scene.tweens.add({targets:object,...config});object.once('destroy',()=>tween.stop());return object;};
-    for(let i=0;i<4;i++){
-      const x=i%2?690:100,y=1016.5;
-      const figure=scene.add.container(x,y);const coat=scene.add.polygon(0,0,[4,0,20,0,24,25,0,25],[0xa46c5d,0x799688,0xc1a16a,0x7b8098][i]).setOrigin(.5,0);
+    scene.crowdMembers=[];scene.crowdLevel=-1;
+    for(let i=0;i<24;i++){
+      const x=55+(i*71)%690,y=1016.5;
+      const figure=scene.add.container(x,y);const coat=scene.add.polygon(0,0,[4,0,20,0,24,25,0,25],[0xa46c5d,0x799688,0xc1a16a,0x7b8098][i%4]).setOrigin(.5,0);
       const face=scene.add.image(0,-9,'castHeads',String((city.length+i*3)%16)).setDisplaySize(20,20);
+      face.castFaceIndex=(city.length+i*3)%16;figure.crowdFace=face;
       figure.add([coat,face,scene.add.rectangle(-5,29,5,9,0x3d4d51),scene.add.rectangle(5,29,5,9,0x3d4d51)]);life.add(figure);
-      animate(figure,{x:x+(i%2?-45:45),duration:4000+i*700,yoyo:true,repeat:-1,ease:'Sine.easeInOut'});animate(coat,{angle:{from:-3,to:3},duration:250,yoyo:true,repeat:-1});
+      figure.setAlpha(i<4?1:0);scene.crowdMembers.push(figure);
+      animate(figure,{x:x+(i%2?-12:12),duration:4000+i*100,yoyo:true,repeat:-1,ease:'Sine.easeInOut'});animate(coat,{angle:{from:-3,to:3},duration:250+i*7,yoyo:true,repeat:-1});
     }
-    for(const x of[180,610]){const pole=scene.add.rectangle(x,785,4,115,0x665548),flag=scene.add.polygon(x+21,745,[0,0,40,0,32,51,0,43],city.length%2?0xba6857:0x728ea0).setOrigin(0,.5);life.add([pole,flag]);animate(flag,{scaleX:{from:.86,to:1},angle:{from:-3,to:3},duration:900,yoyo:true,repeat:-1,ease:'Sine.easeInOut'});}
+    for(const x of[180,610]){const pole=scene.add.rectangle(x,785,4,115,0x665548),flag=scene.add.polygon(x,737,[0,0,40,0,32,51,0,43],city.length%2?0xba6857:0x728ea0).setOrigin(0,0);life.add([pole,flag]);animate(flag,{scaleX:{from:.86,to:1},angle:{from:-3,to:3},duration:900,yoyo:true,repeat:-1,ease:'Sine.easeInOut'});}
     for(let i=0;i<3;i++){const smoke=scene.add.ellipse(97+i*6,670-i*25,16+i*11,24+i*10,0xd0d3bd,.2);life.add(smoke);animate(smoke,{y:smoke.y-60,x:smoke.x+25,alpha:0,duration:2600+i*450,repeat:-1});}
     return life;
+  }
+  function crowd(scene,streak) {
+    const count=Math.min(24,4+Math.max(0,streak)*2);if(scene.crowdLevel===count)return;
+    scene.crowdLevel=count;
+    scene.crowdMembers?.forEach((actor,i)=>{
+      expression(actor.crowdFace,streak>=3?'happy':'worried');
+      actor.crowdTween?.stop();actor.crowdTween=scene.tweens.add({targets:actor,alpha:i<count?1:0,duration:i<count?400+i*15:700});
+      if(!actor.crowdCleanup){actor.crowdCleanup=true;actor.once('destroy',()=>actor.crowdTween?.stop());}
+    });
+  }
+  function holdPole(g,angle=0) {
+    if(!g)return;g.clear();
+    for(const [i,distance]of [12,34].entries()){
+      const x=23+Math.sin(angle)*distance,y=-20-Math.cos(angle)*distance;
+      const shoulder=i?16:-16,elbow=i?35:-14;
+      for(const [width,color]of [[10,0x25343b],[7,i?0x92735e:0xb08b6a]])g.lineStyle(width,color,1).beginPath().moveTo(shoulder,-21).lineTo(elbow,i?-34:-16).lineTo(x,y).strokePath();
+      g.fillStyle(0xd2a075,1).fillEllipse(x,y,9,8);
+    }
   }
   function poseExecutioner(g,axe) {
     if(!g || !axe)return;
@@ -114,15 +135,16 @@
     const plumage=dove?0xf4e9d1:0x294953, feather=dove?0xd6c9ac:0x537a7c;
     const art=scene.add.container(0,0).setScale(fromRight?-1:1,1);
     const tail=scene.add.polygon(-24,5,[0,0,22,6,3,18,7,9],plumage).setStrokeStyle(2,outline);
-    const body=scene.add.ellipse(0,5,43,27,plumage).setStrokeStyle(2,outline);
+    const body=scene.add.polygon(0,5,[0,13,9,1,30,0,43,13,34,27,9,25],plumage).setStrokeStyle(2,outline);
+    const facet=scene.add.polygon(6,10,[0,0,17,4,21,15,3,13],feather);
     const wing=scene.add.polygon(-5,-4,[0,29,4,0,13,8,21,2,25,15,34,12,27,30],feather).setStrokeStyle(2,outline);
-    const head=scene.add.circle(19,-4,12,plumage).setStrokeStyle(2,outline);
+    const head=scene.add.polygon(19,-4,[0,8,7,0,19,2,25,14,17,25,4,23],plumage).setStrokeStyle(2,outline);
     const beak=scene.add.triangle(33,-3,0,0,13,5,0,8,0xf9c66b).setStrokeStyle(1,outline);
     const eye=scene.add.circle(23,-7,2.5,dove?outline:0xf9c66b);
-    art.add([tail,body,wing,head,beak,eye]);
+    art.add([tail,body,facet,wing,head,beak,eye]);
     const flap=scene.tweens.add({targets:wing,angle:{from:-25,to:25},scaleY:{from:.65,to:1},duration:dove?230:280,yoyo:true,repeat:-1,ease:'Sine.easeInOut'});
     art.once('destroy',()=>flap.stop());
     return art;
   }
-  window.CastArt={head,body,jester,weapon,weaponMarkup,bird,expression,nervous,walk,caravan,townLife,poseExecutioner,roadLife};
+  window.CastArt={head,body,jester,weapon,weaponMarkup,bird,expression,nervous,walk,caravan,townLife,poseExecutioner,roadLife,holdPole,crowd};
 })();
