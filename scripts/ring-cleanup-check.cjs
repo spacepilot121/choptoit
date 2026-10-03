@@ -1,0 +1,18 @@
+const fs=require('node:fs'),path=require('node:path'),vm=require('node:vm'),assert=require('node:assert/strict');
+const html=fs.readFileSync(path.join(__dirname,'../index.html'),'utf8');
+const actor=()=>({active:true,destroy(){this.active=false;}});
+let removed=0;
+const event={active:true,phase:'throwing',throwTimer:{remove(){removed++;}},activeRing:{sprite:actor()},leftPlatform:actor(),rightPlatform:actor(),leftGuard:actor(),rightGuard:actor()};
+const animated=[event.activeRing,event.leftPlatform,event.rightPlatform,event.leftGuard,event.rightGuard];
+const active=new Set(animated),ringImage=event.activeRing.sprite;
+const scene={tweens:{killTweensOf(target){active.delete(target);}}};
+const context={yorkRingPlatformEvent:event};vm.createContext(context);
+vm.runInContext(html.slice(html.indexOf('function cleanupYorkRingPlatformEvent('),html.indexOf('function spawnYorkRingPlatformEvent(')),context);
+context.cleanupYorkRingPlatformEvent(scene);
+assert.equal(active.size,0,'No ring or stage animation may survive town departure');
+assert.equal(removed,1);assert.equal(event.active,false);assert.equal(event.phase,'finished');
+assert.equal(ringImage.active,false);
+for(const object of animated.slice(1)) assert.equal(object.active,false);
+assert.equal(context.yorkRingPlatformEvent,null);
+context.cleanupYorkRingPlatformEvent(scene);assert.equal(removed,1,'Repeated cleanup is harmless');
+console.log('Ring-event cleanup cancels flight and all platform/guard animations, removes the timer and safely tolerates repeated cleanup.');

@@ -1,0 +1,18 @@
+<!doctype html>
+<html lang="en"><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
+<title>Chop To It · bird artwork review</title>
+<style>body{margin:0;background:#10272d;color:#f4e9d1;font:16px Georgia;text-align:center}h1{font-size:24px}p{max-width:540px;margin:16px auto}canvas{max-width:100%}</style>
+<h1>Crows & doves</h1><p>Live game artwork: reward the crow, avoid the dove. Both directions shown at enlarged and in-game size.</p>
+<div id="preview"></div>
+<script src="../vendor/phaser-3.55.2.min.js"></script><script src="../cast-art.js"></script>
+<script>
+new Phaser.Game({type:Phaser.CANVAS,width:600,height:430,parent:'preview',backgroundColor:'#9bb3b0',scene:{create(){
+  for(const [row,kind] of ['crow','dove'].entries()) {
+    this.add.text(24,25+row*210,kind==='crow'?'CROW · +FAME':'DOVE · AVOID',{fontSize:'18px',color:'#152b31'});
+    for(const [column,fromRight] of [false,true].entries()) {
+      const art=CastArt.bird(this,kind,fromRight);art.setPosition(140+column*290,100+row*210).setScale(fromRight?-2:2,2);
+      CastArt.bird(this,kind,fromRight).setPosition(140+column*290,170+row*210);
+    }
+  }
+}}});
+</script></html>

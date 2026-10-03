@@ -4,7 +4,9 @@
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no, viewport-fit=cover">
   <title>Chop To It!</title>
-  <link rel="icon" type="image/png" href="favicon256.png">
+  <link rel="icon" type="image/png" href="assets/app-icon-192.png">
+  <link rel="stylesheet" href="mobile.css">
+  <meta name="theme-color" content="#152b31">
   <style>
     html, body {
       width: 100%;
@@ -91,32 +93,38 @@
       font-size: 12px;
     }
   </style>
-  <script src="https://cdn.jsdelivr.net/npm/phaser@3.55.2/dist/phaser.js"></script>
+  <link rel="manifest" href="manifest.webmanifest">
+  <link rel="apple-touch-icon" sizes="180x180" href="assets/app-icon-180.png">
+  <meta name="apple-mobile-web-app-capable" content="yes">
+  <script src="vendor/phaser-3.55.2.min.js"></script>
   <script src="dayNightCycle.js"></script>
+  <script src="cast-art.js"></script>
+  <script src="game-core.js"></script>
+  <script src="campaign.js"></script>
 </head>
 <body>
   <div id="start-overlay" role="button" aria-label="Start game">
     <div class="card">
-      <h1>Chop To It!</h1>
-      <p>Tap enemies as they rise to keep your streak alive and earn gold.</p>
-      <p>Spend gold on upgrades to carry more and hit harder.</p>
-      <p>Best played on iPhone portrait mode.</p>
-      <p class="tap">Tap anywhere to begin</p>
+      <span class="eyebrow">A MOST UNFORTUNATE CAREER</span>
+      <h1>CHOP<br><em>TO IT!</em></h1>
+      <p>One year. One axe.<br>A million and one reasons to retire.</p>
+      <p class="tap">Enter the kingdom →</p>
+      <small>A darkly comic arcade adventure</small>
     </div>
   </div>
   <div id="game-shell"></div>
 
 <script>
 const GAME_WIDTH = 800;
-const GAME_HEIGHT = 1734;
+const GAME_HEIGHT = 1600;
 const CENTER_X = GAME_WIDTH / 2;
 const CENTER_Y = GAME_HEIGHT / 2;
 const SAFE_TOP = 60;
 const SAFE_BOTTOM = GAME_HEIGHT - 60;
 const LEFT_MARGIN = 16;
 const RIGHT_MARGIN = GAME_WIDTH - 16;
-const PORTRAIT_HEADROOM = GAME_HEIGHT - 600;
-const GROUND_Y = GAME_HEIGHT;
+const PORTRAIT_HEADROOM = GAME_HEIGHT - 1040;
+const GROUND_Y = GAME_HEIGHT - 12;
 const STAGE_Y = 520 + PORTRAIT_HEADROOM;
 const CHARACTER_BASE_Y = 460 + PORTRAIT_HEADROOM;
 const HUD_TOP_Y = SAFE_TOP;
@@ -159,12 +167,21 @@ window.visualViewport?.addEventListener('scroll', updateShellHeight);
 const startOverlay = document.getElementById('start-overlay');
 const startGame = () => {
   if (game) return;
+  if (typeof Phaser === 'undefined') {
+    startOverlay.querySelector('.tap').textContent = 'Could not load. Check your connection and reload.';
+    return;
+  }
   startOverlay.remove();
+  window.MobileGame?.loading();
   game = new Phaser.Game(config);
   game.scene.add('TravelScene', TravelScene, false);
 };
 
-startOverlay.addEventListener('click', startGame, { once: true });
+startOverlay.tabIndex = 0;
+startOverlay.addEventListener('click', startGame);
+startOverlay.addEventListener('keydown', event => {
+  if (event.key === 'Enter' || event.key === ' ') { event.preventDefault(); startGame(); }
+});
 
 // Feature toggles for easy testing
 const FEATURES = {
@@ -178,12 +195,20 @@ const FEATURES = {
 const ATMOS_TOP_Y = SAFE_TOP;
 const ATMOS_BOTTOM_Y = SAFE_BOTTOM;
 const CLOUD_MIN_Y = ATMOS_TOP_Y + 20;
-const CLOUD_MAX_Y = Math.floor(ATMOS_TOP_Y + ((ATMOS_BOTTOM_Y - ATMOS_TOP_Y) * 0.6));
+const CLOUD_MAX_Y = Math.min(Math.floor(GAME_HEIGHT * .45), Math.floor(ATMOS_TOP_Y + ((ATMOS_BOTTOM_Y - ATMOS_TOP_Y) * 0.6)));
 const WEATHER_MIN_Y = ATMOS_TOP_Y;
 const WEATHER_MAX_Y = ATMOS_BOTTOM_Y;
 const FOG_MIN_Y = ATMOS_TOP_Y + 80;
 const FOG_MAX_Y = ATMOS_BOTTOM_Y;
 const WIND_MIN_Y = ATMOS_TOP_Y - 20;
+function createCloudTextures(scene) {
+  for(const [key,w,h,shape] of [['cloud-small',180,70,[[5,50],[25,50],[40,24],[65,24],[75,7],[108,7],[120,30],[146,30],[175,50],[175,62],[5,62]]],['cloud-big',260,100,[[6,70],[27,70],[51,43],[83,43],[101,12],[143,12],[163,41],[199,41],[217,60],[250,60],[250,88],[6,88]]]]) {
+    if(scene.textures.exists(key))continue;
+    const texture=scene.textures.createCanvas(key,w,h),ctx=texture.context;
+    ctx.fillStyle='#e6dbbd';ctx.beginPath();shape.forEach(([x,y],i)=>i?ctx.lineTo(x,y):ctx.moveTo(x,y));ctx.closePath();ctx.fill();
+    ctx.fillStyle='#c5cbbb';ctx.fillRect(6,h-22,w-12,10);texture.refresh();
+  }
+}
 const WIND_MAX_Y = ATMOS_BOTTOM_Y;
 const MAX_COIN_ANIMS = 150;
 
@@ -264,6 +289,7 @@ let fireworkCloseEmitter;
 let bloodFireworkEmitter;
 let rainEmitter;
 let rainParts;
+let snowEmitter, snowParts;
 let fogEmitter;
 let fogParts;
 let windEmitter;
@@ -1058,6 +1084,7 @@ let chest;
 let yorkRingPlatformEvent = null;
 let yorkFlyingIslandEvent = null;
 let yorkRingHeadSerial = 0;
+let yorkRingHintShown = false;
 
 function setGoldChestVisible(visible) {
   if (chest) chest.setVisible(visible);
@@ -1079,21 +1106,33 @@ let inventory = {};
 // Multiplier applied to fame gains
 let fameMultiplier = 1;
 
-const SAVE_VERSION = 1;
+const SAVE_VERSION = 2;
 const SaveManager = {
   key: 'choptoit-save',
   saveVersion: SAVE_VERSION,
   disabled: false,
   warned: false,
   saveTimeout: null,
+  lastSavedRaw: null,
+  conflict: false,
   load() {
     if (this.disabled) return;
     try {
-      const raw = localStorage.getItem(this.key);
-      if (!raw) return;
-      const data = JSON.parse(raw);
-      if (!this.validate(data)) return;
-      this.apply(data);
+      this.lastSavedRaw = localStorage.getItem(this.key);
+      let foundSave = false;
+      for (const key of [this.key, this.key + '-backup']) {
+        const raw = localStorage.getItem(key);
+        if (!raw) continue;
+        foundSave = true;
+        let data;
+        try { data = JSON.parse(raw); } catch (_) { continue; }
+        if (!this.validate(data)) continue;
+        this.apply(data);
+        if (key !== this.key) this.recovered = true;
+        return;
+      }
+      // Keep unreadable saves intact until the player chooses a recovery action.
+      if (foundSave) { this.unreadable = true; this.disabled = true; }
     } catch (e) {
       this.handleError(e);
     }
@@ -1107,6 +1146,12 @@ const SaveManager = {
       level,
       currentDay,
       currentMonth,
+      currentCity,
+      timeOfDay: game?.scene?.scenes[0]?.dayNight?.timeOfDay ?? restoredTimeOfDay,
+      killCount,
+      campaign: Campaign.state,
+      market: marketItems.map(m => ({name:m.name,buy:m.currentBuy,sell:m.currentSell,stock:m.stock})),
+      marketSpecials: {buy:dailyBuySpecial,sell:dailySellSpecial},
       citiesUnlocked: cities.filter(c => c.unlocked).map(c => c.name),
       itemsOwned: inventory,
       upgradesOwned: {
@@ -1122,13 +1167,31 @@ const SaveManager = {
     this.saveTimeout = setTimeout(() => this.performSave(), 500);
   },
   performSave() {
+    if (this.saveTimeout) clearTimeout(this.saveTimeout);
     this.saveTimeout = null;
     if (this.disabled) return;
     try {
-      localStorage.setItem(this.key, JSON.stringify(this.getData()));
+      if (!this.checkCurrent()) return;
+      const previous = localStorage.getItem(this.key);
+      if (previous) {
+        try { if (this.validate(JSON.parse(previous))) localStorage.setItem(this.key + '-backup', previous); } catch (_) {}
+      }
+      const next = JSON.stringify(this.getData());
+      localStorage.setItem(this.key, next);
+      this.lastSavedRaw = next;
     } catch (e) {
       this.handleError(e);
     }
+  },
+  checkCurrent() {
+    if (this.conflict) return false;
+    const current = localStorage.getItem(this.key);
+    if (current === this.lastSavedRaw) return true;
+    this.conflict = true;
+    this.disabled = true;
+    if (this.saveTimeout) clearTimeout(this.saveTimeout);
+    this.saveTimeout = null;
+    return false;
   },
   handleError(e) {
     if (!this.warned) {
@@ -1138,6 +1201,18 @@ const SaveManager = {
     this.disabled = true;
   },
   validate(data) {
+    if (!data || typeof data !== 'object') return false;
+    if (data.saveVersion !== undefined && (!Number.isInteger(data.saveVersion) || data.saveVersion < 1 || data.saveVersion > this.saveVersion)) return false;
+    const bounded = (value, min, max) => Number.isFinite(value) && value >= min && value <= max;
+    if (!bounded(data.gold, 0, Number.MAX_SAFE_INTEGER) || !bounded(data.fame, 0, Number.MAX_SAFE_INTEGER) ||
+        !Number.isSafeInteger(data.level) || !bounded(data.level, 1, 1000) || !bounded(data.xp, 0, Number.MAX_SAFE_INTEGER)) return false;
+    if (!data.itemsOwned || Array.isArray(data.itemsOwned) || typeof data.itemsOwned !== 'object' ||
+        !Object.values(data.itemsOwned).every(n => Number.isSafeInteger(n) && n >= 0 && n <= 160)) return false;
+    if (!data.upgradesOwned || !Number.isInteger(data.upgradesOwned.storageLevel) ||
+        !bounded(data.upgradesOwned.storageLevel, 1, 16) || !Number.isInteger(data.upgradesOwned.weaponLevel) ||
+        !bounded(data.upgradesOwned.weaponLevel, 1, 30)) return false;
+    if (!Object.keys(data.itemsOwned).every(name => marketItems.some(item => item.name === name)) ||
+        Object.values(data.itemsOwned).reduce((sum, quantity) => sum + quantity, 0) > data.upgradesOwned.storageLevel * 10) return false;
     const hasValidDay = data.currentDay === undefined || (typeof data.currentDay === 'number' && Number.isFinite(data.currentDay));
     const hasValidMonth = data.currentMonth === undefined || (typeof data.currentMonth === 'number' && Number.isFinite(data.currentMonth));
     return data && typeof data.gold === 'number' && typeof data.fame === 'number' &&
@@ -1162,9 +1237,25 @@ const SaveManager = {
       player.weaponLevel = data.upgradesOwned.weaponLevel || 1;
       const purchased = data.upgradesOwned.purchasedUpgrades || [];
       gameUpgrades.forEach((u, i) => { u.purchased = !!purchased[i]; });
+      fameMultiplier = Math.max(1, ...gameUpgrades.filter(u => u.purchased).map(u => u.mult));
     }
     currentDay = Phaser.Math.Clamp(Math.floor(typeof data.currentDay === 'number' ? data.currentDay : currentDay), 1, 30);
     currentMonth = Phaser.Math.Clamp(Math.floor(typeof data.currentMonth === 'number' ? data.currentMonth : currentMonth), 0, months.length - 1);
+    if (cities.some(c => c.name === data.currentCity)) currentCity = data.currentCity;
+    const savedCity = cities.find(c => c.name === currentCity);
+    if (savedCity) savedCity.unlocked = true;
+    restoredTimeOfDay = Number.isFinite(data.timeOfDay) ? Phaser.Math.Clamp(data.timeOfDay, 0, 0.999999) : 0.2;
+    killCount = Number.isSafeInteger(data.killCount) && data.killCount >= 0 ? data.killCount : 0;
+    Campaign.restore(data.campaign, currentMonth * 30 + currentDay - 1);
+    Campaign.visit(currentCity);
+    if (Array.isArray(data.market) && data.market.length === marketItems.length && data.market.every((m,i) =>
+        m && m.name === marketItems[i].name && Number.isSafeInteger(m.buy) && m.buy > 0 && m.buy <= 1000000 &&
+        Number.isSafeInteger(m.sell) && m.sell > 0 && m.sell <= 1000000 && Number.isSafeInteger(m.stock) && m.stock >= 0 && m.stock <= 10000)) {
+      data.market.forEach((m,i) => Object.assign(marketItems[i],{currentBuy:m.buy,currentSell:Math.min(m.buy,m.sell),stock:m.stock}));
+      dailyBuySpecial = marketItems.some(m=>m.name===data.marketSpecials?.buy) ? data.marketSpecials.buy : null;
+      dailySellSpecial = marketItems.some(m=>m.name===data.marketSpecials?.sell) ? data.marketSpecials.sell : null;
+      restoredMarket = true;
+    }
     if (dateText) dateText.setText(getDateString());
     xpThreshold = 10;
     for (let i = 1; i < level; i++) {
@@ -1214,12 +1305,28 @@ const SaveManager = {
     this.save();
   },
   clear() {
-    if (this.disabled) return;
-    try { localStorage.removeItem(this.key); } catch (e) {}
+    if (this.saveTimeout) clearTimeout(this.saveTimeout);
+    this.saveTimeout = null;
+    try {
+      localStorage.removeItem(this.key);
+      localStorage.removeItem(this.key + '-backup');
+      this.lastSavedRaw = null;
+      return true;
+    } catch (e) { this.handleError(e); return false; }
+  },
+  restore(data) {
+    if (!this.validate(data)) throw new Error('This is not a valid Chop To It save, or it needs a newer game version.');
+    const previous = localStorage.getItem(this.key);
+    let previousValid = false;
+    try { previousValid = this.validate(JSON.parse(previous)); } catch (_) {}
+    if (previousValid) localStorage.setItem(this.key + '-backup', previous);
+    localStorage.setItem(this.key, JSON.stringify(data));
+    this.disabled = true;
   },
   newGame() {
     if (confirm('Start a new game?')) {
-      this.clear();
+      if (!this.clear()) return;
+      this.disabled = true;
       location.reload();
     }
   },
@@ -1228,7 +1335,7 @@ const SaveManager = {
   }
 };
 
-const baseSizes = { red: 60, yellow: 40, green: 20 };
+const baseSizes = { red: 96, yellow: 62, green: 30 };
 let zoneMods = { red: 0, yellow: 0, green: 0 };
 
 const classes = [
@@ -1335,29 +1442,34 @@ cities.forEach(c => {
   c.unlocked = c.name === currentCity;
 });
 
+let restoredTimeOfDay = 0.2;
+let restoredMarket = false;
 SaveManager.load();
 
 // Mapping of cities to their background image files. Keys are the city names
 // and values are the corresponding PNG filenames.
 const cityBackgrounds = {
-  York: 'background_york.png',
-  Canterbury: 'background_canterbury.png',
-  London: 'background_london.png',
-  Dover: 'background_dover.png',
-  Durham: 'background_durham.png',
-  Norwich: 'background_norwich.png',
-  Winchester: 'background_winchester.png',
-  Chester: 'background_chester.png',
-  Hull: 'background_hull.png',
-  Newcastle: 'background_newcastle.png',
-  Colchester: 'background-colchester.png',
-  Lincoln: 'background-lincoln.png',
-  Oxford: 'background-oxford.png',
-  Southampton: 'background-southhampton.png',
-  Gloucester: 'background-gloucester.png',
+  York: 'assets/york-angular.png',
+  Canterbury: 'assets/canterbury-angular.png',
+  London: 'assets/london-angular.png',
+  Dover: 'assets/dover-angular.png',
+  Durham: 'assets/durham-angular.png',
+  Norwich: 'assets/norwich-angular.png',
+  Winchester: 'assets/winchester-angular.png',
+  Chester: 'assets/chester-angular.png',
+  Hull: 'assets/hull-angular.png',
+  Newcastle: 'assets/newcastle-angular.png',
+  Colchester: 'assets/colchester-angular.png',
+  Lincoln: 'assets/lincoln-angular.png',
+  Oxford: 'assets/oxford-angular.png',
+  Southampton: 'assets/southampton-angular.png',
+  Gloucester: 'assets/gloucester-angular.png',
 };
 
 // List of travel background images used during travel scenes.
+// Align the painted stage surfaces with the shared character baseline.
+const cityBackdropOffsets = Object.fromEntries(Object.keys(cityBackgrounds).map(name=>[name,0]));
+
 const travelBackgrounds = Array.from({ length: 14 }, (_, i) => `background_travel${i + 1}.png`);
 
 // Rough geographic coordinates for each city used to estimate travel time
@@ -1416,23 +1528,13 @@ function getDateString() {
 function refreshMarketPrices() {
   const city = cities.find(c => c.name === currentCity);
   marketItems.forEach(m => {
+    const quote = ChopCore.marketQuote(currentCity,m,Phaser.Math.FloatBetween(.9,1.1),m.name === dailyBuySpecial,m.name === dailySellSpecial);
+    m.currentBuy = quote.buy;
+    m.currentSell = quote.sell;
     if (city && m.regions && !m.regions.includes(city.region)) {
-      m.currentBuy = m.buy;
-      m.currentSell = m.sell;
       m.stock = 0;
       return;
     }
-    let buyMult = Phaser.Math.FloatBetween(0.75, 1.25);
-    let sellMult = Phaser.Math.FloatBetween(0.75, 1.25);
-    if (city && city.modifiers && city.modifiers[m.name]) {
-      const mod = city.modifiers[m.name];
-      if (mod.buy) buyMult *= mod.buy;
-      if (mod.sell) sellMult *= mod.sell;
-    }
-    if (m.name === dailyBuySpecial) buyMult *= 0.5;
-    if (m.name === dailySellSpecial) sellMult *= 1.5;
-    m.currentBuy = Math.max(1, Math.round(m.buy * buyMult));
-    m.currentSell = Math.max(1, Math.round(m.sell * sellMult));
     const cityLevel = city ? city.fameReq || 0 : 0;
     const variation = Phaser.Math.Between(-2, 2);
     if (m.buy >= 20) {
@@ -1447,11 +1549,12 @@ function refreshMarketPrices() {
 
 function chooseTargetType() {
   if (!FEATURES.specialTargets) return 'standard';
-  const r = Phaser.Math.Between(1, 100);
-  if (r <= 5) return killStreak >= 10 ? 'royal' : 'standard';
-  if (r <= 15) return 'holyMonk';
-  if (r <= 35) return killStreak >= 8 ? 'explodingBarrel' : 'standard';
-  if (r <= 65) return 'woodenShield';
+  const r = Phaser.Math.Between(1,100);
+  if (currentCity === 'York') return typeof level==='number' && level>=7 && r<=25?'woodenShield':'standard';
+  if (['London','Oxford','Gloucester'].includes(currentCity) && r <= 12) return 'royal';
+  if (['Canterbury','Lincoln','Winchester'].includes(currentCity) && r <= 15) return 'holyMonk';
+  if (['Chester','Hull','Newcastle','Dover','Southampton'].includes(currentCity) && r <= 30) return 'explodingBarrel';
+  if (r <= 45) return 'woodenShield';
   return 'standard';
 }
 
@@ -1459,36 +1562,39 @@ function createTargetAppearance(scene, target, type) {
   target.removeAll(true);
   switch (type) {
     case 'woodenShield': {
-      const c = scene.add.circle(0, 0, 20, 0x8b4513);
-      const m = scene.add.circle(0, 0, 6, 0xcccccc);
-      target.add([c, m]);
+      const c = scene.add.circle(0, 0, 20, 0xaa7546).setStrokeStyle(3, 0x152b31);
+      const grain = scene.add.rectangle(0, 0, 3, 34, 0x714a32);
+      const band = scene.add.rectangle(0, 0, 34, 4, 0xe0bd78);
+      const m = scene.add.circle(0, 0, 6, 0xf4e9d1).setStrokeStyle(2, 0x152b31);
+      target.add([c, grain, band, m]);
       break;
     }
     case 'explodingBarrel': {
-      const b = scene.add.rectangle(0, 0, 30, 40, 0x663300);
-      const f = scene.add.rectangle(0, -22, 4, 8, 0xff0000);
+      const b = scene.add.rectangle(0, 0, 30, 40, 0xaa7546).setStrokeStyle(3, 0x152b31);
+      const f = scene.add.rectangle(0, -22, 4, 8, 0xec805d);
+      const upperBand = scene.add.rectangle(0, -11, 32, 5, 0xf9c66b);
+      const lowerBand = scene.add.rectangle(0, 11, 32, 5, 0xf9c66b);
       target.barrelBodyRect = b;
       target.barrelFuseRect = f;
-      target.add([b, f]);
+      target.add([b,scene.add.rectangle(8,0,7,34,0x714a32,.45),upperBand,lowerBand,f]);
       break;
     }
     case 'holyMonk': {
-      const m = scene.add.rectangle(0, 0, 30, 40, 0xffffcc);
-      target.add(m);
+      const robe = CastArt.body(scene.add.image(0,64,'castBodies','10').setOrigin(.5,1),'priestBody');
+      const face = CastArt.head(scene.add.image(0,-64,'castHeads','12'),'priestHead1');
+      const halo = scene.add.ellipse(0,-94,36,8,0xf9c66b).setStrokeStyle(2,0x152b31);
+      target.add([robe, face, halo]);
       break;
     }
       case 'royal': {
-        const o = scene.add.circle(0, 0, 20, 0xffff00);
-        const txt = scene.add.text(0, 0, 'R', { font: '16px monospace', fill: '#000' })
-          .setOrigin(0.5);
-        target.add([o, txt]);
+        const robe=CastArt.body(scene.add.image(0,64,'castBodies','9').setOrigin(.5,1),'prisonerBody1','Lord');
+        const face=CastArt.head(scene.add.image(0,-64,'castHeads','0'),'head1');
+        const crown = scene.add.polygon(0,-90,[0,0,8,7,14,-3,20,7,28,0,24,17,4,17],0xe2bd6b).setStrokeStyle(2,0x715448);
+        target.add([robe,face,crown]);
         break;
       }
       case 'bird': {
-        const base = target.birdKind === 'dove' ? 'birdWhite' : 'birdBlack';
-        const direction = target.fromRight ? 'Right' : 'Left';
-        const key = base + direction;
-        const img = scene.add.image(0, 0, key).setOrigin(0.5);
+        const img = CastArt.bird(scene,target.birdKind,target.fromRight);
         target.add(img);
         target.birdSprite = img;
         break;
@@ -1497,61 +1603,67 @@ function createTargetAppearance(scene, target, type) {
         const isYorkTallWaverTarget = target.isYorkTallWaver === true;
         const outerRadius = isYorkTallWaverTarget ? 30 : 20;
         const innerRadius = isYorkTallWaverTarget ? 14 : 8;
-        const outerColor = isYorkTallWaverTarget ? 0x1f9d55 : 0xff0000;
-        const innerColor = 0xffffff;
-        const outer = scene.add.circle(0, 0, outerRadius, outerColor);
-        const inner = scene.add.circle(0, 0, innerRadius, innerColor);
-        target.add([outer, inner]);
+        const outerColor = isYorkTallWaverTarget ? 0x8bd1b2 : 0xec805d;
+        const outer = scene.add.circle(0, 0, outerRadius, outerColor).setStrokeStyle(3, 0x152b31);
+        const inner = scene.add.circle(0, 0, innerRadius + 3, 0xf4e9d1);
+        const bullseye = scene.add.circle(0, 0, Math.max(4, innerRadius / 2), 0x152b31);
+        target.add([outer, inner, bullseye]);
       }
   }
 }
 
 
 
+function applyTargetWeather(scene, target) {
+  for (const object of [target, target.jester]) {
+    if (!object) continue;
+    if (object.fogTween) { object.fogTween.stop(); object.fogTween = null; }
+    object.setAlpha(1);
+    if (!object.fogCleanupBound) {
+      object.fogCleanupBound = true;
+      object.once('destroy', () => {
+        if (object.fogTween) { object.fogTween.stop(); object.fogTween = null; }
+      });
+    }
+  }
+}
+
 function applyRandomWeather(scene) {
   const clearChance = 0.5;
   if (!FEATURES.weather || Math.random() < clearChance) {
     currentWeather = 'clear';
   } else {
-    currentWeather = Phaser.Utils.Array.GetRandom(['rain', 'wind', 'fog']);
+    currentWeather = Phaser.Utils.Array.GetRandom(currentMonth<=1 || currentMonth>=10 ? ['rain','wind','fog','snow'] : ['rain','wind','fog']);
   }
   windForce = { x: 0, y: 0 };
   weatherText.setText(currentWeather.toUpperCase());
   if (rainEmitter) rainEmitter.stop();
+  if (snowEmitter) snowEmitter.stop();
   if (fogEmitter) fogEmitter.stop();
   if (windEmitter) windEmitter.stop();
   let letter = '';
   let arrow = '';
-  targetGroup.getChildren().forEach(t => {
-    if (t.fogTween) { t.fogTween.stop(); t.fogTween = null; }
-    t.setAlpha(1);
-    if (t.jester && t.jester.fogTween) { t.jester.fogTween.stop(); t.jester.fogTween = null; }
-    if (t.jester) t.jester.setAlpha(1);
-  });
+  targetGroup.getChildren().forEach(t => applyTargetWeather(scene, t));
   if (currentWeather === 'wind') {
     windForce.x = Phaser.Math.Between(-100, 100);
     windForce.y = Phaser.Math.Between(-100, 100);
     letter = 'W';
     arrow = arrowForWind(windForce.x, windForce.y);
     if (windEmitter) {
-      windEmitter.setSpeedX({ min: windForce.x - 20, max: windForce.x + 20 });
-      windEmitter.setSpeedY({ min: windForce.y - 20, max: windForce.y + 20 });
+      windEmitter.setSpeedX({ min: windForce.x * 2.6 - 30, max: windForce.x * 2.6 + 30 });
+      windEmitter.setSpeedY({ min: windForce.y * 2.6 - 30, max: windForce.y * 2.6 + 30 });
       const zone = createWindEmitZone();
       windEmitter.setEmitZone({ type: 'random', source: zone });
       windEmitter.start();
     }
   } else if (currentWeather === 'fog') {
     letter = 'F';
-    targetGroup.getChildren().forEach(t => {
-      t.fogTween = scene.tweens.add({ targets: t, alpha: 0.4, yoyo: true, repeat: -1, duration: 800 });
-      if (t.jester) {
-        t.jester.fogTween = scene.tweens.add({ targets: t.jester, alpha: 0.4, yoyo: true, repeat: -1, duration: 800 });
-      }
-    });
     if (fogEmitter) fogEmitter.start();
   } else if (currentWeather === 'rain') {
     letter = 'R';
     if (rainEmitter) rainEmitter.start();
+  } else if (currentWeather === 'snow') {
+    letter='S'; if(snowEmitter)snowEmitter.start();
   } else if (currentWeather === 'clear') {
     letter = 'C';
   }
@@ -1714,6 +1826,7 @@ function dailyMarketUpdate() {
 
 // Advance the calendar by a number of days
 function advanceDays(days = 1) {
+  Campaign.advance(days);
   for (let i = 0; i < days; i++) {
     currentDay++;
     if (currentDay > 30) {
@@ -1722,11 +1835,13 @@ function advanceDays(days = 1) {
     }
   }
   if (dateText) dateText.setText(getDateString());
+  SaveManager.save();
 }
 
 // Alias used by the day/night cycle to advance time
 function advanceCalendarDays(days = 1) {
   advanceDays(days);
+  dailyMarketUpdate();
 }
 
 function isMenuOpen() {
@@ -1809,53 +1924,53 @@ function pickClass() {
 }
 
 function preload() {
+  this.assetLoadFailed = false;
+  this.load.on('progress', value => window.MobileGame?.loadProgress(value));
+  this.load.on('loaderror', () => {
+    this.assetLoadFailed = true;
+    window.MobileGame?.loadFailed();
+  });
   this.load.image('logo', 'logo.png');
-  for (let i = 1; i <= 10; i++) {
+  for (let i = 1; !window.MobileGame && i <= 10; i++) {
     this.load.image(`intro${i}`, `intro${i}.png`);
   }
-  this.load.image('shop', 'shop.png');
+  if (!window.MobileGame) this.load.image('shop', 'shop.png');
   this.load.image('platform', 'platform.png');
   this.load.image('executionerHead', 'executionerhead.png');
+  this.load.image('executionerFigure', 'assets/executioner-angular.png');
+  this.load.image('angularRoad','assets/road-angular.png');
+  this.load.atlas('castHeads','assets/cast-heads-angular.png','assets/cast-heads-angular.json');
+  this.load.atlas('castBodies','assets/cast-bodies-angular.png','assets/cast-bodies-angular.json');
+  this.load.atlas('castJesters','assets/cast-jesters-angular.png','assets/cast-jesters-angular.json');
+  this.load.atlas('castWeapons','assets/cast-weapons-angular.png','assets/cast-weapons-angular.json');
   this.load.image('executionerBody', 'executionerbody.png');
   this.load.image('escortHead', 'escorthead.png');
   this.load.image('escortBody', 'escortbody.png');
-  this.load.image('signTravel', 'sign_travel.png');
-  this.load.image('signStorage', 'sign_storage.png');
-  this.load.image('signWeapons', 'sign_weapons.png');
-  this.load.image('signClose', 'sign_close.png');
-  this.load.image('mapNorth', 'map_north.png');
-  this.load.image('mapSouth', 'map_south.png');
-  this.load.image('backgroundTravel', 'background_travel1.png');
-  this.load.image('backgroundTravelMenu', 'background_travelmenu.png');
   this.load.image('chestOpen', 'goldchest_open.png');
   this.load.image('chestClosed', 'goldchest_closed.png');
-  // Storage upgrade assets
-  this.load.image('backgroundStorage', 'background_storage.png');
-  this.load.image('upgradeButton', 'upgrade_button.png');
-  for (let i = 1; i <= 16; i++) {
-    this.load.image(`storage${i}`, `storage_${i}.png`);
+  if (!window.MobileGame) {
+    this.load.image('signTravel', 'sign_travel.png');
+    this.load.image('signStorage', 'sign_storage.png');
+    this.load.image('signWeapons', 'sign_weapons.png');
+    this.load.image('signClose', 'sign_close.png');
+    this.load.image('mapNorth', 'map_north.png');
+    this.load.image('mapSouth', 'map_south.png');
+    this.load.image('backgroundTravel', 'background_travel1.png');
+    this.load.image('backgroundTravelMenu', 'background_travelmenu.png');
+    this.load.image('backgroundStorage', 'background_storage.png');
+    this.load.image('upgradeButton', 'upgrade_button.png');
+    for (let i = 1; i <= 16; i++) this.load.image(`storage${i}`, `storage_${i}.png`);
+    this.load.image('backgroundWeapons', 'background_weapons.png');
+    for (let i = 1; i <= 30; i++) this.load.image(`weapons${i}`, `weapons${i}.png`);
+    this.load.image('background', 'background.png');
+    this.load.image('backgroundSky', 'background_bluesky.png');
   }
-  // Weapons upgrade assets
-  this.load.image('backgroundWeapons', 'background_weapons.png');
-  for (let i = 1; i <= 30; i++) {
-    this.load.image(`weapons${i}`, `weapons${i}.png`);
-  }
-  this.load.image('background', 'background.png');
-  this.load.image('backgroundSky', 'background_bluesky.png');
-  for (let i = 1; i <= 87; i++) {
-    const headKey = `prisonerHead${i}`;
-    const headFile = i === 1 ? 'prisonerhead.png' : `prisonerhead${i}.png`;
-    this.load.image(headKey, headFile);
-  }
+  // All townsfolk faces are supplied by castHeads; legacy numeric IDs still
+  // select the same illustrated variants through CastArt.head.
   for (let i = 1; i <= 3; i++) {
     const bodyKey = `prisonerBody${i}`;
     const bodyFile = i === 1 ? 'prisonerbody.png' : `prisonerbody${i}.png`;
     this.load.image(bodyKey, bodyFile);
-  }
-  for (let i = 1; i <= 4; i++) {
-    const headKey = `priestHead${i}`;
-    const headFile = i === 1 ? 'prisonerhead_priest.png' : `prisonerhead_priest${i}.png`;
-    this.load.image(headKey, headFile);
   }
   this.load.image('priestBody', 'prisonerbody_priest.png');
   this.load.image('jesterHead1', 'jesterhead.png');
@@ -1866,33 +1981,51 @@ function preload() {
   this.load.image('jesterBody3', 'jesterbody3.png');
   this.load.image('jesterHead4', 'jesterhead4.png');
   this.load.image('jesterBody4', 'jesterbody4.png');
-  this.load.image('birdBlackLeft', 'bird_black_left.png');
-  this.load.image('birdBlackRight', 'bird_black_right.png');
-  this.load.image('birdWhiteLeft', 'bird_white_left.png');
-  this.load.image('birdWhiteRight', 'bird_white_right.png');
-  // Load city backgrounds using explicit file mappings to handle inconsistent
-  // naming.
-  Object.entries(cityBackgrounds).forEach(([name, file]) => {
+  // Mobile starts with only the saved town. Other towns remain in the offline
+  // package and are decoded on travel, avoiding fourteen large startup images.
+  Object.entries(cityBackgrounds).filter(([name]) => !window.MobileGame || name === currentCity).forEach(([name, file]) => {
     const key = `background-${name.toLowerCase()}`;
     this.load.image(key, file);
   });
   // Load dedicated travel backgrounds.
-  travelBackgrounds.forEach((file, i) => {
+  if (!window.MobileGame) travelBackgrounds.forEach((file, i) => {
     const key = `background-travel${i + 1}`;
     this.load.image(key, file);
   });
 }
 
+const pendingCityBackgrounds = new Map();
+function ensureCityBackground(scene, name) {
+  const key = `background-${name.toLowerCase()}`;
+  if (scene.textures.exists(key)) return Promise.resolve();
+  if (pendingCityBackgrounds.has(key)) return pendingCityBackgrounds.get(key);
+  const pending = new Promise((resolve, reject) => {
+    const img = new Image();
+    const timeout = setTimeout(() => { img.onload = img.onerror = null; reject(new Error('The town artwork took too long to load.')); }, 20000);
+    img.onload = () => {
+      clearTimeout(timeout);
+      if (!scene.textures.exists(key)) scene.textures.addImage(key, img);
+      resolve();
+    };
+    img.onerror = () => { clearTimeout(timeout); reject(new Error('The town artwork could not load.')); };
+    img.src = cityBackgrounds[name];
+  }).finally(() => pendingCityBackgrounds.delete(key));
+  pendingCityBackgrounds.set(key, pending);
+  return pending;
+}
+
 function create() {
   const scene = this;
+  if (scene.assetLoadFailed) { scene.scene.pause(); return; }
 
   // Background and stage art
-  skyRect = scene.add.image(CENTER_X, CENTER_Y, 'backgroundSky');
-  skyRect.setDisplaySize(GAME_WIDTH, GAME_HEIGHT);
+  skyRect = window.MobileGame
+    ? scene.add.rectangle(CENTER_X, CENTER_Y, GAME_WIDTH, GAME_HEIGHT, 0x79bac1)
+    : scene.add.image(CENTER_X, CENTER_Y, 'backgroundSky').setDisplaySize(GAME_WIDTH, GAME_HEIGHT);
   // Render sky behind celestial bodies
   skyRect.setDepth(-5);
 
-  backgroundRect = scene.add.image(CENTER_X, CENTER_Y, 'background');
+  backgroundRect = scene.add.image(CENTER_X, CENTER_Y, window.MobileGame ? `background-${currentCity.toLowerCase()}` : 'background');
   setBackdropCover(backgroundRect, GAME_WIDTH, GAME_HEIGHT, true);
   backgroundRect.setDepth(-2);
   // Apply the initial background for the starting city
@@ -1900,34 +2033,12 @@ function create() {
 
   // Parallax cloud layers
   if (FEATURES.clouds) {
-    const gfx = scene.make.graphics({ x: 0, y: 0, add: false });
-    // draw a more detailed small cloud with subtle shading
-    gfx.fillStyle(0xdddddd, 0.6);
-    gfx.fillEllipse(50, 45, 60, 20);
-    gfx.fillStyle(0xffffff, 0.9);
-    gfx.fillCircle(30, 30, 20);
-    gfx.fillCircle(50, 20, 25);
-    gfx.fillCircle(70, 30, 20);
-    gfx.fillCircle(40, 40, 18);
-    gfx.fillCircle(60, 40, 18);
-    gfx.generateTexture('cloud-small', 100, 60);
-    gfx.clear();
-    // draw a more detailed large cloud
-    gfx.fillStyle(0xdddddd, 0.6);
-    gfx.fillEllipse(70, 45, 80, 25);
-    gfx.fillStyle(0xffffff, 0.9);
-    gfx.fillCircle(40, 30, 25);
-    gfx.fillCircle(70, 20, 35);
-    gfx.fillCircle(100, 30, 25);
-    gfx.fillCircle(55, 45, 20);
-    gfx.fillCircle(85, 45, 20);
-    gfx.generateTexture('cloud-big', 140, 60);
-    gfx.destroy();
+    createCloudTextures(scene);
 
     cloudLayerFar = scene.add.group();
     cloudLayerNear = scene.add.group();
 
-    for (let i = 0; i < 11; i++) {
+    for (let i = 0; i < 4; i++) {
       const cloud = scene.add.image(
         Phaser.Math.Between(0, config.width),
         Phaser.Math.Between(CLOUD_MIN_Y, CLOUD_MAX_Y),
@@ -1940,14 +2051,14 @@ function create() {
       cloudLayerFar.add(cloud);
     }
 
-    for (let i = 0; i < 7; i++) {
+    for (let i = 0; i < 2; i++) {
       const cloud = scene.add.image(
         Phaser.Math.Between(0, config.width),
         Phaser.Math.Between(CLOUD_MIN_Y + 20, CLOUD_MAX_Y),
         'cloud-big'
       );
       cloud.setDepth(-1);
-      cloud.setAlpha(Phaser.Math.FloatBetween(0.6, 0.9));
+      cloud.setAlpha(Phaser.Math.FloatBetween(0.4, 0.6));
       cloud.setScale(Phaser.Math.FloatBetween(0.8, 1.2));
       cloudLayerNear.add(cloud);
     }
@@ -1957,9 +2068,9 @@ function create() {
   this.dayNight = new DayNightCycle({ dayLengthSeconds: 180 });
   // Place the lighting overlay just above the background so gameplay and
   // UI elements remain on top and unaffected by the darkening effect.
-  this.dayNight.init(scene, { backCloudsDepth: -3, overlayDepth: -1.5 });
+  this.dayNight.init(scene, { backCloudsDepth: -3, overlayDepth: -1.5, celestialDepth: -4 });
   // Start the calendar at sunrise on January 1st
-  this.dayNight.timeOfDay = this.dayNight.config.sunriseStart;
+  this.dayNight.timeOfDay = restoredTimeOfDay;
   this.dayNight.update(0);
   this.dayNight.onFullDay(() => { advanceCalendarDays(1); });
   // Only begin a new execution round if the player isn't already interacting
@@ -1971,7 +2082,7 @@ function create() {
     }
   });
 
-  stage = scene.add.image(CENTER_X, STAGE_Y, 'platform').setDepth(0);
+  stage = scene.add.image(CENTER_X, STAGE_Y, 'platform').setDepth(0).setAlpha(currentCity in cityBackdropOffsets ? 0 : 1);
   stageBlood = scene.add.rectangle(CENTER_X, STAGE_Y, 1, 10, 0x770000)
     .setOrigin(0.5, 1)
     .setVisible(false)
@@ -1993,47 +2104,58 @@ function create() {
   // Executioner, starts off-screen and walks in on first spawn
   // Place him behind the prisoner but in front of the background
   executioner = scene.add.container(CENTER_X, CHARACTER_BASE_Y).setDepth(0.5);
-  executionerWeapon = scene.add.image(0, -20, `weapons${player.weaponLevel}`)
-    .setOrigin(0.5)
-    .setAngle(135);
-  const execBody = scene.add.image(0, 50, 'executionerBody')
-    .setOrigin(0.5, 1);
-  const execHead = scene.add.image(0, -30, 'executionerHead')
-    .setOrigin(0.5, 0.5);
-  executioner.add([executionerWeapon, execBody, execHead]);
+  executionerWeapon = CastArt.weapon(scene.add.image(28, -12, `weapons${player.weaponLevel}`),player.weaponLevel)
+    .setOrigin(0.5, 0.88)
+    .setAngle(25);
+  const execBody = scene.add.image(0, 66, 'executionerFigure')
+    .setOrigin(0.5, 1).setDisplaySize(136, 208);
+  executioner.add([execBody, executionerWeapon]);
+  scene.executionerHands = scene.add.graphics();
+  executioner.add(scene.executionerHands);
+  scene.tweens.add({targets:execBody,y:64,duration:1100,yoyo:true,repeat:-1,ease:'Sine.easeInOut'});
   executioner.setVisible(false);
 
   // Condemned figure with separate head and body
   prisoner = scene.add.container(CENTER_X, CHARACTER_BASE_Y).setDepth(1);
   // Pivot the body around the feet so it can topple realistically
   // Position it so the top still aligns with the neck
-  prisonerBody = scene.add.image(0, 50, prisonerBodyKey)
+  prisonerBody = scene.add.image(0, 64, prisonerBodyKey)
     .setOrigin(0.5, 1);
-  prisonerHead = scene.add.container(0, -20);
-  prisonerHeadSprite = scene.add.image(0, 0, prisonerHeadKey).setOrigin(0.5);
+  CastArt.body(prisonerBody,prisonerBodyKey);
+  prisonerHead = scene.add.container(0, -64);
+  prisonerHeadSprite = scene.add.image(0, 0, 'castHeads', '0').setOrigin(0.5);
+  CastArt.head(prisonerHeadSprite,prisonerHeadKey);
+  CastArt.nervous(scene,prisonerHeadSprite,prisonerBody);
   prisonerHead.add(prisonerHeadSprite);
   // Aim arrow points upward for angle selection
   // Larger arrow for angle and power selection
-  aimArrow = scene.add.triangle(0, -25, 0, -40, -12, 0, 12, 0, 0xffff00)
-    .setOrigin(0.5, 1)
-    .setVisible(false);
+  aimArrow = scene.add.container(0, -12).setVisible(false);
+  const aiming=scene.add.graphics();
+  aiming.lineStyle(7,0x203b42,.8).lineBetween(0,-12,0,-94);
+  aiming.lineStyle(3,0xe6cf92,1).lineBetween(0,-12,0,-94);
+  aiming.lineStyle(3,0xe6cf92,1).beginPath().moveTo(-8,-80).lineTo(0,-94).lineTo(8,-80).strokePath();
+  aiming.lineStyle(2,0xb9dfcc,.9).strokeCircle(0,-10,8);
+  aimArrow.add(aiming);
   prisonerHead.add(aimArrow);
+  scene.launchGuide = scene.add.graphics().setDepth(24);
   prisoner.add([prisonerBody, prisonerHead]);
   prisoner.setVisible(false);
 
   // Escort guards
   leftEscort = scene.add.container(0, 0);
-  const leftBody = scene.add.image(0, 50, 'escortBody')
+  const leftBody = scene.add.image(0, 64, 'escortBody')
     .setOrigin(0.5, 1);
-  const leftHead = scene.add.image(0, -20, 'escortHead')
+  const leftHead = scene.add.image(0, -64, 'escortHead')
     .setOrigin(0.5, 0.5);
   leftEscort.add([leftBody, leftHead]);
+  CastArt.body(leftBody,'escortBody');CastArt.head(leftHead,'escortHead');
   rightEscort = scene.add.container(0, 0);
-  const rightBody = scene.add.image(0, 50, 'escortBody')
+  const rightBody = scene.add.image(0, 64, 'escortBody')
     .setOrigin(0.5, 1);
-  const rightHead = scene.add.image(0, -20, 'escortHead')
+  const rightHead = scene.add.image(0, -64, 'escortHead')
     .setOrigin(0.5, 0.5);
   rightEscort.add([rightBody, rightHead]);
+  CastArt.body(rightBody,'escortBody');CastArt.head(rightHead,'escortHead');
   leftEscort.setVisible(false);
   rightEscort.setVisible(false);
 
@@ -2174,7 +2296,7 @@ function create() {
     .setScrollFactor(0)
     .setVisible(false);
   updateXPUI();
-  streakMultiplierText = scene.add.text(CENTER_X + 60, STAGE_Y, 'x0', { font: '48px monospace', fill: '#ff0000' })
+  streakMultiplierText = scene.add.text(CENTER_X + 60, STAGE_Y, 'x0', { font: '48px monospace', fill: '#f9c66b' })
     .setOrigin(0.5, 1)
     .setDepth(2)
     .setStroke('#000000', 4);
@@ -2189,7 +2311,7 @@ function create() {
     });
   }
 
-  // Logo drop animation before showing the intro
+  // The mobile journal owns onboarding; retain the legacy intro as a fallback.
   // Ensure the logo appears above the intro
   logoBg = scene.add.rectangle(CENTER_X, CENTER_Y, GAME_WIDTH, GAME_HEIGHT, 0x000000).setDepth(199);
   logoContainer = scene.add.container(CENTER_X, -260).setDepth(200);
@@ -2211,7 +2333,10 @@ function create() {
           { angle: { from: -15, to: 15 }, duration: 300, yoyo: true, ease: 'Sine.easeInOut' },
           { angle: { from: -10, to: 10 }, duration: 400, yoyo: true, ease: 'Sine.easeInOut' },
           { angle: { from: -5, to: 5 }, duration: 500, yoyo: true, ease: 'Sine.easeInOut' },
-          { angle: 0, duration: 600, ease: 'Sine.easeInOut', onComplete: showIntroAfterLogo }
+          { angle: 0, duration: 600, ease: 'Sine.easeInOut', onComplete: () => {
+            if (window.MobileGame) { startGame(); window.MobileGame.ready(scene); }
+            else showIntroAfterLogo();
+          } }
         ]
       });
     }
@@ -2244,7 +2369,11 @@ function create() {
     xpBarFill.setVisible(true);
     setGoldChestVisible(true);
     gameStarted = true;
-    if (executionerIntro) {
+    if (window.MobileGame) {
+      executioner.setVisible(true);
+      executioner.setPosition(CENTER_X - 100, CHARACTER_BASE_Y);
+      spawnPrisoner(scene, false);
+    } else if (executionerIntro) {
       introExecutioner(scene, () => spawnPrisoner(scene, false));
     } else {
       spawnPrisoner(scene, false);
@@ -2360,9 +2489,9 @@ function create() {
 
   // Blood particle emitter
   const g = scene.add.graphics();
-  g.fillStyle(0xff0000, 1);
-  g.fillCircle(2, 2, 2);
-  g.generateTexture('blood', 4, 4);
+  g.fillStyle(0xd85242, 1);
+  g.fillPoints([{x:0,y:0},{x:7,y:2},{x:6,y:7},{x:1,y:6}],true);
+  g.generateTexture('blood', 8, 8);
   g.destroy();
   const particles = scene.add.particles('blood').setDepth(1);
   bloodEmitter = particles.createEmitter({
@@ -2465,11 +2594,20 @@ function create() {
   gWeather.fillStyle(0x99ccff, 1);
   gWeather.fillRect(0, 0, 2, 10);
   gWeather.generateTexture('raindrop', 2, 10);
-  gWeather.clear();
-  gWeather.fillStyle(0xffffff, 0.6);
-  gWeather.fillRect(0, 0, 20, 8);
-  gWeather.generateTexture('fog', 20, 8);
   gWeather.destroy();
+  // A soft ellipse makes drifting mist, without hundreds of hard-edged tiles.
+  if (!scene.textures.exists('mist-soft')) {
+    const mist = scene.textures.createCanvas('mist-soft', 256, 128);
+    const ctx = mist.context;
+    ctx.scale(2, 1);
+    const gradient = ctx.createRadialGradient(64, 64, 0, 64, 64, 64);
+    gradient.addColorStop(0, 'rgba(210,230,224,0.7)');
+    gradient.addColorStop(0.45, 'rgba(210,230,224,0.3)');
+    gradient.addColorStop(1, 'rgba(210,230,224,0)');
+    ctx.fillStyle = gradient;
+    ctx.fillRect(0, 0, 128, 128);
+    mist.refresh();
+  }
   // Place weather effects behind UI overlays so menus appear on top
   rainParts = scene.add.particles('raindrop').setDepth(28);
   rainEmitter = rainParts.createEmitter({
@@ -2477,33 +2615,36 @@ function create() {
     y: { min: WEATHER_MIN_Y, max: WEATHER_MAX_Y },
     lifespan: 800,
     speedY: { min: 400, max: 600 },
-    quantity: 24,
+    quantity: 6,
     frequency: 80,
     on: false
   });
-  fogParts = scene.add.particles('fog').setDepth(28);
+  fogParts = scene.add.particles('mist-soft').setDepth(28);
   fogEmitter = fogParts.createEmitter({
     x: { min: -50, max: GAME_WIDTH + 50 },
     y: { min: FOG_MIN_Y, max: FOG_MAX_Y },
-    lifespan: 6000,
-    speedX: { min: -20, max: 20 },
+    lifespan: 11000,
+    speedX: { min: 45, max: 80 },
     speedY: { min: -5, max: 5 },
-    quantity: 10,
-    alpha: { start: 0.8, end: 0.1 },
+    quantity: 1,
+    frequency: 950,
+    scale: { start: 1.8, end: 3 },
+    alpha: { start: 0.34, end: 0 },
     on: false
   });
 
   const windG = scene.add.graphics();
-  windG.fillStyle(0x996633, 1);
-  windG.fillCircle(2, 2, 2);
-  windG.generateTexture('leaf', 4, 4);
+  windG.fillStyle(0xc48b4e, 1);
+  windG.fillPoints([{x:0,y:8},{x:8,y:1},{x:17,y:2},{x:15,y:10},{x:7,y:14}],true);
+  windG.lineStyle(1,0x6b6240,1).lineBetween(1,12,14,4);
+  windG.generateTexture('leaf', 18, 15);
   windG.destroy();
   windParts = scene.add.particles('leaf').setDepth(28);
   windEmitter = windParts.createEmitter({
     lifespan: 4000,
-    // Increase particle output dramatically so the wind effect is visible
-    quantity: 14,
-    frequency: 16,
+    // Sparse leaves keep wind readable without obscuring targets.
+    quantity: 2,
+    frequency: 100,
     speedY: { min: 20, max: 140 },
     scale: { start: 1, end: 0 },
     rotate: { min: -180, max: 180 },
@@ -2512,6 +2653,11 @@ function create() {
 
 
 
+  const snowArt=scene.add.graphics();snowArt.lineStyle(1,0xf4eed9,1);
+  snowArt.lineBetween(7,0,7,14).lineBetween(0,7,14,7).lineBetween(2,2,12,12).lineBetween(2,12,12,2);
+  snowArt.generateTexture('snowflake',14,14);snowArt.destroy();
+  snowParts=scene.add.particles('snowflake').setDepth(27);
+  snowEmitter=snowParts.createEmitter({x:{min:0,max:GAME_WIDTH},y:-20,lifespan:14000,speedY:{min:80,max:130},speedX:{min:-30,max:30},frequency:120,quantity:2,rotate:{min:0,max:360},scale:{start:.65,end:.9},alpha:{start:.8,end:0},on:false});
   // Physics group to accumulate fallen bodies
   bodyGroup = scene.physics.add.group();
   // Targets should remain stationary until hit
@@ -2524,7 +2670,7 @@ function create() {
   });
   yorkRingPlatformEvent = null;
   // Enable collisions between bodies so they pile up
-  scene.physics.add.collider(bodyGroup, bodyGroup);
+  scene.headPileCounts=Array(20).fill(0);
   // Stop corpses completely after two bounces
   scene.physics.world.on('worldbounds', (body, up, down) => {
     const obj = body.gameObject;
@@ -2542,9 +2688,11 @@ function create() {
         });
       }
       obj.bounceCount = (obj.bounceCount || 0) + 1;
-      if (obj.bounceCount >= 2) {
+      if (obj.bounceCount >= (obj.isHead ? 2 : 1)) {
+        if (obj.isHead) settleHead(scene,obj);
+        else settleCorpse(scene,obj);
         // Lay the corpse on its side most of the time
-        if (Math.random() < 0.9) {
+        if (!obj.isHead && !obj.hasSettled && Math.random() < 0.9) {
           const sign = Math.random() < 0.5 ? -1 : 1;
           obj.setRotation(sign * Phaser.Math.DegToRad(90));
         }
@@ -2589,6 +2737,9 @@ function create() {
   });
 
   
+  // The mobile overlay has its own workshop, market and travel screens. Avoid
+  // building their hidden canvas counterparts and decoding all their art.
+  if (!window.MobileGame) {
   // Storage and weapons signs
   storageButton = scene.add.image(0, 0, 'signStorage')
     .setOrigin(0, 0)
@@ -2649,7 +2800,7 @@ function create() {
   const sqBodyKey = `prisonerBody${Phaser.Math.Between(1, 3)}`;
   const sqHeadKey = `prisonerHead${Phaser.Math.Between(1, 87)}`;
   const sqBody = scene.add.image(0, 0, sqBodyKey).setOrigin(0.5, 1).setScale(1);
-  const sqHead = scene.add.image(0, -80, sqHeadKey).setOrigin(0.5).setScale(1);
+  const sqHead = CastArt.head(scene.add.image(0, -80, 'castHeads', '0'), sqHeadKey);
   storagePeasant = scene.add.container(0, 0, [sqBody, sqHead]);
   storagePeasant.setPosition(400, 550);
   upgradeButton = scene.add.image(400, 290, 'upgradeButton')
@@ -2702,7 +2853,7 @@ function create() {
   const wqBodyKey = `prisonerBody${Phaser.Math.Between(1, 3)}`;
   const wqHeadKey = `prisonerHead${Phaser.Math.Between(1, 87)}`;
   const wqBody = scene.add.image(0, 0, wqBodyKey).setOrigin(0.5, 1).setScale(1);
-  const wqHead = scene.add.image(0, -80, wqHeadKey).setOrigin(0.5).setScale(1);
+  const wqHead = CastArt.head(scene.add.image(0, -80, 'castHeads', '0'), wqHeadKey);
   weaponPeasant = scene.add.container(0, 0, [wqBody, wqHead]);
   weaponPeasant.setPosition(400, 550);
   const weaponsClose = scene.add.image(700, 0, 'signClose')
@@ -2813,7 +2964,7 @@ function create() {
   const bodyKey = `prisonerBody${Phaser.Math.Between(1, 3)}`;
   const headKey = `prisonerHead${Phaser.Math.Between(1, 87)}`;
   const body = scene.add.image(0, 0, bodyKey).setOrigin(0.5, 1).setScale(1);
-  const head = scene.add.image(0, -80, headKey).setOrigin(0.5).setScale(1);
+  const head = CastArt.head(scene.add.image(0, -80, 'castHeads', '0'), headKey);
   marketPrisoner = scene.add.container(400, 550, [body, head]);
   shopContainer.add(marketChatterBubble);
   shopContainer.add(marketChatterText);
@@ -2893,9 +3044,11 @@ function create() {
   tradeContainer.add([tradeBg, tradeTitle, b1, b10, bMax, s1, s10, sMax, tradeClose, tradeSpaceText]);
   tradeBuyBtns = [b1, b10, bMax];
   tradeSellBtns = [s1, s10, sMax];
+  }
 
   // Set up first day's prices and gossip
-  dailyMarketUpdate();
+  if (restoredMarket) { updateMarketUI(); restoredMarket = false; }
+  else dailyMarketUpdate();
 
   SaveManager.startAutoSave();
   updateUnlockButtons(scene);
@@ -2906,11 +3059,13 @@ function create() {
     .setVisible(false);
 
   // Input key for timing
-  scene.input.keyboard.on('keydown-SPACE', () => {
-    if (swingActive && inputEnabled) endSwing(scene);
+  scene.input.keyboard.on('keydown-SPACE', event => {
+    if (event.repeat || event.target?.closest?.('button')) return;
+    if (window.MobileGame) window.MobileGame.strike();
+    else if (swingActive && inputEnabled) endSwing(scene);
   });
   scene.input.on('pointerdown', () => {
-    if (!inputEnabled || menuOpen) return;
+    if (!inputEnabled || menuOpen || window.MobileGame?.isPaused()) return;
     if (awaitingAngle) {
       chooseAngle(scene);
     } else if (awaitingPower) {
@@ -2921,6 +3076,13 @@ function create() {
   });
 
   // Targets spawn with each prisoner
+  if (window.MobileGame) {
+    scene.tweens.killTweensOf(logoContainer);
+    scene.time.delayedCall(1, () => {
+      startGame();
+      window.MobileGame.ready(scene);
+    });
+  }
 }
 
 let swingDirection = 1;
@@ -2971,8 +3133,8 @@ function fadeBackgroundOverlay(scene, alpha, duration = 300, onComplete) {
 function toggleShop(scene) {
   const visible = !shopContainer.visible;
   menuOpen = visible;
-  shopOverlay.setVisible(visible);
-  shopContainer.setVisible(visible);
+  shopOverlay?.setVisible(visible);
+  shopContainer?.setVisible(visible);
   setGoldChestVisible(!visible);
   if (dateBg) dateBg.setVisible(!visible);
   if (dateText) dateText.setVisible(!visible);
@@ -3044,23 +3206,25 @@ function updateZones() {
 // Purchase a fame boosting upgrade
 function buyUpgrade(scene, index) {
   const u = gameUpgrades[index];
-  if (u.purchased || fame < u.fameReq) return;
+  if (!u || u.purchased || fame < u.fameReq || u.mult <= fameMultiplier) return false;
   if (player.gold >= u.cost) {
     player.gold -= u.cost;
     goldText.setText(formatGold(player.gold));
-    fameMultiplier = u.mult;
+    fameMultiplier = Math.max(fameMultiplier, u.mult);
     u.purchased = true;
     if (u.ui && u.ui.buy) {
       u.ui.buy.setText('Bought').disableInteractive();
     }
     SaveManager.save();
+    return true;
   }
+  return false;
 }
 
 // Buying from the trading market
 function buyMarketItem(scene, index, qty = 1) {
   const item = marketItems[index];
-  if (fame < item.fameReq) return;
+  if (!item || !Number.isSafeInteger(qty) || qty <= 0 || fame < item.fameReq) return 0;
   qty = Math.min(qty, item.stock || 0);
   const cost = item.currentBuy * qty;
   if (qty > 0 && player.gold >= cost && getInventoryCount() + qty <= player.maxStorage) {
@@ -3071,20 +3235,26 @@ function buyMarketItem(scene, index, qty = 1) {
     updateMarketUI();
     showMarketQuote(sellingQuotes);
     SaveManager.save();
+    return qty;
   }
+  return 0;
 }
 
 // Selling items the player owns
 function sellMarketItem(scene, index, qty = 1) {
   const item = marketItems[index];
+  if (!item || !Number.isSafeInteger(qty) || qty <= 0) return 0;
   if ((inventory[item.name] || 0) >= qty) {
     inventory[item.name] -= qty;
     item.stock = (item.stock || 0) + qty;
     addGold(scene, item.currentSell * qty);
+    Campaign.state.sold += qty;
     updateMarketUI();
     showMarketQuote(buyingQuotes);
     SaveManager.save();
+    return qty;
   }
+  return 0;
 }
 
 
@@ -3199,8 +3369,8 @@ function showTravelMenu(scene, region = travelRegion) {
 function toggleTravel(scene, resume = true, withFade = true) {
   const visible = !travelContainer.visible;
   menuOpen = visible;
-  travelOverlay.setVisible(visible);
-  travelContainer.setVisible(visible);
+  travelOverlay?.setVisible(visible);
+  travelContainer?.setVisible(visible);
   setGoldChestVisible(!visible);
   if (dateBg) dateBg.setVisible(!visible);
   if (dateText) dateText.setVisible(!visible);
@@ -3429,7 +3599,7 @@ function upgradeWeapon(scene) {
 // Update executioner's carried weapon to current level
 function updateExecutionerWeaponTexture() {
   if (executionerWeapon) {
-    executionerWeapon.setTexture(`weapons${player.weaponLevel}`);
+    CastArt.weapon(executionerWeapon,player.weaponLevel);
   }
 }
 
@@ -3463,12 +3633,14 @@ function showTradeMenu(scene, index, mode = 'buy') {
   tradeBuyBtns.forEach(btn => btn.setVisible(showBuy));
   tradeSellBtns.forEach(btn => btn.setVisible(!showBuy));
   tradeSpaceText.setText(`Empty Space: ${player.maxStorage - getInventoryCount()}`);
-  tradeOverlay.setVisible(true);
-  tradeContainer.setVisible(true);
+  tradeOverlay?.setVisible(true);
+  tradeContainer?.setVisible(true);
   if (currentWeather === 'rain' && rainEmitter && rainParts) {
     rainEmitter.stop();
     rainEmitter.killAll();
     rainParts.setVisible(false);
+  } else if (currentWeather === 'snow' && snowEmitter && snowParts) {
+    snowEmitter.stop();snowEmitter.killAll();snowParts.setVisible(false);
   } else if (currentWeather === 'fog' && fogEmitter && fogParts) {
     fogEmitter.stop();
     fogEmitter.killAll();
@@ -3493,8 +3665,8 @@ function showTradeMenu(scene, index, mode = 'buy') {
 }
 
 function hideTradeMenu(scene) {
-  tradeOverlay.setVisible(false);
-  tradeContainer.setVisible(false);
+  tradeOverlay?.setVisible(false);
+  tradeContainer?.setVisible(false);
   menuOpen = false;
   // backOverlay.setVisible(backOverlayWasVisible);
   scene.physics.world.resume();
@@ -3503,6 +3675,8 @@ function hideTradeMenu(scene) {
   if (currentWeather === 'rain' && rainEmitter && rainParts) {
     rainParts.setVisible(true);
     rainEmitter.start();
+  } else if (currentWeather === 'snow' && snowEmitter && snowParts) {
+    snowParts.setVisible(true);snowEmitter.start();
   } else if (currentWeather === 'fog' && fogEmitter && fogParts) {
     fogParts.setVisible(true);
     fogEmitter.start();
@@ -3530,6 +3704,8 @@ function resetForNewCity(scene) {
   missStreak = 0;
   missText.setText(`Misses: ${missStreak}`);
   bodyGroup.clear(true, true);
+  scene.basketCarrier?.destroy(true);scene.basketCarrier=null;
+  scene.headPileCounts=Array(20).fill(0);
   targetGroup.getChildren().forEach(t => {
     if (t.yorkWaveTween) { t.yorkWaveTween.stop(); t.yorkWaveTween = null; }
     if (t.jester) t.jester.destroy();
@@ -3556,9 +3732,12 @@ function updateBackground(scene) {
   if (scene.textures.exists(key)) {
     backgroundRect.setTexture(key);
   } else {
-    backgroundRect.setTexture('background');
+    backgroundRect.setTexture(scene.textures.exists('background') ? 'background' : `background-${currentCity.toLowerCase()}`);
   }
   setBackdropCover(backgroundRect, GAME_WIDTH, GAME_HEIGHT, true);
+  backgroundRect.y -= cityBackdropOffsets[currentCity] || 0;
+  if (stage) stage.setAlpha(currentCity in cityBackdropOffsets ? 0 : 1);
+  CastArt.townLife(scene,currentCity);
 }
 
 function selectCity(scene, city) {
@@ -3571,13 +3750,13 @@ function selectCity(scene, city) {
   // Ensure the travel UI overlay is hidden before starting the transition.
   // Force-close the travel menu in case it somehow remained visible
   // and ensure the dimming overlay disappears when travelling.
-  travelOverlay.setVisible(false);
-  travelContainer.setVisible(false);
+  travelOverlay?.setVisible(false);
+  travelContainer?.setVisible(false);
   // Also hide other overlays in case they were inadvertently left open.
-  shopOverlay.setVisible(false);
-  shopContainer.setVisible(false);
-  tradeOverlay.setVisible(false);
-  tradeContainer.setVisible(false);
+  shopOverlay?.setVisible(false);
+  shopContainer?.setVisible(false);
+  tradeOverlay?.setVisible(false);
+  tradeContainer?.setVisible(false);
   // Reset the darkness overlay and begin the new city's intro fresh.
   // resetBackOverlay(scene);
   // Directly reset for the new city without fading the camera first.
@@ -3586,17 +3765,21 @@ function selectCity(scene, city) {
   roundCount = 1;
   // Extra safety: hide the travel overlay again in case any async events
   // re-enabled it during the city transition.
-  travelOverlay.setVisible(false);
+  travelOverlay?.setVisible(false);
   setGoldChestVisible(true);
 }
 
 function savePrisoner(scene) {
+  prisonerHeadSprite.personaTween?.stop();
+  CastArt.expression(prisonerHeadSprite,'happy');
+  CastArt.walk(scene,prisoner,1200,true);
+  window.MobileGame?.feedback('Three misses! Free at last!',true);
   scene.tweens.add({
     targets: prisoner,
     x: 850,
     y: CHARACTER_BASE_Y,
-    duration: 2000,
-    ease: 'Linear'
+    duration: 1200,
+    ease: 'Sine.easeIn'
   });
 }
 
@@ -3611,10 +3794,10 @@ function beheadPrisoner(scene, bloodAmount, angleDeg, power = 1) {
   const finalStrikePower = power * weaponPowerMultiplier;
   const neckX = prisoner.x;
   const neckY = prisoner.y - 10;
-  bloodEmitter.explode(bloodAmount, neckX, neckY);
+  bloodEmitter.explode(Math.min(32,bloodAmount), neckX, neckY);
   const headX0 = prisoner.x + prisonerHead.x;
   const headY0 = prisoner.y + prisonerHead.y;
-  headEmitter.explode(bloodAmount / 2, headX0, headY0);
+  headEmitter.explode(Math.min(18,bloodAmount / 2), headX0, headY0);
 
   if (lastGoldGain > 0) {
     showGoldGain(scene, lastGoldGain);
@@ -3622,12 +3805,10 @@ function beheadPrisoner(scene, bloodAmount, angleDeg, power = 1) {
   }
 
   // Create a physics body using the prisoner sprite for the falling corpse
-  const corpse = scene.add.image(prisoner.x, prisoner.y + 50, prisonerBodyKey)
+  const corpse = scene.add.image(prisoner.x, prisoner.y + 50, 'castBodies','0')
     .setOrigin(0.5, 1)
     .setDepth(0.5);
-  if (prisonerClass.name !== 'Clergy') {
-    corpse.setTint(prisonerClass.color);
-  }
+  CastArt.body(corpse,prisonerBodyKey,prisonerClass.name);
   scene.physics.world.enable(corpse);
   bodyGroup.add(corpse);
   corpse.isCorpse = true;
@@ -3645,7 +3826,7 @@ function beheadPrisoner(scene, bloodAmount, angleDeg, power = 1) {
   // Pumping neck spurts while the body tumbles
   bloodEmitter.startFollow(corpse, 0, -50);
   bloodEmitter.setFrequency(60);
-  bloodEmitter.setQuantity(Math.max(5, bloodAmount / 25));
+  bloodEmitter.setQuantity(2);
   bloodEmitter.start();
   let pumpOn = true;
   if (neckPumpEvent) {
@@ -3675,7 +3856,7 @@ function beheadPrisoner(scene, bloodAmount, angleDeg, power = 1) {
 
   // Reveal and grow the blood pool once the head is off
   bloodPool.setVisible(true);
-  bloodPool.displayHeight = Math.min(bloodPool.displayHeight + 1, 100);
+  bloodPool.displayHeight = Math.min(bloodPool.displayHeight + 6, 300);
   stageBlood.setVisible(true);
   stageBlood.displayWidth = Math.min(stageBlood.displayWidth + 5, 300);
 
@@ -3683,13 +3864,16 @@ function beheadPrisoner(scene, bloodAmount, angleDeg, power = 1) {
   prisoner.setVisible(false);
 
   // Spawn a new flying head sprite
-  const flyingHead = scene.add.image(headX0, headY0, prisonerHeadKey)
+  const flyingHead = scene.add.image(headX0, headY0, 'castHeads', '0')
     .setOrigin(0.5)
     .setDepth(0.8);
+  CastArt.head(flyingHead,prisonerHeadKey);
+  CastArt.expression(flyingHead,'startled');
   scene.physics.world.enable(flyingHead);
   bodyGroup.add(flyingHead);
   flyingHead.isCorpse = true;
   flyingHead.isHead = true;
+  flyingHead.chopGold=scene.currentChopGold || 0;
   flyingHead.bounceCount = 0;
   flyingHead.power = finalStrikePower;
   flyingHead.prevX = flyingHead.x;
@@ -3701,26 +3885,18 @@ function beheadPrisoner(scene, bloodAmount, angleDeg, power = 1) {
   hBody.setAllowGravity(true);
   hBody.onWorldBounds = true;
   hBody.setCollideWorldBounds(true);
-  hBody.checkCollision.left = false;
-  hBody.checkCollision.right = false;
+  hBody.checkCollision.left = true;
+  hBody.checkCollision.right = true;
   hBody.checkCollision.up = false;
   hBody.setBounce(0.6);
   hBody.setDrag(50, 0);
-  if (FEATURES.weather && currentWeather === 'rain') {
+  if (FEATURES.weather && (currentWeather === 'rain' || currentWeather === 'snow')) {
     hBody.setGravityY(0);
     flyingHead.rainGravityApplied = false;
   } else {
     hBody.setGravityY(0);
   }
-  const speed = 250 * finalStrikePower;
-  let vx = Math.sin(rad) * speed;
-  if (FEATURES.weather && currentWeather === 'wind') {
-    vx += windForce.x;
-  }
-  let vy = -Math.cos(rad) * speed;
-  if (FEATURES.weather && currentWeather === 'wind') {
-    vy += windForce.y;
-  }
+  const {x:vx,y:vy} = ChopCore.launchVelocity(angle,power,weaponPowerMultiplier,FEATURES.weather && currentWeather === 'wind' ? windForce : {x:0,y:0});
   hBody.setVelocity(vx, vy);
   hBody.setAngularVelocity(Phaser.Math.Between(-200, 200));
 
@@ -3739,8 +3915,84 @@ function beheadPrisoner(scene, bloodAmount, angleDeg, power = 1) {
   // Continuous spurting from the flying head
   headEmitter.startFollow(flyingHead, 0, 15);
   headEmitter.setFrequency(20);
-  headEmitter.setQuantity(Math.max(5, bloodAmount / 30));
+  headEmitter.setQuantity(2);
   headEmitter.start();
+}
+
+function settleHead(scene,head) {
+  if(head.active===false || head.hasSettled)return;head.hasSettled=true;
+  CastArt.expression(head,'dazed');head.setAlpha(1);head.setScale(58/128);head.setAngle(Phaser.Math.Between(-18,18));
+  const column=Math.max(0,Math.min(19,Math.floor(head.x/40)));
+  head.pileOffset=Math.min(240,scene.headPileCounts[column]++*12);
+  head.y=(scene.remainsFloor || GROUND_Y)-head.displayHeight/2-head.pileOffset;
+  head.setDepth(31);
+  if(head.body){head.body.stop();head.body.setAllowGravity(false);head.body.enable=false;}
+}
+
+function settleCorpse(scene,corpse) {
+  if(corpse.hasSettled)return;corpse.hasSettled=true;
+  const column=Math.max(0,Math.min(19,Math.floor(corpse.x/40)));
+  corpse.pileOffset=Math.min(240,scene.headPileCounts[column]++*12);
+  corpse.setOrigin(.5).setAngle(Math.random()<.5?-90:90).setAlpha(1).setDepth(30);
+  corpse.y=(scene.remainsFloor || GROUND_Y)-corpse.displayWidth/2-corpse.pileOffset;
+  if(corpse.body){corpse.body.stop();corpse.body.setAllowGravity(false);corpse.body.enable=false;}
+}
+
+function updateRemainsFloor(scene) {
+  const canvas=scene.game.canvas,nav=document.querySelector('.mobile-nav');
+  let floor=GROUND_Y;
+  if(canvas && nav && nav.getBoundingClientRect().height>0){
+    const box=canvas.getBoundingClientRect(),bar=nav.getBoundingClientRect();
+    if(box.height>0){
+      const controls=document.querySelector('.mobile-controls'),ui=document.querySelector('#mobile-ui');
+      if(controls && ui){
+        controls.style.top='auto';controls.style.bottom=nav.getBoundingClientRect().height+'px';
+        floor=Math.min(GROUND_Y,Math.max(STAGE_Y+90,(controls.getBoundingClientRect().top-box.top)/box.height*GAME_HEIGHT-12));
+      }
+    }
+  }
+  if(scene.remainsFloor===floor)return;
+  scene.remainsFloor=floor;scene.physics.world.setBounds(0,0,GAME_WIDTH,floor);
+  bloodPool?.setY(floor).setDepth(29);
+  bodyGroup?.getChildren().forEach(remains=>{
+    if(remains.hasSettled)remains.y=floor-(remains.isHead?remains.displayHeight:remains.displayWidth)/2-remains.pileOffset;
+  });
+}
+
+function spawnBasketCarrier(scene) {
+  scene.basketCarrier?.destroy(true);scene.basketCarrier=null;
+  const multiplier=ChopCore.basketMultiplier(currentCity,level);
+  if(!multiplier || Phaser.Math.Between(1,100)>55)return;
+  const floor=scene.remainsFloor || GROUND_Y;
+  const carrier=scene.add.container(-70,floor-90).setDepth(25);
+  carrier.halfWidth=43;carrier.multiplier=multiplier;carrier.previousX=carrier.x;scene.basketCarrier=carrier;
+  const coat=CastArt.body(scene.add.image(0,90,'castBodies','0').setOrigin(.5,1),'prisonerBody5');
+  const face=CastArt.head(scene.add.image(0,-38,'castHeads','0'),'head5');
+  CastArt.expression(face,'happy');
+  const basket=scene.add.polygon(0,22,[0,0,86,0,77,44,9,44],0xb48b55).setStrokeStyle(3,0x554639);
+  const weave=scene.add.graphics();weave.lineStyle(2,0x765e43,1);
+  for(let x=-30;x<=30;x+=12)weave.lineBetween(x,5,x*.85,39);
+  for(let y=10;y<40;y+=9)weave.lineBetween(-38+y*.2,y,38-y*.2,y);
+  const rim=scene.add.rectangle(0,0,86,8,0xe3c086);
+  const label=scene.add.text(0,23,multiplier+'×',{font:'bold 23px Georgia',color:'#fff0ca',stroke:'#554639',strokeThickness:3}).setOrigin(.5);
+  carrier.add([coat,face,basket,weave,rim,label,scene.add.circle(-43,7,6,0xc68d65),scene.add.circle(43,7,6,0xc68d65)]);
+  carrier.moveTween=scene.tweens.add({targets:carrier,x:GAME_WIDTH+70,duration:11000,yoyo:true,repeat:-1,ease:'Linear'});
+  carrier.once('destroy',()=>carrier.moveTween?.stop());
+}
+
+function checkBasketCatch(scene) {
+  const basket=scene.basketCarrier;if(!basket?.active)return;
+  basket.y=(scene.remainsFloor || GROUND_Y)-90;
+  if(!basket.used)bodyGroup.getChildren().forEach(head=>{
+    if(basket.used || !head.isHead || head.hasSettled || head.basketCaught || !head.body?.enable || head.body.velocity.y<=0)return;
+    if(!ChopCore.basketCatch({x:head.prevX??head.x,y:head.prevY??head.y},{x:head.x,y:head.y},basket,head.displayHeight/2))return;
+    basket.used=true;head.basketCaught=true;
+    const bonus=Math.max(0,Math.floor(head.chopGold || 0))*(basket.multiplier-1);
+    if(bonus>0){addGold(scene,bonus);SaveManager.save();window.MobileGame?.combo(basket.multiplier,bonus,'basket');}
+    head.body.stop();head.body.setAllowGravity(false);head.body.enable=false;
+    scene.tweens.add({targets:head,x:basket.x,y:basket.y+20,duration:240,onComplete:()=>settleHead(scene,head)});
+  });
+  basket.previousX=basket.x;
 }
 
 function showAimArrow(scene, bloodAmount, nextSide) {
@@ -3799,14 +4051,15 @@ function choosePower(scene) {
 function slashExecutioner(scene, angle, onComplete) {
   if (slashTween) slashTween.stop();
   slashTween = scene.tweens.add({
-    targets: executioner,
-    angle: { from: 0, to: -angle },
-    duration: 150,
-    yoyo: true,
-    ease: 'Cubic.easeOut',
+    targets: executionerWeapon,
+    angle: -45,
+    duration: 180,
+    ease: 'Sine.easeOut',
     onComplete: () => {
-      slashTween = null;
-      if (onComplete) onComplete();
+      slashTween = scene.tweens.add({targets:executionerWeapon,angle:70,duration:130,ease:'Cubic.easeIn',onComplete:()=>{
+        if(onComplete)onComplete();
+        slashTween=scene.tweens.add({targets:executionerWeapon,angle:25,duration:260,ease:'Sine.easeInOut',onComplete:()=>{slashTween=null;}});
+      }});
     }
   });
 }
@@ -3819,6 +4072,7 @@ function introExecutioner(scene, onComplete) {
   executioner.setPosition(850, CHARACTER_BASE_Y);
   executioner.setAlpha(0);
   executioner.setVisible(true);
+  CastArt.walk(scene,executioner,1500);
   // backOverlay.setAlpha(0);
   // backOverlay.setVisible(true);
   // scene.tweens.add({
@@ -3829,7 +4083,7 @@ function introExecutioner(scene, onComplete) {
   // });
   scene.tweens.add({
     targets: executioner,
-    x: 400,
+    x: 300,
     alpha: 1,
     duration: 1500,
     ease: "Linear",
@@ -3863,16 +4117,45 @@ function resetHead(scene) {
     scene.children.remove(prisonerHead);
     prisoner.add(prisonerHead);
   }
-  prisonerHead.setPosition(0, -20);
+  prisonerHead.setPosition(0, -64);
   prisonerHead.setRotation(0);
   prisonerBody.setAngle(0);
-  prisonerBody.y = 50;
+  prisonerBody.y = 60;
   prisoner.setAngle(0);
 }
 
 
 
+function retirePreviousRoundTargets(scene) {
+  if (!targetGroup) return;
+  // Each set of pole targets belongs to one customer. Let unhit jesters leave
+  // before the next set arrives, so a long streak does not bury the stage.
+  targetGroup.getChildren().filter(target => target.jester && !target.collected).forEach(target => {
+    const jester = target.jester;
+    if (target.moveTween) target.moveTween.stop();
+    if (target.yorkWaveTween) target.yorkWaveTween.stop();
+    if (target.barrelPulseTween) target.barrelPulseTween.stop();
+    if (target.barrelBlinkEvent) target.barrelBlinkEvent.remove(false);
+    scene.tweens.killTweensOf(target);
+    scene.tweens.killTweensOf(jester);
+    target.collected = true;
+    if (target.body) target.body.enable = false;
+    targetGroup.remove(target);
+    const exitX = jester.startFromRight ? GAME_WIDTH + 100 : -100;
+    scene.tweens.add({
+      targets: [jester, target],
+      x: exitX,
+      alpha: 0,
+      duration: 650,
+      ease: 'Sine.easeIn',
+      onComplete: () => { jester.destroy(); target.destroy(); }
+    });
+  });
+}
+
 function spawnPrisoner(scene, fromRight, withTarget = true) {
+  retirePreviousRoundTargets(scene);
+  spawnBasketCarrier(scene);
   const city = cities.find(c => c.name === currentCity);
   roundCount++;
   if (FEATURES.weather && (roundCount === 1 || roundCount % 5 === 1)) {
@@ -3904,12 +4187,13 @@ function spawnPrisoner(scene, fromRight, withTarget = true) {
     prisonerBodyKey = 'priestBody';
   } else {
     const headVariant = Phaser.Math.Between(1, 87);
-    const bodyVariant = Phaser.Math.Between(1, 3);
+    const bodyVariant = Phaser.Math.Between(1, 9);
     prisonerHeadKey = `prisonerHead${headVariant}`;
     prisonerBodyKey = `prisonerBody${bodyVariant}`;
   }
-  prisonerBody.setTexture(prisonerBodyKey);
-  prisonerHeadSprite.setTexture(prisonerHeadKey);
+  CastArt.body(prisonerBody,prisonerBodyKey,prisonerClass.name);
+  CastArt.head(prisonerHeadSprite,prisonerHeadKey);
+  CastArt.nervous(scene,prisonerHeadSprite,prisonerBody);
   // Spawn up to 3 targets (jesters, barrels, etc.) each time a prisoner appears
   // The number of targets is chosen at random to keep gameplay varied
   if (withTarget) {
@@ -3925,16 +4209,12 @@ function spawnPrisoner(scene, fromRight, withTarget = true) {
   if (withTarget && shouldSpawnYorkFlyingIslandEvent()) {
     spawnYorkFlyingIslandEvent(scene);
   }
-  prisonerBody.clearTint();
-  if (prisonerClass.name !== 'Clergy') {
-    prisonerBody.setTint(prisonerClass.color);
-  }
   baseSwingSpeed = prisonerClass.speed;
   swingSpeed = baseSwingSpeed * speedMultiplier;
   // Keep body aligned under the head when resetting for a new prisoner
-  prisonerBody.y = 50;
+  prisonerBody.y = 64;
   
-  const startX = -50;
+  const startX = -100;
   prisoner.setPosition(startX, CHARACTER_BASE_Y);
   leftEscort.setPosition(startX - 50, CHARACTER_BASE_Y);
   rightEscort.setPosition(startX + 50, CHARACTER_BASE_Y);
@@ -3945,12 +4225,14 @@ function spawnPrisoner(scene, fromRight, withTarget = true) {
   redZone.setVisible(false);
   yellowZone.setVisible(false);
   greenZone.setVisible(false);
+  CastArt.walk(scene,prisoner,1500);CastArt.walk(scene,leftEscort,1500);CastArt.walk(scene,rightEscort,1500);
   scene.tweens.add({
     targets: prisoner,
     x: 400,
     duration: 1500,
     ease: 'Linear',
     onComplete: () => {
+      CastArt.walk(scene,leftEscort,800);CastArt.walk(scene,rightEscort,800);
       // Once the prisoner reaches the center, have the escorts walk off
       // screen to the left instead of simply disappearing.
       scene.tweens.add({
@@ -4060,7 +4342,7 @@ function endSwing(scene) {
     let strikeMsg = `Strike ${missStreak}`;
     if (missStreak >= 3) {
       payout -= 20;
-      strikeMsg = 'Strike 3\nSaved!';
+      strikeMsg = 'Strike 3\nFree at last!';
       missStreak = 0;
       savePrisoner(scene);
       spawnSide = 'left';
@@ -4077,7 +4359,7 @@ function endSwing(scene) {
     killCount++;
     killStreak++;
     if (killStreak > 1) {
-      speedMultiplier *= 1.05;
+      speedMultiplier = Math.min(1.65, speedMultiplier * 1.035);
     }
     swingSpeed = baseSwingSpeed * speedMultiplier;
     killText.setText(`Kills: ${killCount}`);
@@ -4090,6 +4372,7 @@ function endSwing(scene) {
   missText.setText(`Misses: ${missStreak}`);
 
   const goldGain = missed ? payout : payout * killStreak;
+  if(!missed)scene.currentChopGold=goldGain;
   addGold(scene, goldGain);
   if (!missed && goldGain > 0) {
     lastGoldGain = goldGain;
@@ -4108,7 +4391,9 @@ function endSwing(scene) {
   // Show popup
   scene.popupText.setText(message);
   scene.popupText.setVisible(true);
+  window.MobileGame?.feedback(!missed ? `${message} · +${goldGain} gold · ${killStreak} in a row` : `${message} · streak reset`, !missed);
 
+  if (!missed) window.MobileGame?.combo(killStreak,goldGain);
   SaveManager.save();
 
   // Leave the meter visible briefly so players can see the result
@@ -4131,16 +4416,20 @@ function endSwing(scene) {
 }
 
 function gainFame(scene, npc, amount = 1) {
-  const fameGain = amount * fameMultiplier;
-  fame += fameGain;
+  const previousFame = fame;
+  fame = Math.max(0, fame + amount * (amount > 0 ? fameMultiplier : 1));
+  const fameGain = fame - previousFame;
   fameText.setText(formatGold(Math.floor(fame)));
-  addXP(scene, 5 * amount);
+  if (amount > 0) addXP(scene, 5 * amount);
   SaveManager.save();
   const coinsToSpawn = Math.max(0, Math.floor(fameGain));
   for (let i = 0; i < coinsToSpawn; i++) {
     scene.time.delayedCall(i * 100, () => spawnFameCoin(scene));
   }
-  const popup = scene.add.text(npc.x, npc.y - 40, `+${amount} Fame`, {
+  const fameLabel = `${fameGain > 0 ? '+' : ''}${Number(fameGain.toFixed(1))} fame`;
+  const labels = {woodenShield:'Shield broken',explodingBarrel:'Barrel lit',royal:'Royal target',holyMonk:'Avoid the monks',bird:'Crow hit'};
+  if (amount !== 0) window.MobileGame?.feedback(`${labels[npc.targetType] || (npc.isYorkTallWaver ? 'High target' : 'Target hit')} · ${fameLabel}${npc.targetType === 'bird' ? ' · +1 gold' : ''}`, amount > 0);
+  const popup = scene.add.text(npc.x, npc.y - 40, fameLabel, {
     font: '20px monospace',
     fill: '#ffff00'
   }).setOrigin(0.5);
@@ -4172,9 +4461,18 @@ function handleTargetHit(scene, target, head) {
   if (target.collected) return;
   if (target.targetType === 'woodenShield' && head && head.power < 1.5) {
     head.body.setVelocityX(-head.body.velocity.x * 0.5);
+    if (!target.shieldFeedbackAt || scene.time.now - target.shieldFeedbackAt > 700) {
+      target.shieldFeedbackAt = scene.time.now;
+      window.MobileGame?.feedback('Shield blocked · use more power', false);
+    }
     return;
   }
   target.collected = true;
+  if(head && target.targetType!=='holyMonk' && !(target.targetType==='bird' && target.birdKind==='dove')) {
+    head.targetCombo=(head.targetCombo || 0)+1;
+    if(head.targetCombo>1){const bonus=Math.min(5,head.targetCombo-1);addGold(scene,bonus);window.MobileGame?.combo(head.targetCombo,bonus,'targets');}
+  }
+  if (target.targetType !== 'holyMonk' && !(target.targetType === 'bird' && target.birdKind === 'dove')) Campaign.state.targets++;
   if (target.moveTween) { target.moveTween.stop(); target.moveTween = null; }
   if (target.yorkWaveTween) { target.yorkWaveTween.stop(); target.yorkWaveTween = null; }
   const jester = target.jester;
@@ -4186,7 +4484,9 @@ function handleTargetHit(scene, target, head) {
   if (target.targetType === 'bird') {
     bloodFireworkEmitter.explode(25, target.x, target.y);
     if (target.birdKind === 'dove') {
+      const lostFame = Math.min(1, fame);
       fame = Math.max(0, fame - 1);
+      window.MobileGame?.feedback(`Avoid the doves · ${lostFame > 0 ? `-${lostFame} fame` : 'no fame left to lose'}`, false);
       fameText.setText(formatGold(Math.floor(fame)));
       fameGain = 0;
     } else {
@@ -4194,7 +4494,7 @@ function handleTargetHit(scene, target, head) {
       addGold(scene, 1);
       fameGain = 0;
     }
-    gainFame(scene, target, fameGain);
+    SaveManager.save();
     targetGroup.remove(target);
     target.body.setVelocity(0, 0);
     target.body.setAllowGravity(false);
@@ -4326,7 +4626,7 @@ const YORK_RING_EVENT_TEST_CHANCE = 45;
 const YORK_ISLAND_EVENT_TEST_CHANCE = 35;
 
 function shouldSpawnYorkFlyingIslandEvent() {
-  if (currentCity !== 'York') return false;
+  if (currentCity !== 'Norwich' || player.weaponLevel < 8) return false;
   if (yorkFlyingIslandEvent && yorkFlyingIslandEvent.active) return false;
   if (yorkRingPlatformEvent && yorkRingPlatformEvent.active) return false;
   return Phaser.Math.Between(1, 100) <= YORK_ISLAND_EVENT_TEST_CHANCE;
@@ -4359,30 +4659,34 @@ function getFlyingIslandMetrics(islandEvent) {
   };
 }
 
-function createFlyingIslandPlaceholder(scene) {
+function createFlyingIsland(scene) {
   const island = scene.add.container(0, 0).setDepth(23);
   const shadow = scene.add.ellipse(0, 24, 220, 24, 0x000000, 0.16);
-  const underside = scene.add.ellipse(0, 18, 214, 64, 0x7a4a1f, 1);
-  const undersideFront = scene.add.rectangle(0, 28, 196, 34, 0x6b421b, 0.9).setStrokeStyle(3, 0x4b2910, 0.35);
-  const dirtLip = scene.add.ellipse(0, 0, 210, 36, 0x8a5a2b, 1);
-  const greenBase = scene.add.ellipse(0, -18, 236, 54, 0x27b857, 1);
-  const greenTrim = scene.add.ellipse(0, -10, 226, 20, 0x1d8f44, 0.55);
-  const greenHighlight = scene.add.ellipse(-34, -24, 126, 18, 0x72f08c, 0.82);
-  const holeRim = scene.add.ellipse(30, -22, 28, 12, 0x143d22, 0.95);
-  const hole = scene.add.circle(30, -20, 8, 0x050505, 0.95);
+  const underside = scene.add.ellipse(0, 18, 214, 64, 0x725846, 1).setStrokeStyle(4, 0x19363c);
+  const undersideFront = scene.add.polygon(0, 31, [0,0, 196,0, 184,20, 149,27, 135,39, 97,31, 67,38, 43,25, 12,20], 0x685343).setStrokeStyle(3, 0x19363c);
+  const dirtLip = scene.add.ellipse(0, 0, 210, 36, 0xb18a55, 1).setStrokeStyle(3, 0x19363c);
+  const greenBase = scene.add.ellipse(0, -18, 236, 54, 0x598e76, 1).setStrokeStyle(4, 0x19363c);
+  const greenTrim = scene.add.ellipse(0, -10, 226, 20, 0x376b60, 0.65);
+  const greenHighlight = scene.add.ellipse(-34, -24, 126, 18, 0x9cc49a, 0.6);
+  const holeRim = scene.add.ellipse(30, -22, 28, 12, 0xd8bb78, 1).setStrokeStyle(2, 0x19363c);
+  const hole = scene.add.circle(30, -20, 8, 0x10272c, 1);
   const holeShade = scene.add.ellipse(30, -16, 22, 8, 0x000000, 0.28);
-  const rootLeft = scene.add.rectangle(-56, 42, 7, 18, 0x5a3315, 1).setAngle(-6);
-  const rootMid = scene.add.rectangle(0, 44, 6, 16, 0x5a3315, 1);
-  const rootRight = scene.add.rectangle(54, 42, 7, 18, 0x5a3315, 1).setAngle(6);
-  const rock1 = scene.add.circle(-68, 26, 12, 0x6b421b, 1);
-  const rock2 = scene.add.circle(-14, 34, 10, 0x5f3918, 1);
-  const rock3 = scene.add.circle(40, 32, 11, 0x6e4520, 1);
-  const rock4 = scene.add.circle(80, 24, 10, 0x5b3516, 1);
-  const flagPole = scene.add.rectangle(72, -38, 4, 51, 0xe9e0c7, 1).setOrigin(0.5, 1);
-  const flag = scene.add.triangle(78, -79, 0, 0, 21, 9, 0, 18, 0xff4155, 1).setOrigin(0, 0.5);
-  const flagTip = scene.add.circle(72, -91, 3, 0xffe8a3, 1);
+  const rootLeft = scene.add.rectangle(-56, 42, 5, 18, 0xb18a55, 1).setAngle(-12);
+  const rootMid = scene.add.rectangle(0, 44, 4, 16, 0xb18a55, 1).setAngle(8);
+  const rootRight = scene.add.rectangle(54, 42, 5, 18, 0xb18a55, 1).setAngle(12);
+  const rock1 = scene.add.ellipse(-68, 26, 23, 13, 0x9e8b70, 1).setStrokeStyle(2, 0x4d5148);
+  const rock2 = scene.add.ellipse(-14, 34, 19, 12, 0x837b68, 1).setStrokeStyle(2, 0x4d5148);
+  const rock3 = scene.add.ellipse(40, 32, 24, 14, 0x9e8b70, 1).setStrokeStyle(2, 0x4d5148);
+  const rock4 = scene.add.ellipse(80, 24, 18, 11, 0x837b68, 1).setStrokeStyle(2, 0x4d5148);
+  const grass = scene.add.graphics().lineStyle(2, 0xc4d1a1, 0.7);
+  [[-82,-22],[-59,-13],[-25,-29],[4,-12],[61,-19],[88,-24]].forEach(([x,y]) => {
+    grass.lineBetween(x-3,y,x,y-4); grass.lineBetween(x,y-4,x+3,y);
+  });
+  const flagPole = scene.add.rectangle(72, -38, 4, 51, 0xd8bb78, 1).setOrigin(0.5, 1).setStrokeStyle(1, 0x19363c);
+  const flag = scene.add.triangle(78, -79, 0, 0, 21, 9, 0, 18, 0xd7836d, 1).setOrigin(0, 0.5).setStrokeStyle(2, 0x19363c);
+  const flagTip = scene.add.circle(72, -91, 3, 0xf4d18a, 1).setStrokeStyle(1, 0x19363c);
   const flagGroup = scene.add.container(0, 0, [flagPole, flag, flagTip]);
-  island.add([shadow, underside, undersideFront, dirtLip, greenBase, greenTrim, greenHighlight, holeRim, holeShade, hole, rootLeft, rootMid, rootRight, rock1, rock2, rock3, rock4, flagGroup]);
+  island.add([shadow, underside, undersideFront, dirtLip, greenBase, greenTrim, greenHighlight, grass, holeRim, holeShade, hole, rootLeft, rootMid, rootRight, rock1, rock2, rock3, rock4, flagGroup]);
   island.flagGroup = flagGroup;
   island.flagPole = flagPole;
   island.flag = flag;
@@ -4418,7 +4722,7 @@ function spawnYorkFlyingIslandEvent(scene) {
   const targetY = Phaser.Math.Between(Math.floor(GAME_HEIGHT * 0.25), Math.floor(GAME_HEIGHT * 0.6));
   const targetX = Phaser.Math.Between(180, GAME_WIDTH - 180);
   const startX = fromLeft ? -180 : GAME_WIDTH + 180;
-  const island = createFlyingIslandPlaceholder(scene);
+  const island = createFlyingIsland(scene);
   island.setPosition(startX, targetY);
   island.setAlpha(0.96);
   const bobPhase = Phaser.Math.FloatBetween(0, Math.PI * 2);
@@ -4568,7 +4872,8 @@ function completeFlyingIslandHoleSuccess(scene, islandEvent, head) {
     alpha: 0,
     angle: head.angle + 120,
     duration: 260,
-    ease: 'Cubic.easeIn'
+    ease: 'Cubic.easeIn',
+    onComplete:()=>settleHead(scene,head)
   });
   islandEvent.flagTween = scene.tweens.add({
     targets: islandEvent.container.flagGroup,
@@ -4579,7 +4884,7 @@ function completeFlyingIslandHoleSuccess(scene, islandEvent, head) {
   });
   gainFame(scene, islandEvent.container, 5);
   addGold(scene, 5);
-  const successPopup = scene.add.text(metrics.x, metrics.y - 90, 'York Island Sink! +5 Fame +5 Gold', {
+  const successPopup = scene.add.text(metrics.x, metrics.y - 90, 'Norwich Hole in One! +5 Fame +5 Gold', {
     font: '24px monospace',
     fill: '#fff08a',
     stroke: '#000000',
@@ -4621,21 +4926,19 @@ function completeFlyingIslandHoleSuccess(scene, islandEvent, head) {
 }
 
 function shouldSpawnYorkRingPlatformEvent() {
-  if (currentCity !== 'York') return false;
+  if (currentCity !== 'Winchester') return false;
+  if (player.weaponLevel < 8) return false;
   if (yorkRingPlatformEvent && yorkRingPlatformEvent.active) return false;
   return Phaser.Math.Between(1, 100) <= YORK_RING_EVENT_TEST_CHANCE;
 }
 
 function createYorkRingGuard(scene, x, y, facing) {
-  const guardPartScale = 1.12;
   const guard = scene.add.container(x, y).setDepth(21);
-  const body = scene.add.image(0, 0, 'escortBody')
+  const body = CastArt.body(scene.add.image(0, 0, 'escortBody'), 'escortBody')
     .setOrigin(0.5, 1)
-    .setScale(guardPartScale)
     .setFlipX(facing === 'left');
-  const head = scene.add.image(0, -body.displayHeight, 'escortHead')
+  const head = CastArt.head(scene.add.image(0, -114, 'escortHead'), 'escortHead')
     .setOrigin(0.5, 0.5)
-    .setScale(guardPartScale)
     .setFlipX(facing === 'left');
   guard.add([body, head]);
   return guard;
@@ -4657,6 +4960,8 @@ function spawnYorkThrownRing(scene, eventData, fromLeft) {
     endX,
     progress: 0,
     centerY: y,
+    prevX: startX,
+    prevY: y,
     innerRadius: 26,
     outerRadius: 38,
     spinTurns: Phaser.Math.Between(5, 8),
@@ -4695,20 +5000,26 @@ function didHeadPassThroughMovingRing(head, ring, previousX, previousY, currentX
   if (ring.touchedHeadIds.has(head.ringHeadId)) return false;
   const ringX = ring.sprite.x;
   const ringY = ring.centerY ?? ring.sprite.y;
-  const minDistSq = pointSegmentDistanceSq(ringX, ringY, previousX, previousY, currentX, currentY);
+  // Compare both paths in ring-relative space so a moving ring can meet a
+  // head that is nearly stationary at the top of its flight.
+  const relativePreviousX = previousX - (ring.prevX ?? ringX);
+  const relativePreviousY = previousY - (ring.prevY ?? ringY);
+  const relativeCurrentX = currentX - ringX;
+  const relativeCurrentY = currentY - ringY;
+  const minDistSq = pointSegmentDistanceSq(0, 0, relativePreviousX, relativePreviousY, relativeCurrentX, relativeCurrentY);
   const headRadius = Math.max(6, (head.displayWidth || 30) * 0.18);
   const safeInner = Math.max(6, ring.innerRadius - headRadius);
   const rimOuter = ring.outerRadius + headRadius;
   const sweptRim = minDistSq <= rimOuter * rimOuter && minDistSq >= safeInner * safeInner;
   if (sweptRim) return false;
-  const prevDist = Phaser.Math.Distance.Between(previousX, previousY, ringX, ringY);
-  const currDist = Phaser.Math.Distance.Between(currentX, currentY, ringX, ringY);
+  const prevDist = Phaser.Math.Distance.Between(relativePreviousX, relativePreviousY, 0, 0);
+  const currDist = Phaser.Math.Distance.Between(relativeCurrentX, relativeCurrentY, 0, 0);
   const crossedInterior = (prevDist > safeInner && currDist < safeInner) || (prevDist < safeInner && currDist > safeInner) || minDistSq < safeInner * safeInner;
-  const minX = Math.min(previousX, currentX) - safeInner;
-  const maxX = Math.max(previousX, currentX) + safeInner;
-  const minY = Math.min(previousY, currentY) - safeInner;
-  const maxY = Math.max(previousY, currentY) + safeInner;
-  const nearRing = ringX >= minX && ringX <= maxX && ringY >= minY && ringY <= maxY;
+  const minX = Math.min(relativePreviousX, relativeCurrentX) - safeInner;
+  const maxX = Math.max(relativePreviousX, relativeCurrentX) + safeInner;
+  const minY = Math.min(relativePreviousY, relativeCurrentY) - safeInner;
+  const maxY = Math.max(relativePreviousY, relativeCurrentY) + safeInner;
+  const nearRing = 0 >= minX && 0 <= maxX && 0 >= minY && 0 <= maxY;
   if (crossedInterior && nearRing) {
     ring.touchedHeadIds.add(head.ringHeadId);
     return true;
@@ -4721,6 +5032,8 @@ function clearAllTargetsFromRingEvent(scene, triggeringHead) {
   targetsToClear.forEach(t => handleTargetHit(scene, t, triggeringHead));
   fame += 3;
   fameText.setText(formatGold(Math.floor(fame)));
+  SaveManager.save();
+  window.MobileGame?.feedback('Ring clear! · +3 fame · nearby targets cleared', true);
   const popup = scene.add.text(CENTER_X, CENTER_Y - 220, 'Ring Clear! +3 Fame', {
     font: '36px monospace',
     fill: '#ffe100',
@@ -4740,13 +5053,15 @@ function clearAllTargetsFromRingEvent(scene, triggeringHead) {
 function cleanupYorkRingPlatformEvent(scene) {
   if (!yorkRingPlatformEvent) return;
   const e = yorkRingPlatformEvent;
+  e.active = false;
+  e.phase = 'finished';
   if (e.throwTimer) { e.throwTimer.remove(false); e.throwTimer = null; }
+  if (e.activeRing) scene.tweens.killTweensOf(e.activeRing);
   if (e.activeRing?.sprite?.active) e.activeRing.sprite.destroy();
   e.activeRing = null;
-  if (e.leftPlatformTween) e.leftPlatformTween.stop();
-  if (e.rightPlatformTween) e.rightPlatformTween.stop();
-  if (e.leftGuardTween) e.leftGuardTween.stop();
-  if (e.rightGuardTween) e.rightGuardTween.stop();
+  for (const actor of [e.leftPlatform,e.rightPlatform,e.leftGuard,e.rightGuard]) {
+    if (actor) scene.tweens.killTweensOf(actor);
+  }
   if (e.leftPlatform?.active) e.leftPlatform.destroy();
   if (e.rightPlatform?.active) e.rightPlatform.destroy();
   if (e.leftGuard?.active) e.leftGuard.destroy();
@@ -4754,12 +5069,29 @@ function cleanupYorkRingPlatformEvent(scene) {
   yorkRingPlatformEvent = null;
 }
 
+function minimumReachableYorkRingEventY(launchY, weaponMultiplier, platformHalfHeight) {
+  // Wind changes between customers while the guards stay on stage. Place the
+  // ring so a full-power shot can still reach its apex in the worst wind.
+  const fullPowerSpeed = 500 * weaponMultiplier;
+  const worstWind = 100;
+  const verticalSpeed = Math.max(0, Math.sqrt(Math.max(0, fullPowerSpeed * fullPowerSpeed - worstWind * worstWind)) - worstWind);
+  const highestHeadY = launchY - verticalSpeed * verticalSpeed / 800;
+  return Math.ceil(highestHeadY + 80 + platformHalfHeight + 56 + YORK_RING_THROW_ARC_HEIGHT);
+}
+
 function spawnYorkRingPlatformEvent(scene) {
   cleanupYorkRingPlatformEvent(scene);
-  const eventY = Phaser.Math.Between(Math.floor(GAME_HEIGHT * 0.2), Math.floor(GAME_HEIGHT * 0.5));
   const platformScaleX = 0.48;
   const platformScaleY = 0.5;
-  const platformTextureWidth = scene.textures.get('platform').getSourceImage().width;
+  const platformImage = scene.textures.get('platform').getSourceImage();
+  const platformTextureWidth = platformImage.width;
+  // Include the entire ring and its arc, not just the platform's centre.
+  const platformHalfHeight = platformImage.height * platformScaleY * .5;
+  const hudMinEventY = Math.ceil(GAME_HEIGHT * .25 + 38 + YORK_RING_THROW_ARC_HEIGHT + 56 + platformHalfHeight);
+  const reachableMinEventY = minimumReachableYorkRingEventY(CHARACTER_BASE_Y + prisonerHead.y, getWeaponPowerMultiplier(), platformHalfHeight);
+  const minEventY = Math.max(hudMinEventY, reachableMinEventY);
+  const maxEventY = Math.max(minEventY, CHARACTER_BASE_Y - 180);
+  const eventY = Phaser.Math.Between(minEventY, maxEventY);
   const leftStopX = 0;
   const rightStopX = GAME_WIDTH;
   const offscreenPlatformX = platformTextureWidth * platformScaleX * -1;
@@ -4787,6 +5119,10 @@ function spawnYorkRingPlatformEvent(scene) {
     throwFromLeft: true,
     throwTimer: null
   };
+  if (!yorkRingHintShown) {
+    yorkRingHintShown = true;
+    window.MobileGame?.hint('York challenge · send a head through the gold ring');
+  }
 
   scene.tweens.add({
     targets: leftPlatform,
@@ -4977,16 +5313,18 @@ function checkFastHeadTargetCrossings(scene) {
         }
         handleFlyingIslandGreenBounce(scene, head, yorkFlyingIslandEvent);
       }
-      if (yorkRingPlatformEvent && yorkRingPlatformEvent.activeRing && !yorkRingPlatformEvent.activeRing.spent) {
-        const ring = yorkRingPlatformEvent.activeRing;
-        if (didHeadPassThroughMovingRing(head, ring, prevX, prevY, head.x, head.y)) {
-          ring.spent = true;
-          clearAllTargetsFromRingEvent(scene, head);
-          scene.tweens.killTweensOf(ring.sprite);
-          if (ring.sprite && ring.sprite.active) ring.sprite.destroy();
-          yorkRingPlatformEvent.activeRing = null;
-        }
+    }
+    if (yorkRingPlatformEvent && yorkRingPlatformEvent.activeRing && !yorkRingPlatformEvent.activeRing.spent) {
+      const ring = yorkRingPlatformEvent.activeRing;
+      if (didHeadPassThroughMovingRing(head, ring, prevX, prevY, head.x, head.y)) {
+        ring.spent = true;
+        clearAllTargetsFromRingEvent(scene, head);
+        scene.tweens.killTweensOf(ring);
+        if (ring.sprite && ring.sprite.active) ring.sprite.destroy();
+        yorkRingPlatformEvent.activeRing = null;
       }
+    }
+    if (movedFarEnough) {
       for (let i = 0; i < targets.length; i++) {
         const target = targets[i];
         if (didHeadSegmentHitTarget(head, target, prevX, prevY, head.x, head.y)) {
@@ -4998,6 +5336,11 @@ function checkFastHeadTargetCrossings(scene) {
     head.prevX = head.x;
     head.prevY = head.y;
   });
+  const activeRing = yorkRingPlatformEvent?.activeRing;
+  if (activeRing?.sprite?.active) {
+    activeRing.prevX = activeRing.sprite.x;
+    activeRing.prevY = activeRing.centerY ?? activeRing.sprite.y;
+  }
 }
 
 function spawnHolyMonk(scene) {
@@ -5007,12 +5350,15 @@ function spawnHolyMonk(scene) {
   monk.targetType = 'holyMonk';
   createTargetAppearance(scene, monk, 'holyMonk');
   scene.physics.world.enable(monk);
+  monk.body.setSize(46,157).setOffset(-23,-93);
+  CastArt.walk(scene,monk,12000);
   monk.body.setAllowGravity(false);
   monk.body.setImmovable(true);
   monk.body.setVelocityX(fromRight ? -30 : 30);
   monk.collected = false;
   monk.jester = null;
   targetGroup.add(monk);
+  applyTargetWeather(scene, monk);
   const changes = Phaser.Math.Between(1, 2);
   let done = 0;
   const changeEvent = scene.time.addEvent({
@@ -5047,12 +5393,15 @@ function spawnRoyal(scene) {
   royal.targetType = 'royal';
   createTargetAppearance(scene, royal, 'royal');
   scene.physics.world.enable(royal);
+  royal.body.setSize(46,157).setOffset(-23,-93);
+  CastArt.walk(scene,royal,12000);
   royal.body.setAllowGravity(false);
   royal.body.setImmovable(true);
   royal.body.setVelocityX(fromRight ? -40 : 40);
   royal.collected = false;
   royal.jester = null;
   targetGroup.add(royal);
+  applyTargetWeather(scene, royal);
   scene.tweens.add({
     targets: royal,
     x: stopX,
@@ -5073,12 +5422,27 @@ function spawnRoyal(scene) {
   });
 }
 
+function birdFlightLane(weaponMultiplier, launchY) {
+  // A full-power vertical shot should climb past the bird with room to aim.
+  // Stronger blades bring later flocks higher, but never into the mobile HUD.
+  const maximumRise = Math.pow(500 * weaponMultiplier, 2) / 800;
+  return Math.max(420, Math.min(760, Math.round(launchY - maximumRise + 80)));
+}
+
 function spawnBird(scene) {
+  if (targetGroup.getChildren().some(target => target.targetType === 'bird' && target.active && !target.collected)) return;
+  const launchY = prisoner.y + prisonerHead.y;
+  const weaponMultiplier = getWeaponPowerMultiplier();
+  const laneY = birdFlightLane(weaponMultiplier, launchY);
+  const windY = FEATURES.weather && currentWeather === 'wind' ? windForce.y : 0;
+  const fullPowerRise = Math.pow(Math.max(0, 500 * weaponMultiplier - windY), 2) / 800;
+  if (launchY - fullPowerRise > laneY) return;
   const fromRight = Phaser.Math.Between(0, 1) === 1;
   const startX = fromRight ? 850 : -50;
   const endX = fromRight ? -50 : 850;
-  const kind = Phaser.Math.Between(0, 1) ? 'dove' : 'crow';
-  const bird = scene.add.container(startX, 160).setDepth(20);
+  // Teach the bonus first. Reputation-costing doves join after a few upgrades.
+  const kind = player.weaponLevel < 4 ? 'crow' : (Phaser.Math.Between(0, 1) ? 'dove' : 'crow');
+  const bird = scene.add.container(startX, laneY).setDepth(20);
   bird.targetType = 'bird';
   bird.birdKind = kind;
   bird.fromRight = fromRight;
@@ -5086,10 +5450,13 @@ function spawnBird(scene) {
   scene.physics.world.enable(bird);
   bird.body.setAllowGravity(false);
   bird.body.setImmovable(true);
-  bird.body.setVelocityX(fromRight ? -40 : 40);
+  // The art faces either way; include its head and beak on both sides.
+  bird.body.setSize(100,50);
+  bird.body.setOffset(-50,-20);
   bird.collected = false;
   bird.jester = null;
   targetGroup.add(bird);
+  applyTargetWeather(scene, bird);
   bird.moveTween = scene.tweens.add({
     targets: bird,
     x: endX,
@@ -5098,14 +5465,11 @@ function spawnBird(scene) {
     yoyo: true,
     repeat: 0,
     onYoyo: () => {
-      bird.body.setVelocityX(-bird.body.velocity.x);
-      const base = bird.birdKind === 'dove' ? 'birdWhite' : 'birdBlack';
-      const movingRight = bird.body.velocity.x > 0;
-      const dir = movingRight ? 'Right' : 'Left';
-      if (bird.birdSprite) bird.birdSprite.setTexture(base + dir);
+      if (bird.birdSprite) bird.birdSprite.setScale(fromRight?1:-1,1);
     },
     onComplete: () => bird.destroy()
   });
+  bird.once('destroy',()=>bird.moveTween?.stop());
 }
 
 function pickSpacedTargetX(existingTargetXs = []) {
@@ -5138,26 +5502,28 @@ function spawnTarget(scene, existingTargetXs = []) {
   const startX = fromRight ? 850 : -50;
   const targetX = pickSpacedTargetX(existingTargetXs);
   existingTargetXs.push(targetX);
-  const isYorkTallWaver = currentCity === 'York' && type === 'standard' && Phaser.Math.Between(1, 100) <= 35;
-  const maxVisiblePoleHeight = Math.max(540, CHARACTER_BASE_Y - 100);
-  const tallPoleMax = Math.min(900, maxVisiblePoleHeight);
+  const profile=ChopCore.targetProfile(currentCity,level,player.weaponLevel,Phaser.Math.Between(1,100));
+  const isYorkTallWaver = profile.high && type === 'standard';
+  // Reserve the upper quarter for the mobile HUD and the target's radius.
+  const maxVisiblePoleHeight = Math.max(540, CHARACTER_BASE_Y - 20 - GAME_HEIGHT * .25);
+  const reach=Math.max(180,Math.floor(Math.pow(Math.max(0,500*getWeaponPowerMultiplier()-100),2)/800-60));
+  const tallPoleMax = Math.min(reach, maxVisiblePoleHeight);
   const poleHeight = isYorkTallWaver
-    ? Phaser.Math.Between(540, tallPoleMax)
+    ? Phaser.Math.Between(Math.min(360,tallPoleMax), tallPoleMax)
     : Phaser.Math.Between(80, 180);
 
   // Ensure jesters render above the lighting overlay and other background elements.
   const jester = scene.add.container(startX, CHARACTER_BASE_Y).setDepth(20);
   jester.startFromRight = fromRight;
-  const body = scene.add.image(0, 50, 'jesterBody1').setOrigin(0.5, 1);
-  const pole = scene.add.rectangle(0, -20, 6, poleHeight, 0x8b4513)
+  const body = scene.add.image(0, 63, 'jesterBody1').setOrigin(0.5, 1);
+  const pole = scene.add.rectangle(23, -20, 6, poleHeight, 0x8b4513)
     .setOrigin(0.5, 1);
-  const head = scene.add.image(0, -20, 'jesterHead1').setOrigin(0.5);
-  jester.add([body, pole, head]);
+  jester.add([pole, body]);
 
-  const target = scene.add.container(startX, CHARACTER_BASE_Y - 20 - poleHeight).setDepth(20);
+  const target = scene.add.container(startX+23, CHARACTER_BASE_Y - 20 - poleHeight).setDepth(20);
   target.targetType = type;
   target.isYorkTallWaver = isYorkTallWaver;
-  target.fameMultiplier = isYorkTallWaver ? 3 : 1;
+  target.fameMultiplier = isYorkTallWaver ? profile.reward : 1;
   target.yorkWaveTween = null;
   target.jesterPole = pole;
   target.poleHeight = poleHeight;
@@ -5165,7 +5531,7 @@ function spawnTarget(scene, existingTargetXs = []) {
 
   const isEligibleForStandardMove = !isYorkTallWaver;
   const shouldMoveWoodenShield = type === 'woodenShield' && killStreak >= 3;
-  const shouldMoveStandard = type !== 'woodenShield' && isEligibleForStandardMove && FEATURES.movingTargets && Phaser.Math.Between(0, 1) === 1;
+  const shouldMoveStandard = type !== 'woodenShield' && isEligibleForStandardMove && FEATURES.movingTargets && profile.moving;
   const shouldStartMoveTweenAfterEntrance = shouldMoveWoodenShield || shouldMoveStandard;
   const moveTweenDuration = shouldMoveWoodenShield && killStreak >= 10 ? 400 : 800;
 
@@ -5174,20 +5540,16 @@ function spawnTarget(scene, existingTargetXs = []) {
   }
 
   let jBodyKey = 'jesterBody1';
-  let jHeadKey = 'jesterHead1';
   if (type === 'woodenShield') {
     jBodyKey = 'jesterBody2';
-    jHeadKey = 'jesterHead2';
   } else if (type === 'explodingBarrel') {
     jBodyKey = 'jesterBody3';
-    jHeadKey = 'jesterHead3';
   }
   if (target.isMoving) {
     jBodyKey = 'jesterBody4';
-    jHeadKey = 'jesterHead4';
   }
-  body.setTexture(jBodyKey);
-  head.setTexture(jHeadKey);
+  CastArt.jester(body,jBodyKey);
+  jester.poleHands=scene.add.graphics();jester.add(jester.poleHands);
 
   target.collected = false;
   target.jester = jester;
@@ -5196,23 +5558,14 @@ function spawnTarget(scene, existingTargetXs = []) {
   target.barrelBlinkEvent = null;
   target.barrelPulseTween = null;
   targetGroup.add(target);
+  applyTargetWeather(scene, target);
 
   scene.tweens.add({
-    targets: [jester, target],
+    targets: jester,
     x: targetX,
     duration: 1500,
     ease: 'Linear',
     onComplete: () => {
-      if (shouldStartMoveTweenAfterEntrance) {
-        target.moveTween = scene.tweens.add({
-          targets: target,
-          y: target.y - 20,
-          duration: moveTweenDuration,
-          yoyo: true,
-          repeat: -1,
-          ease: 'Sine.easeInOut'
-        });
-      }
       scene.physics.world.enable(target);
       if (type === 'explodingBarrel') {
         // Include the fuse above the barrel in the hitbox and widen it slightly
@@ -5230,20 +5583,19 @@ function spawnTarget(scene, existingTargetXs = []) {
       }
       target.body.setAllowGravity(false);
       target.body.setImmovable(true);
-      if (target.isYorkTallWaver) {
-        const maxArcOffset = 50;
-        const arcAngle = Math.asin(Math.min(0.2, maxArcOffset / target.poleHeight));
+      if (target.isYorkTallWaver || shouldStartMoveTweenAfterEntrance) {
+        const arcAngle = Math.asin(Math.min(0.5, profile.amplitude / target.poleHeight));
         const waveState = { angle: -arcAngle };
         target.yorkWaveTween = scene.tweens.add({
           targets: waveState,
           angle: arcAngle,
-          duration: 1400,
+          duration: type==='woodenShield'?moveTweenDuration:profile.duration,
           yoyo: true,
           repeat: -1,
           ease: 'Sine.easeInOut',
           onUpdate: () => {
             if (!target.active || !jester.active) return;
-            const pivotX = jester.x;
+            const pivotX = jester.x+23;
             const pivotY = jester.y - 20;
             const s = Math.sin(waveState.angle);
             const c = Math.cos(waveState.angle);
@@ -5262,11 +5614,12 @@ function spawnTarget(scene, existingTargetXs = []) {
           }
         });
       }
-      if (FEATURES.birds && Phaser.Math.Between(1, 10) === 1) {
+      if (FEATURES.birds && Phaser.Math.Between(1, 6) === 1) {
         scene.time.delayedCall(2000, () => spawnBird(scene));
       }
     },
     onUpdate: () => {
+      target.x=jester.x+23;
       if (target.body) {
         if (type === 'explodingBarrel') {
           target.body.x = target.x + target.body.offset.x;
@@ -5281,13 +5634,15 @@ function spawnTarget(scene, existingTargetXs = []) {
 }
 
 function addXP(scene, amount) {
-  xp += amount;
-  if (xp >= xpThreshold) {
+  if (!Number.isFinite(amount) || amount <= 0) return;
+  xp = Math.min(Number.MAX_SAFE_INTEGER, xp + amount);
+  const previousLevel = level;
+  while (xp >= xpThreshold) {
     xp -= xpThreshold;
     level++;
     xpThreshold = Math.floor(xpThreshold * 1.33);
-    onLevelUp(scene);
   }
+  if (level > previousLevel) onLevelUp(scene);
   updateXPUI();
   SaveManager.save();
 }
@@ -5299,6 +5654,11 @@ function updateXPUI() {
 }
 
 function onLevelUp(scene) {
+  if (window.MobileGame) {
+    const reached=level;
+    scene.time.delayedCall(650,()=>window.MobileGame.rankUp(reached));
+    return;
+  }
   const msg = scene.add.text(CENTER_X, CENTER_Y, 'LEVEL UP!', { font: '48px monospace', fill: '#ffff00' })
     .setOrigin(0.5)
     .setDepth(25);
@@ -5329,6 +5689,7 @@ function showUnlockMessage(scene, text, delay = 0) {
 }
 
 function updateUnlockButtons(scene, fromLevelUp = false) {
+  if (window.MobileGame) return;
   if (level >= 2 && !weaponsButton.visible) {
     weaponsButton.setVisible(true).setInteractive();
     if (fromLevelUp) showUnlockMessage(scene, 'Weapons Unlocked', 500);
@@ -5353,28 +5714,53 @@ function updateUnlockButtons(scene, fromLevelUp = false) {
 
 function update(time, delta) {
 
+  updateRemainsFloor(this);
+  CastArt.poseExecutioner(this.executionerHands,executionerWeapon);
   if (!gameStarted || menuOpen) return;
+  CastArt.crowd(this,killStreak);
+  targetGroup?.getChildren().forEach(target=>{if(target.jester?.poleHands)CastArt.holdPole(target.jester.poleHands,target.jesterPole.rotation);});
+  checkBasketCatch(this);
+  aimArrow.list?.[0]?.setVisible(awaitingAngle);
+  if (this.launchGuide) {
+    this.launchGuide.clear();
+    if (awaitingPower && prisoner.visible) {
+      const points=ChopCore.launchPreview(selectedAngle,aimArrow.scaleY,getWeaponPowerMultiplier(),FEATURES.weather && currentWeather==='wind'?windForce:{x:0,y:0},FEATURES.weather && (currentWeather==='snow'?'snow':currentWeather==='rain'));
+      const guide=this.launchGuide,origin={x:prisoner.x+prisonerHead.x,y:prisoner.y+prisonerHead.y};
+      guide.lineStyle(7,0x203b42,.32).beginPath().moveTo(origin.x,origin.y);
+      points.forEach(point=>guide.lineTo(origin.x+point.x,origin.y+point.y));guide.strokePath();
+      guide.lineStyle(2,0xc4e5d3,.9).beginPath().moveTo(origin.x,origin.y);
+      points.forEach(point=>guide.lineTo(origin.x+point.x,origin.y+point.y));guide.strokePath();
+      const end=points.at(-1);guide.lineStyle(2,0xe6cf92,.85).strokeCircle(origin.x+end.x,origin.y+end.y,10);
+      const sweep=(time/550)%1,index=Math.floor(sweep*points.length),glint=points[index];
+      guide.fillStyle(0xf4e9d1,.85).fillCircle(origin.x+glint.x,origin.y+glint.y,3);
+
+    }
+  }
 
   if (this.dayNight) {
     this.dayNight.update(delta / 1000);
   }
 
   if (FEATURES.clouds && cloudLayerFar && cloudLayerNear) {
+    const daylight=.5*(1-Math.cos((this.dayNight?.timeOfDay ?? .5)*Math.PI*2));
+    const cloudChannel=(night,day)=>Math.round(night+(day-night)*daylight);
+    const cloudTint=(cloudChannel(100,255)<<16)|(cloudChannel(132,255)<<8)|cloudChannel(153,255);
     cloudLayerFar.getChildren().forEach(cloud => {
-      cloud.x -= 0.2;
+      cloud.x -= 12 * delta / 1000;
       if (cloud.x < -cloud.width / 2) {
         cloud.x = config.width + cloud.width / 2;
         cloud.y = Phaser.Math.Between(CLOUD_MIN_Y, CLOUD_MAX_Y);
-        cloud.setAlpha(Phaser.Math.FloatBetween(0.6, 0.9));
+        cloud.setAlpha(Phaser.Math.FloatBetween(0.4, 0.6));
         cloud.setScale(Phaser.Math.FloatBetween(0.8, 1.2));
       }
     });
     cloudLayerNear.getChildren().forEach(cloud => {
-      cloud.x -= 0.4;
+      cloud.setTint(cloudTint);
+      cloud.x -= 24 * delta / 1000;
       if (cloud.x < -cloud.width / 2) {
         cloud.x = config.width + cloud.width / 2;
         cloud.y = Phaser.Math.Between(CLOUD_MIN_Y + 20, CLOUD_MAX_Y);
-        cloud.setAlpha(Phaser.Math.FloatBetween(0.6, 0.9));
+        cloud.setAlpha(Phaser.Math.FloatBetween(0.4, 0.6));
         cloud.setScale(Phaser.Math.FloatBetween(0.8, 1.2));
       }
     });
@@ -5382,17 +5768,16 @@ function update(time, delta) {
 
   // Move cursor
   if (swingActive) {
-    cursor.x += swingDirection * swingSpeed;
-    if (cursor.x > 550 || cursor.x < 250) {
-      swingDirection *= -1;
-    }
+    const motion = ChopCore.advanceMeter(cursor.x, swingDirection, swingSpeed * 60, delta / 1000);
+    cursor.x = motion.position;
+    swingDirection = motion.direction;
   }
 
   // Apply extra gravity once heads start falling in the rain
-  if (FEATURES.weather && currentWeather === 'rain' && bodyGroup) {
+  if (FEATURES.weather && (currentWeather === 'rain' || currentWeather === 'snow') && bodyGroup) {
     bodyGroup.getChildren().forEach(obj => {
       if (obj.isHead && !obj.rainGravityApplied && obj.body.velocity.y > 0) {
-        obj.body.setGravityY(300);
+        obj.body.setGravityY(currentWeather==='snow'?120:300);
         obj.rainGravityApplied = true;
       }
     });
@@ -5423,247 +5808,53 @@ function update(time, delta) {
 }
 
 class TravelScene extends Phaser.Scene {
-  constructor() {
-    super({ key: 'TravelScene' });
-  }
-  init(data) {
-    this.city = data.city;
-    this.days = Math.max(1, data.days);
-    this.mainScene = data.mainScene;
-  }
+  constructor() { super({key:'TravelScene'}); }
+  init(data) { this.city=data.city;this.days=Math.max(1,data.days);this.mainScene=data.mainScene;this.elapsed=0;this.finished=false; }
   create() {
-    const keys = travelBackgrounds.map((_, i) => `background-travel${i + 1}`);
-    let bgKey = Phaser.Utils.Array.GetRandom(keys);
-    if (!this.textures.exists(bgKey)) bgKey = 'background';
-    this.add.image(CENTER_X, CENTER_Y, 'backgroundSky').setDisplaySize(GAME_WIDTH, GAME_HEIGHT).setDepth(-5);
-    const travelBg = this.add.image(CENTER_X, CENTER_Y, bgKey).setDepth(-2);
-    setBackdropCover(travelBg, GAME_WIDTH, GAME_HEIGHT, true);
-    this.add.text(CENTER_X, SAFE_TOP, `Travelling to ${this.city.name}`, { font: '32px serif', fill: '#ffff00' }).setOrigin(0.5);
-    let d = currentDay;
-    let m = currentMonth;
-    const date = this.add.text(CENTER_X, SAFE_TOP + 40, `${d} ${months[m]}`, { font: '28px monospace', fill: '#ffffff' }).setOrigin(0.5);
-    const duration = this.days * 700;
-    // Accelerate the day/night cycle so it completes one full day for each
-    // travel day, keeping the visuals in sync with the journey length.
-    this.dayNight = new DayNightCycle({ dayLengthSeconds: (duration / this.days) / 1000 });
-    this.dayNight.init(this, { backCloudsDepth: -3, overlayDepth: -0.5 });
-    const pickWeather = () =>
-      Math.random() < 0.5
-        ? 'Clear'
-        : Phaser.Utils.Array.GetRandom(['Rain', 'Wind', 'Fog']);
-    let weather = pickWeather();
-
-    // Simple particle emitters to visualize travel weather
-    const rainEmitter = this.add.particles('raindrop').createEmitter({
-      x: { min: 0, max: GAME_WIDTH },
-      y: { min: WEATHER_MIN_Y, max: WEATHER_MAX_Y },
-      lifespan: 800,
-      speedY: { min: 400, max: 600 },
-      quantity: 24,
-      frequency: 80,
-      on: false
-    });
-    const fogEmitter = this.add.particles('fog').createEmitter({
-      x: { min: -50, max: GAME_WIDTH + 50 },
-      y: { min: FOG_MIN_Y, max: FOG_MAX_Y },
-      lifespan: 6000,
-      speedX: { min: -20, max: 20 },
-      speedY: { min: -5, max: 5 },
-      quantity: 10,
-      alpha: { start: 0.8, end: 0.1 },
-      on: false
-    });
-    const windEmitter = this.add.particles('leaf').createEmitter({
-      lifespan: 4000,
-      quantity: 14,
-      frequency: 16,
-      scale: { start: 1, end: 0 },
-      rotate: { min: -180, max: 180 },
-      on: false
-    });
-
-    // Parallax clouds that drift during travel
-    if (FEATURES.clouds) {
-      if (!this.textures.exists('cloud-small')) {
-        const gfx = this.make.graphics({ x: 0, y: 0, add: false });
-        gfx.fillStyle(0xdddddd, 0.6);
-        gfx.fillEllipse(50, 45, 60, 20);
-        gfx.fillStyle(0xffffff, 0.9);
-        gfx.fillCircle(30, 30, 20);
-        gfx.fillCircle(50, 20, 25);
-        gfx.fillCircle(70, 30, 20);
-        gfx.fillCircle(40, 40, 18);
-        gfx.fillCircle(60, 40, 18);
-        gfx.generateTexture('cloud-small', 100, 60);
-        gfx.clear();
-        gfx.fillStyle(0xdddddd, 0.6);
-        gfx.fillEllipse(70, 45, 80, 25);
-        gfx.fillStyle(0xffffff, 0.9);
-        gfx.fillCircle(40, 30, 25);
-        gfx.fillCircle(70, 20, 35);
-        gfx.fillCircle(100, 30, 25);
-        gfx.fillCircle(55, 45, 20);
-        gfx.fillCircle(85, 45, 20);
-        gfx.generateTexture('cloud-big', 140, 60);
-        gfx.destroy();
-      }
-      this.travelCloudLayerFar = this.add.group();
-      this.travelCloudLayerNear = this.add.group();
-      for (let i = 0; i < 4; i++) {
-        const cloud = this.add.image(
-          Phaser.Math.Between(0, config.width),
-          Phaser.Math.Between(CLOUD_MIN_Y, CLOUD_MAX_Y),
-          'cloud-small'
-        );
-        cloud.setDepth(-3);
-        cloud.setTint(0x888888);
-        cloud.setAlpha(Phaser.Math.FloatBetween(0.3, 0.5));
-        cloud.setScale(Phaser.Math.FloatBetween(0.8, 1.2));
-        this.travelCloudLayerFar.add(cloud);
-      }
-      for (let i = 0; i < 3; i++) {
-        const cloud = this.add.image(
-          Phaser.Math.Between(0, config.width),
-          Phaser.Math.Between(CLOUD_MIN_Y + 20, CLOUD_MAX_Y),
-          'cloud-big'
-        );
-        cloud.setDepth(-1);
-        cloud.setAlpha(Phaser.Math.FloatBetween(0.6, 0.9));
-        cloud.setScale(Phaser.Math.FloatBetween(0.8, 1.2));
-        this.travelCloudLayerNear.add(cloud);
-      }
-    }
-
-    // Parallax grass tufts that blow past during travel
-    const grassG = this.add.graphics();
-    grassG.fillStyle(0x2e8b57, 1);
-    grassG.beginPath();
-    grassG.moveTo(2, 8);
-    grassG.lineTo(4, 0);
-    grassG.lineTo(6, 8);
-    grassG.lineTo(2, 8);
-    grassG.moveTo(0, 8);
-    grassG.lineTo(1, 3);
-    grassG.lineTo(2, 8);
-    grassG.moveTo(6, 8);
-    grassG.lineTo(7, 3);
-    grassG.lineTo(8, 8);
-    grassG.fillPath();
-    grassG.generateTexture('grassTuft', 8, 8);
-    grassG.destroy();
-
-    const grassFarParts = this.add.particles('grassTuft').setDepth(0);
-    grassFarParts.createEmitter({
-      x: { min: 0, max: GAME_WIDTH },
-      y: { min: STAGE_Y, max: STAGE_Y + 40 },
-      lifespan: 5000,
-      speedX: { min: -80, max: -40 },
-      speedY: { min: -20, max: 20 },
-      quantity: 1,
-      frequency: 300,
-      alpha: { start: 1, end: 0 },
-      scale: { start: 0.6, end: 0.2 }
-    });
-    const grassNearParts = this.add.particles('grassTuft').setDepth(2);
-    grassNearParts.createEmitter({
-      x: { min: 0, max: GAME_WIDTH },
-      y: { min: legacyY(570), max: GROUND_Y },
-      lifespan: 3000,
-      speedX: { min: -200, max: -120 },
-      speedY: { min: -30, max: 30 },
-      quantity: 1,
-      frequency: 150,
-      alpha: { start: 1, end: 0 },
-      scale: { start: 1.5, end: 0.7 }
-    });
-    const setWeather = (w) => {
-      rainEmitter.stop();
-      fogEmitter.stop();
-      windEmitter.stop();
-      if (w === 'Rain') {
-        rainEmitter.start();
-      } else if (w === 'Fog') {
-        fogEmitter.start();
-      } else if (w === 'Wind') {
-        windEmitter.setSpeedX({ min: -50, max: 50 });
-        windEmitter.setSpeedY({ min: 30, max: 140 });
-        const zone = createWindEmitZone();
-        windEmitter.setEmitZone({ type: 'random', source: zone });
-        windEmitter.start();
-      }
-    };
-    setWeather(weather);
-    const exec = this.add.container(-100, CHARACTER_BASE_Y).setDepth(1);
-    const weapon = this.add.image(0, -20, `weapons${player.weaponLevel}`)
-      .setOrigin(0.5)
-      .setAngle(135);
-    const body = this.add.image(0, 50, 'executionerBody').setOrigin(0.5, 1);
-    const head = this.add.image(0, -30, 'executionerHead').setOrigin(0.5);
-    exec.add([weapon, body, head]);
-    this.add.existing(exec);
-
-    // Storage upgrade image trails 50px lower behind the executioner
-    const upgrade = this.add
-      .image(-250, legacyY(510), `storage${player.storageLevel}`)
-      .setOrigin(0.5, 1)
-      .setDepth(0);
-
-    this.tweens.add({ targets: exec, x: 900, duration, ease: 'Linear' });
-    this.tweens.add({ targets: upgrade, x: 750, duration, ease: 'Linear' });
-    this.time.addEvent({
-      delay: duration / this.days,
-      repeat: this.days - 1,
-      callback: () => {
-        d++;
-        if (d > 30) { d = 1; m = (m + 1) % months.length; }
-        date.setText(`${d} ${months[m]}`);
-        if (Math.random() < 0.5) {
-          weather = pickWeather();
-          setWeather(weather);
-        }
-      }
-    });
-
-    this.time.delayedCall(duration, () => this.finish());
+    this.duration=Math.max(2500,this.days*1100);
+    this.add.rectangle(CENTER_X,CENTER_Y,GAME_WIDTH,GAME_HEIGHT,0x89afa8).setDepth(-5);
+    this.road=this.add.image(CENTER_X,CENTER_Y,'angularRoad').setDepth(-2);
+    this.waymarks=Array.from({length:7},(_,i)=>this.add.rectangle(i*160,1240+(i%2)*30,34,4,0x8f7960).setDepth(8));
+    this.landmarks=Array.from({length:8},(_,i)=>this.add.polygon(i*140,900+(i%3)*45,i%3===0?[0,0,35,50,22,50,48,90,20,90,20,145,12,145,12,90,0,90,-26,90,-4,50,-16,50]:[0,0,36,-18,64,8,58,35,35,52,31,120,22,120,24,51,-8,40,-20,14],i%2?0x466f68:0x799b81).setDepth(-1).setScale(.65+(i%4)*.22));
+    createCloudTextures(this);
+    this.clouds=[];
+    for(let i=0;i<7;i++)this.clouds.push(this.add.image(i*135,330+(i%3)*90,i%2?'cloud-big':'cloud-small').setDepth(i%2?-1:-3).setScale(.7+(i%3)*.3).setAlpha(.65));
+    this.add.text(CENTER_X,230,'THE ROAD TO '+this.city.name.toUpperCase(),{font:'bold 32px Georgia',color:'#e9d8b4',backgroundColor:'#25343b',padding:{x:24,y:14}}).setOrigin(.5).setDepth(20);
+    this.date=this.add.text(CENTER_X,310,'',{font:'24px Georgia',color:'#e9d8b4',backgroundColor:'#203b42',padding:{x:14,y:8}}).setOrigin(.5).setDepth(20);
+    this.label=this.add.text(CENTER_X,1410,'',{font:'22px Georgia',color:'#e9d8b4',backgroundColor:'#25343b',padding:{x:18,y:10}}).setOrigin(.5).setDepth(20);
+    this.progress=this.add.rectangle(100,1460,0,8,0xe2b668).setOrigin(0,.5).setDepth(20);
+    this.dayNight=new DayNightCycle({dayLengthSeconds:this.duration/this.days/1000});
+    this.dayNight.init(this,{overlayDepth:5,celestialDepth:-4});this.dayNight.timeOfDay=this.mainScene.dayNight.timeOfDay;
+    this.caravan=CastArt.caravan(this,player.storageLevel,410,1170).setDepth(10);
+    this.exec=this.add.image(570,1254,'executionerFigure').setOrigin(.5,1).setDisplaySize(115,175).setDepth(11);
+    this.tweens.add({targets:this.exec,y:1248,angle:{from:-2,to:2},duration:210,yoyo:true,repeat:-1});
+    CastArt.roadLife(this);
+    const labels=player.storageLevel<2?'You and your dog':player.storageLevel<3?'Your pack horse':'Your trading cart';
+    this.label.setText(labels+' · '+this.days+' days on the road');
+    window.MobileGame?.journeyStart(this);
   }
-  update(time, delta) {
-    if (this.dayNight) {
-      this.dayNight.update(delta / 1000);
-    }
-    if (FEATURES.clouds && this.travelCloudLayerFar && this.travelCloudLayerNear) {
-      // Accelerate cloud movement to keep pace with the sped-up day/night cycle
-      const speedMult = 180 / this.dayNight.config.dayLengthSeconds;
-      this.travelCloudLayerFar.getChildren().forEach(cloud => {
-        cloud.x -= 0.2 * speedMult;
-        if (cloud.x < -cloud.width / 2) {
-          cloud.x = config.width + cloud.width / 2;
-          cloud.y = Phaser.Math.Between(CLOUD_MIN_Y, CLOUD_MAX_Y);
-          cloud.setAlpha(Phaser.Math.FloatBetween(0.6, 0.9));
-          cloud.setScale(Phaser.Math.FloatBetween(0.8, 1.2));
-        }
-      });
-      this.travelCloudLayerNear.getChildren().forEach(cloud => {
-        cloud.x -= 0.4 * speedMult;
-        if (cloud.x < -cloud.width / 2) {
-          cloud.x = config.width + cloud.width / 2;
-          cloud.y = Phaser.Math.Between(CLOUD_MIN_Y + 20, CLOUD_MAX_Y);
-          cloud.setAlpha(Phaser.Math.FloatBetween(0.6, 0.9));
-          cloud.setScale(Phaser.Math.FloatBetween(0.8, 1.2));
-        }
-      });
-    }
+  update(time,delta) {
+    if(this.finished)return;
+    this.elapsed+=delta;this.dayNight.update(delta/1000);
+    const travelled=Math.min(this.days,Math.floor(this.elapsed/this.duration*this.days));
+    const calendarDay=(currentMonth*30+currentDay-1+travelled)%360;
+    this.date.setText((calendarDay%30+1)+' '+months[Math.floor(calendarDay/30)]+' · '+travelled+' / '+this.days+' days');
+    this.progress.displayWidth=600*Math.min(1,this.elapsed/this.duration);
+    this.waymarks?.forEach(mark=>{mark.x-=delta*.23;if(mark.x < -50)mark.x=GAME_WIDTH+50;});
+    this.landmarks?.forEach((tree,i)=>{tree.x-=delta*(i%2?.1:.04);if(tree.x < -80)tree.x=GAME_WIDTH+80;});
+    this.clouds.forEach((cloud,i)=>{cloud.x-=delta/1000*(i%2?90:35);if(cloud.x < -cloud.displayWidth)cloud.x=GAME_WIDTH+cloud.displayWidth;});
+    if(this.elapsed>=this.duration)this.finish();
   }
   finish() {
-    advanceDays(this.days);
-    selectCity(this.mainScene, this.city);
-    dailyMarketUpdate();
-    SaveManager.save();
-    this.scene.stop();
-    this.mainScene.scene.resume();
+    if(this.finished)return;this.finished=true;
+    advanceDays(this.days);this.city.unlocked=true;Campaign.visit(this.city.name);
+    selectCity(this.mainScene,this.city);dailyMarketUpdate();SaveManager.performSave();
+    window.MobileGame?.journeyFinish(this.city.name);
+    this.scene.stop();this.mainScene.scene.resume();
   }
 }
 
-// Inject styled gameplay instructions beneath the Phaser canvas once the page loads
+/* Legacy desktop instructions are superseded by the in-game journal.
 window.addEventListener('load', () => {
   const instructions = document.createElement('div');
   instructions.id = 'game-instructions';
@@ -5721,7 +5912,24 @@ window.addEventListener('load', () => {
   visitorCounterEl.style.fontFamily = 'Georgia, serif';
   document.body.appendChild(visitorCounterEl);
   fetchVisitorCount();
-});
+}); */
+</script>
+<script src="audio.js"></script><script src="mobile.js"></script>
+<script src="offline.js"></script>
+<script>
+// This fallback also works when the engine failed before game setup could run.
+if (!window.Phaser || !window.ChopCore || !window.Campaign || !window.DayNightCycle || !window.CastArt || !window.MobileGame) {
+  const gate = document.getElementById('start-overlay');
+  if (gate) {
+    gate.querySelector('.tap').textContent = 'Download interrupted · tap to retry';
+    gate.querySelector('small').textContent = 'Check your connection, then try again. Your saved progress stays on this device.';
+    gate.setAttribute('aria-label', 'Retry game download');
+    gate.tabIndex = 0;
+    const retry = event => { event.preventDefault(); event.stopImmediatePropagation(); location.reload(); };
+    gate.addEventListener('click', retry, true);
+    gate.addEventListener('keydown', event => { if (event.key === 'Enter' || event.key === ' ') retry(event); }, true);
+  }
+}
 </script>
 
 </body>

@@ -1,0 +1,27 @@
+{
+  "name": "choptoit",
+  "version": "0.2.0",
+  "private": true,
+  "scripts": {
+    "start": "node scripts/serve.cjs",
+    "test": "node scripts/check.cjs && node scripts/build.cjs --check && node scripts/offline-check.cjs",
+    "build": "node scripts/check.cjs && node scripts/build.cjs && node scripts/offline-check.cjs",
+    "release": "npm run build && node scripts/package-release.cjs && node scripts/release-smoke.cjs",
+    "native:prepare": "npm run release && node scripts/prepare-native.cjs",
+    "native:sync": "npm run native:prepare && cap sync && node scripts/native-art.cjs && node scripts/native-check.cjs",
+    "native:check": "node scripts/native-check.cjs"
+  },
+  "dependencies": {
+    "@capacitor/android": "^8.5.2",
+    "@capacitor/app": "^8.1.1",
+    "@capacitor/core": "^8.5.2",
+    "@capacitor/filesystem": "^8.1.3",
+    "@capacitor/ios": "^8.5.2",
+    "@capacitor/share": "^8.0.2"
+  },
+  "devDependencies": {
+    "@capacitor/cli": "^8.5.2",
+    "esbuild": "^0.28.2",
+    "sharp": "^0.35.5"
+  }
+}

@@ -1,0 +1,92 @@
+{
+  "frames": {
+    "0": {
+      "frame": {
+        "x": 162,
+        "y": 59,
+        "w": 309,
+        "h": 531
+      },
+      "rotated": false,
+      "trimmed": false,
+      "spriteSourceSize": {
+        "x": 0,
+        "y": 0,
+        "w": 309,
+        "h": 531
+      },
+      "sourceSize": {
+        "w": 309,
+        "h": 531
+      }
+    },
+    "1": {
+      "frame": {
+        "x": 788,
+        "y": 53,
+        "w": 306,
+        "h": 537
+      },
+      "rotated": false,
+      "trimmed": false,
+      "spriteSourceSize": {
+        "x": 0,
+        "y": 0,
+        "w": 306,
+        "h": 537
+      },
+      "sourceSize": {
+        "w": 306,
+        "h": 537
+      }
+    },
+    "2": {
+      "frame": {
+        "x": 156,
+        "y": 672,
+        "w": 332,
+        "h": 537
+      },
+      "rotated": false,
+      "trimmed": false,
+      "spriteSourceSize": {
+        "x": 0,
+        "y": 0,
+        "w": 332,
+        "h": 537
+      },
+      "sourceSize": {
+        "w": 332,
+        "h": 537
+      }
+    },
+    "3": {
+      "frame": {
+        "x": 781,
+        "y": 675,
+        "w": 318,
+        "h": 533
+      },
+      "rotated": false,
+      "trimmed": false,
+      "spriteSourceSize": {
+        "x": 0,
+        "y": 0,
+        "w": 318,
+        "h": 533
+      },
+      "sourceSize": {
+        "w": 318,
+        "h": 533
+      }
+    }
+  },
+  "meta": {
+    "image": "cast-bodies-v2.png",
+    "size": {
+      "w": 1254,
+      "h": 1254
+    },
+    "scale": "1"
+  }
+}
