@@ -2739,6 +2739,7 @@ function create() {
   // Stop corpses completely after two bounces
   scene.physics.world.on('worldbounds', (body, up, down) => {
     const obj = body.gameObject;
+    if(obj?.isFallingCraft && down){landSkyCraft(scene,obj);return;}
     if(obj?.isFlyingFruit && down){obj.destroy();return;}
     if (!obj || !obj.isCorpse) return;
     if (down) {
@@ -4639,7 +4640,7 @@ function showGoldGain(scene, amount) {
 function setupProjectileCollisions(scene) {
   scene.projectileCollider?.destroy();
   scene.projectileCollider = scene.physics.add.overlap(bodyGroup, targetGroup, (projectile, target) => {
-    if ((projectile.isHead || projectile.isFallingBird || projectile.isFlyingFruit) && !projectile.hasSettled && projectile.body?.enable) {
+    if ((projectile.isHead || projectile.isFallingBird || projectile.isFlyingFruit || projectile.isFallingCraft) && !projectile.hasSettled && projectile.body?.enable) {
       handleTargetHit(scene, target, projectile);
     }
   });
@@ -5512,7 +5513,7 @@ function checkFastHeadTargetCrossings(scene) {
   if (!bodyGroup || !targetGroup) return;
   const targets = targetGroup.getChildren();
   bodyGroup.getChildren().forEach(head => {
-    if ((!head.isHead && !head.isFallingBird && !head.isFlyingFruit) || !head.active || !head.body || !head.body.enable) return;
+    if ((!head.isHead && !head.isFallingBird && !head.isFlyingFruit && !head.isFallingCraft) || !head.active || !head.body || !head.body.enable) return;
     const prevX = head.prevX ?? head.x;
     const prevY = head.prevY ?? head.y;
     const movedFarEnough = Phaser.Math.Distance.Between(prevX, prevY, head.x, head.y) > 4;
@@ -5711,10 +5712,17 @@ function pickSpacedTargetX(existingTargetXs = [], zoom = 1) {
 }
 
 function updateTargetMotion(target, time) {
-  if(!target.active || target.collected || !target.jester?.active || target.motionStartedAt===null || !target.targetOption?.motion)return;
-  const pose=window.TargetShop.motion(target.targetOption,time-target.motionStartedAt,target.basePoleHeight);
+  if(!target.active || target.collected || !target.jester?.active || target.motionStartedAt===null)return;
+  if(target.scene?.cameras && target.naturalPoleHeight!==undefined){
+    const height=desiredTargetPoleHeight(target.scene,target);
+    const dt=Math.min(100,Math.max(0,time-(target.heightUpdatedAt ?? time-16)));
+    target.heightUpdatedAt=time;
+    target.basePoleHeight+=(height-target.basePoleHeight)*(1-Math.exp(-dt/420));
+  }
+  const pose=target.targetOption?.motion?window.TargetShop.motion(target.targetOption,time-target.motionStartedAt,target.basePoleHeight):{height:target.basePoleHeight,angle:0};
   target.poleHeight=pose.height;
   target.jesterPole.setDisplaySize(6,pose.height).setRotation(pose.angle);
+  if(target.washingLine && target.linePartner?.active)target.linePartner.jesterPole.setDisplaySize(6,pose.height);
 }
 
 function populateRoundTargets(scene) {
@@ -5774,13 +5782,15 @@ function spawnTarget(scene, existingTargetXs = [], guaranteedOption = null) {
   target.greenTarget=!!option?.green;
   target.targetOption=option || {};
   target.targetRadius=option?.radius || (type==='special'?34:undefined);target.targetColor=option?.color;
+  target.naturalPoleHeight=poleHeight;target.heightSeed=Math.random();
   target.basePoleHeight=poleHeight;target.motionStartedAt=null;
   target.isMoving=!!option?.motion;
   target.isYorkTallWaver = isYorkTallWaver;
   target.fameMultiplier = option?.reward || (isYorkTallWaver ? profile.reward : 1);
   target.yorkWaveTween = null;
   target.jesterPole = pole;jester.jesterPole=pole;
-  target.poleHeight = poleHeight;
+  target.poleHeight = desiredTargetPoleHeight(scene,target);target.basePoleHeight=target.poleHeight;
+  pole.setDisplaySize(6,target.poleHeight);
   if(type==='explodingBarrel'){
     target.barrelSize=option?.size || 1;target.barrelFuseMs=option?.fuse || 700;
     target.barrelScale=[0,.8,1.15,1.5][target.barrelSize];
@@ -5998,7 +6008,7 @@ function update(time, delta) {
   // Apply extra gravity once heads start falling in the rain
   if (FEATURES.weather && (currentWeather === 'rain' || currentWeather === 'snow') && bodyGroup) {
     bodyGroup.getChildren().forEach(obj => {
-      if ((obj.isHead || obj.isFallingBird || obj.isFlyingFruit) && obj.body?.enable && !obj.rainGravityApplied && obj.body.velocity.y > 0) {
+      if ((obj.isHead || obj.isFallingBird || obj.isFlyingFruit || obj.isFallingCraft) && obj.body?.enable && !obj.rainGravityApplied && obj.body.velocity.y > 0) {
         obj.body.setGravityY(currentWeather==='snow'?120:300);
         obj.rainGravityApplied = true;
       }

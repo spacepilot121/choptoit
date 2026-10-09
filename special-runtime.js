@@ -1,3 +1,16 @@
+// Stable per-target height variation opens the usable sky as the camera widens.
+function desiredTargetPoleHeight(scene,target){
+  const camera=scene.cameras.main,zoom=Math.max(.35,camera.zoom);
+  const opened=Math.min(1,Math.max(0,(1/zoom-1)/(1/.35-1)));
+  const rise=Math.pow(Math.max(0,500*getWeaponPowerMultiplier()-100),2)/800;
+  const top=camera.worldView.y+GAME_HEIGHT*.22/zoom;
+  const ceiling=Math.max(140,Math.min(rise-60,CHARACTER_BASE_Y-20-top-85));
+  const initial=Math.min(ceiling,target.naturalPoleHeight ?? target.basePoleHeight);
+  const seed=target.heightSeed ?? .5;
+  const fraction=(target.washingLine || target.targetOption?.art==='line') ? .66+seed*.22 : target.isYorkTallWaver ? .5+seed*.4 : .1+seed*.8;
+  return initial+Math.max(0,ceiling*fraction-initial)*opened;
+}
+
 // Runtime adapters keep target rules separate from the Phaser scene lifecycle.
 function refreshSpecialTarget(target) {
   const option=target.targetOption,g=target.specialStatus;if(!g)return;
@@ -33,7 +46,12 @@ function updateSpecialTarget(scene,target) {
   }
   for(const part of target.specialParts || [])if(part.active&&!part.collected){
     part.setPosition(target.x+part.partOffset,target.y+(target.washingLine?part.lineYOffset:5));
-    if(part.body){part.body.x=part.x+part.body.offset.x;part.body.y=part.y+part.body.offset.y;}
+    if(part.body){
+      part.body.x=part.x+part.body.offset.x;part.body.y=part.y+part.body.offset.y;
+      // Attached clothes are positioned by the rope, not by physics displacement.
+      part.body.updateFromGameObject?.();
+      if(part.body.position){part.body.prev?.copy(part.body.position);part.body.prevFrame?.copy(part.body.position);}
+    }
   }
 }
 function specialTargetAPI(scene) {
@@ -102,7 +120,7 @@ function initializeSpecialTarget(scene,target) {
 
 function prepareWashingLine(scene,target){
   if(!target.jester)return;
-  target.washingLine=true;target.specialSprite?.setVisible(false);
+  target.washingLine=true;target.motionStartedAt=scene.time.now;target.specialSprite?.setVisible(false);
   const first=target.jester,centre=target.lineDestination ?? first.x,half=155;
   const entrance=first.startFromRight?offscreenActorX(scene,true)+half:offscreenActorX(scene,false)-half;
   first.x=entrance-half;
@@ -189,12 +207,12 @@ function spawnSkyCraft(scene,type){
   const zoom=scene.cameras.main.zoom;if(zoom>(type==='ufo'?.37:.5))return;
   if(targetGroup.getChildren().some(t=>t.skyCraft===type&&t.active&&!t.collected))return;
   const launchY=CHARACTER_BASE_Y-64,rise=Math.pow(500*getWeaponPowerMultiplier()-100,2)/800;
-  const skyTop=scene.cameras.main.worldView.y+GAME_HEIGHT*.22/zoom;
-  const y=Math.max(skyTop+130,launchY-rise*(type==='ufo'?.88:.62));
+  const skyTop=scene.cameras.main.worldView.y+GAME_HEIGHT*.14/zoom;
+  const y=Math.max(skyTop+130,launchY-rise*(type==='ufo'?.96:.86));
   if(y>CHARACTER_BASE_Y-400)return;
   const fromRight=Math.random()<.5,craft=scene.add.container(offscreenActorX(scene,fromRight),y).setDepth(20);
-  craft.targetType=type;craft.skyCraft=type;craft.specialGold=type==='ufo'?1500:500;craft.fameMultiplier=type==='ufo'?10:5;craft.collected=false;
-  const g=scene.add.graphics();craft.add(g);
+  craft.targetType=type;craft.skyCraft=type;craft.fromRight=fromRight;craft.specialGold=type==='ufo'?1500:500;craft.fameMultiplier=type==='ufo'?10:5;craft.collected=false;
+  const g=scene.add.graphics();craft.add(g);craft.skyArt=g;
   if(type==='ufo'){
     g.fillStyle(0x7ab5ad).fillPoints([{x:-33,y:0},{x:-22,y:-26},{x:0,y:-38},{x:25,y:-22},{x:34,y:0}],true);
     g.fillStyle(0xdcc084).fillPoints([{x:-75,y:3},{x:-43,y:-9},{x:39,y:-9},{x:77,y:4},{x:43,y:26},{x:-40,y:26}],true);
@@ -211,14 +229,44 @@ function spawnSkyCraft(scene,type){
   targetGroup.add(craft);
   const flight=scene.tweens.add({targets:craft,x:offscreenActorX(scene,!fromRight),duration:type==='ufo'?11000:19000,ease:'Linear',onComplete:()=>{if(craft.active)craft.destroy();}});craft.moveTween=flight;
   const bob=scene.tweens.add({targets:g,y:{from:-8,to:8},duration:1200,yoyo:true,repeat:-1,ease:'Sine.easeInOut'});
+  craft.bobTween=bob;
   craft.once('destroy',()=>{flight.stop();bob.stop();targetGroup.remove(craft);});
   return craft;
 }
 
 function burstSkyCraft(scene,target,projectile){
-  if(target.skyCraft==='ufo')sonicWave(scene,target,projectile);
-  else specialTargetAPI(scene).pieces(target,{pieces:4,partArt:'gold',treasure:true},projectile);
-  fireworkEmitter.explode(24,target.x,target.y);target.destroy(true);
+  if(target.skyCraft==='ufo'){
+    sonicWave(scene,target,projectile);fireworkEmitter.explode(24,target.x,target.y);target.destroy();return;
+  }
+  if(target.isFallingCraft)return;
+  specialTargetAPI(scene).pieces(target,{pieces:4,partArt:'gold',treasure:true},projectile);
+  target.moveTween?.stop();target.bobTween?.stop();
+  target.isFallingCraft=true;target.comboSource=projectile?.comboSource || projectile;
+  target.prevX=target.x;target.prevY=target.y;target.power=projectile?.power || 1;
+  bodyGroup.add(target);
+  target.body.setAllowGravity(true).setImmovable(false).setCollideWorldBounds(true);
+  target.body.checkCollision.up=false;target.body.onWorldBounds=true;
+  target.body.setVelocity(target.fromRight?-240:240,-130).setAngularVelocity(65).setDrag(30,0);
+  target.body.setAccelerationX(currentWeather==='wind'?windForce.x*.45:0);
+  const deflate=scene.tweens.add({targets:target.skyArt,scaleX:.42,scaleY:.58,duration:1600,ease:'Sine.easeIn'});
+  let bursts=0;
+  const sputter=scene.time.addEvent({delay:280,repeat:5,callback:()=>{
+    if(!target.scene || !target.body?.enable)return;
+    const side=bursts++%2?1:-1;
+    target.body.setVelocityX(side*(230+Math.random()*170));
+    target.body.setVelocityY(target.body.velocity.y-90);
+    target.body.setAngularVelocity(side*95);
+    fireworkEmitter.explode(3,target.x,target.y-20);
+  }});
+  const expiry=scene.time.delayedCall(16000,()=>landSkyCraft(scene,target));
+  target.once('destroy',()=>{deflate.stop();sputter.remove(false);expiry.remove(false);bodyGroup.remove(target);});
+}
+
+function landSkyCraft(scene,target){
+  if(!target?.scene || target.crashLanded)return;
+  target.crashLanded=true;
+  fireworkEmitter.explode(16,target.x,target.y);
+  target.destroy();
 }
 
 function updateWideWeather(scene){
