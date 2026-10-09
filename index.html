@@ -1652,6 +1652,7 @@ function applyTargetWeather(scene, target) {
 }
 
 function applyRandomWeather(scene) {
+  scene.weatherViewZoom=null;
   const clearChance = 0.5;
   const learning = killCount < 3 && Campaign.state.claimed === 0;
   if (!FEATURES.weather || learning || Math.random() < clearChance) {
@@ -2087,13 +2088,13 @@ function create() {
     ? scene.add.rectangle(CENTER_X, CENTER_Y, GAME_WIDTH, GAME_HEIGHT, 0x79bac1)
     : scene.add.image(CENTER_X, CENTER_Y, 'backgroundSky').setDisplaySize(GAME_WIDTH, GAME_HEIGHT);
   // Render sky behind celestial bodies
-  skyRect.setDepth(-5).setDisplaySize(GAME_WIDTH * 3, GAME_HEIGHT * 3);
+  skyRect.setDepth(-5).setDisplaySize(GAME_WIDTH * 4, GAME_HEIGHT * 6);
 
   backgroundRect = scene.add.image(CENTER_X, CENTER_Y, window.MobileGame ? `background-${currentCity.toLowerCase()}` : 'background');
   setBackdropCover(backgroundRect, GAME_WIDTH, GAME_HEIGHT, true);
   backgroundRect.setDepth(-2);
   // A soft daylight haze pushes scenery back while leaving actors saturated.
-  scene.daylightVeil=scene.add.rectangle(CENTER_X,CENTER_Y,GAME_WIDTH*3,GAME_HEIGHT*3,0xd9e2cc).setDepth(-1.6).setAlpha(0);
+  scene.daylightVeil=scene.add.rectangle(CENTER_X,CENTER_Y,GAME_WIDTH*4,GAME_HEIGHT*6,0xd9e2cc).setDepth(-1.6).setAlpha(0);
   // Apply the initial background for the starting city
   updateBackground(scene);
 
@@ -2107,7 +2108,7 @@ function create() {
     for (let i = 0; i < 16; i++) {
       const cloud = scene.add.image(
         Phaser.Math.Between(-800, config.width+800),
-        Phaser.Math.Between(-1500, CLOUD_MAX_Y),
+        Phaser.Math.Between(-2700, CLOUD_MAX_Y),
         'cloud-small'
       );
       cloud.setDepth(-3);
@@ -2120,7 +2121,7 @@ function create() {
     for (let i = 0; i < 10; i++) {
       const cloud = scene.add.image(
         Phaser.Math.Between(-800, config.width+800),
-        Phaser.Math.Between(-1500, CLOUD_MAX_Y),
+        Phaser.Math.Between(-2700, CLOUD_MAX_Y),
         'cloud-big'
       );
       cloud.setDepth(-1);
@@ -2738,11 +2739,12 @@ function create() {
   // Stop corpses completely after two bounces
   scene.physics.world.on('worldbounds', (body, up, down) => {
     const obj = body.gameObject;
+    if(obj?.isFlyingFruit && down){obj.destroy();return;}
     if (!obj || !obj.isCorpse) return;
     if (down) {
       if (obj.jester && !obj.jester.running) {
         obj.jester.running = true;
-        const offX = obj.jester.startFromRight ? GAME_WIDTH+450 : -450;
+        const offX = offscreenActorX(scene,obj.jester.startFromRight);
         obj.scene.tweens.add({
           targets: obj.jester,
           x: offX,
@@ -3610,9 +3612,10 @@ function getWeaponUpgradeCost() {
 }
 
 // Weapon levels should affect actual strike strength, not just meter leniency.
-// Level 1 => 1.00x, then +6% per level to keep scaling meaningful but controlled.
+// Blades gain 6% per level; long streaks build enough lift to reach the wider sky.
 function getWeaponPowerMultiplier() {
-  return 1 + ((player.weaponLevel - 1) * 0.06);
+  const blade=1+((player.weaponLevel-1)*.06);
+  return blade+(3.4-blade)*Math.min(1,Math.max(0,killStreak-5)/20);
 }
 
 // Refresh weapon image, upgrade cost text, and interactivity
@@ -3862,7 +3865,7 @@ function savePrisoner(scene) {
   window.MobileGame?.feedback('Three misses! Free at last!',true);
   scene.tweens.add({
     targets: prisoner,
-    x: GAME_WIDTH + 450,
+    x: offscreenActorX(scene,true),
     y: CHARACTER_BASE_Y,
     duration: 1200,
     ease: 'Sine.easeIn'
@@ -4024,7 +4027,7 @@ function settleCorpse(scene,corpse) {
 function offscreenActorX(scene, fromRight, margin=160) {
   const camera=scene.cameras.main;
   // Reserve the widest combo view too, so changing zoom cannot reveal a spawn.
-  const halfWidth=GAME_WIDTH/(2*Math.min(camera.zoom,.55));
+  const halfWidth=GAME_WIDTH/(2*Math.min(camera.zoom,.35));
   return (camera.scrollX || 0)+CENTER_X+(fromRight?halfWidth+margin:-halfWidth-margin);
 }
 
@@ -4039,7 +4042,7 @@ function anchorCoinChest(scene) {
 function updateComboCamera(scene, delta) {
   if(!window.MobileGame)return;
   const camera=scene.cameras.main;
-  const target=1-Math.min(.45,Math.max(0,killStreak-2)*.12);
+  const target=Math.max(.35,1-Math.min(.45,Math.max(0,killStreak-2)*.12)-Math.max(0,killStreak-6)*.012);
   const blend=1-Math.exp(-Math.max(0,Math.min(100,delta || 16))/180);
   const zoom=camera.zoom+(target-camera.zoom)*blend;
   camera.setZoom(Math.abs(target-zoom)<.0001?target:zoom);
@@ -4061,7 +4064,7 @@ function updateRemainsFloor(scene) {
     }
   }
   if(scene.remainsFloor===floor)return;
-  scene.remainsFloor=floor;if(chest)chest.setY(floor-35);scene.physics.world.setBounds(-400,-1600,GAME_WIDTH+800,floor+1600,true,true,false,true);
+  scene.remainsFloor=floor;if(chest)chest.setY(floor-35);scene.physics.world.setBounds(-1000,-4000,GAME_WIDTH+2000,floor+4000,true,true,false,true);
   bloodPool?.setY(floor).setDepth(29);
   bodyGroup?.getChildren().forEach(remains=>{
     if(remains.hasSettled)remains.y=floor-(remains.isHead || remains.isFallingBird?remains.displayHeight:remains.displayWidth)/2-remains.pileOffset;
@@ -4076,9 +4079,9 @@ function spawnBasketCarrier(scene) {
   const floor=scene.remainsFloor || GROUND_Y;
   const fromRight=Phaser.Math.Between(0,1)===1;
   const size=(multiplier===4? .68:multiplier===3? .84:1)*(option?.width || 1);
-  const carrier=scene.add.container(fromRight?GAME_WIDTH+500:-500,floor-90).setDepth(25);
+  const carrier=scene.add.container(offscreenActorX(scene,fromRight),floor-90).setDepth(25);
   carrier.halfWidth=43*size;carrier.multiplier=multiplier;carrier.previousX=carrier.x;scene.basketCarrier=carrier;
-  carrier.exitX=fromRight?-510:GAME_WIDTH+510;
+  carrier.exitX=offscreenActorX(scene,!fromRight);
   const coat=CastArt.body(scene.add.image(0,90,'castBodies','0').setOrigin(.5,1),'prisonerBody5');
   const face=CastArt.head(scene.add.image(0,-38,'castHeads','0'),'head5');
   CastArt.expression(face,'happy');
@@ -4284,6 +4287,7 @@ function retirePreviousRoundTargets(scene) {
   // A missed chop clears the resident carriers, including caught targets.
   [...targetGroup.getChildren(),...(scene.parkedTargets || [])].filter(target => target.jester && !target.leaving).forEach(target => {
     target.leaving=true;
+    if(target.washingLine){departWashingLine(scene,target);return;}
     const jester = target.jester;
     if (target.moveTween) target.moveTween.stop();
     if (target.yorkWaveTween) target.yorkWaveTween.stop();
@@ -4295,7 +4299,7 @@ function retirePreviousRoundTargets(scene) {
     if (target.body) target.body.enable = false;
     for(const part of target.specialParts || []){targetGroup.remove(part);if(part.active)part.destroy();}
     targetGroup.remove(target);
-    const exitX = jester.startFromRight ? GAME_WIDTH+450 : -450;
+    const exitX = offscreenActorX(scene,jester.startFromRight);
     scene.tweens.add({
       targets: [jester, target],
       x: exitX,
@@ -4635,7 +4639,7 @@ function showGoldGain(scene, amount) {
 function setupProjectileCollisions(scene) {
   scene.projectileCollider?.destroy();
   scene.projectileCollider = scene.physics.add.overlap(bodyGroup, targetGroup, (projectile, target) => {
-    if ((projectile.isHead || projectile.isFallingBird) && !projectile.hasSettled && projectile.body?.enable) {
+    if ((projectile.isHead || projectile.isFallingBird || projectile.isFlyingFruit) && !projectile.hasSettled && projectile.body?.enable) {
       handleTargetHit(scene, target, projectile);
     }
   });
@@ -4697,7 +4701,8 @@ function handleTargetHit(scene, target, head, blast=false) {
   if(fameGain>0){if(target.mustardPaint)fameGain*=3;if(scene.trickBuffUntil && scene.trickBuffUntil>scene.time.now)fameGain*=2;}
   if (target.targetType === 'bird') {
     bloodFireworkEmitter.explode(25, target.x, target.y);
-    const birdGold=target.birdKind==='dove'?1000:100;
+    const birdGold={crow:100,dove:1000,swallow:150,magpie:300,owl:250,phoenix:500}[target.birdKind] || 100;
+    if(typeof applyBirdEffect==='function')applyBirdEffect(scene,target,physicalProjectile);
     gainFame(scene,target,fameGain,targetGoldReward+birdGold);
     addGold(scene,birdGold);
     if(head)head.targetGold=(head.targetGold || 0)+birdGold;
@@ -4714,11 +4719,14 @@ function handleTargetHit(scene, target, head, blast=false) {
   if(target.partParent?.active&&!target.partParent.collected){
     target.partParent.specialPartsRemaining--;if(target.partParent.specialPartsRemaining<=0)handleTargetHit(scene,target.partParent,physicalProjectile,true);
   }
+  if(!target.active)return;
   if (target.targetType === 'explodingBarrel') {
     armExplodingBarrel(scene, target, head);
     return;
   }
   targetGroup.remove(target);
+  if(target.skyCraft){burstSkyCraft(scene,target,physicalProjectile);return;}
+  if(target.washingLine){departWashingLine(scene,target);return;}
   if(jester?.poleHands)CastArt.holdPole(jester.poleHands,0);
   // blood spray at impact
   splatEmitter.explode(15, target.x, target.y);
@@ -4742,8 +4750,8 @@ function handleTargetHit(scene, target, head, blast=false) {
         target.setPosition(23,-38);jester.add(target);jester.jesterPole?.setVisible(false);
         CastArt.walk(scene,jester,1500,true);
         (scene.departingCarriers ||= new Set()).add(jester);
-        jester.exitTween=scene.tweens.add({targets:jester,x:jester.startFromRight?GAME_WIDTH+450:-450,duration:1500,ease:'Linear',onComplete:()=>{
-          scene.departingCarriers.delete(jester);jester.destroy(true);if(target.active)target.destroy();
+        jester.exitTween=scene.tweens.add({targets:jester,x:offscreenActorX(scene,jester.startFromRight),duration:1500,ease:'Linear',onComplete:()=>{
+          scene.departingCarriers.delete(jester);if(jester.scene)jester.destroy();if(target.scene)target.destroy();
         }});
       }else if(!jester)target.destroy();
     }
@@ -4819,8 +4827,8 @@ function detonateExplodingBarrel(scene, target, head) {
   if(jester?.active&&!jester.running){
     jester.running=true;jester.jesterPole?.setVisible(false);CastArt.walk(scene,jester,1500,true);
     (scene.departingCarriers ||= new Set()).add(jester);
-    jester.exitTween=scene.tweens.add({targets:jester,x:jester.startFromRight?GAME_WIDTH+450:-450,duration:1500,ease:'Linear',onComplete:()=>{
-      scene.departingCarriers.delete(jester);jester.destroy(true);
+    jester.exitTween=scene.tweens.add({targets:jester,x:offscreenActorX(scene,jester.startFromRight),duration:1500,ease:'Linear',onComplete:()=>{
+      scene.departingCarriers.delete(jester);if(jester.scene)jester.destroy();
     }});
   }
   target.destroy();
@@ -5504,7 +5512,7 @@ function checkFastHeadTargetCrossings(scene) {
   if (!bodyGroup || !targetGroup) return;
   const targets = targetGroup.getChildren();
   bodyGroup.getChildren().forEach(head => {
-    if ((!head.isHead && !head.isFallingBird) || !head.active || !head.body || !head.body.enable) return;
+    if ((!head.isHead && !head.isFallingBird && !head.isFlyingFruit) || !head.active || !head.body || !head.body.enable) return;
     const prevX = head.prevX ?? head.x;
     const prevY = head.prevY ?? head.y;
     const movedFarEnough = Phaser.Math.Distance.Between(prevX, prevY, head.x, head.y) > 4;
@@ -5550,7 +5558,7 @@ function checkFastHeadTargetCrossings(scene) {
 
 function spawnHolyMonk(scene) {
   const fromRight = Phaser.Math.Between(0, 1) === 1;
-  const startX = fromRight ? GAME_WIDTH+450 : -450;
+  const startX = scene.cameras ? offscreenActorX(scene,fromRight) : (fromRight ? GAME_WIDTH+450 : -450);
   const monk = scene.add.container(startX, CHARACTER_BASE_Y).setDepth(20);
   monk.targetType = 'holyMonk';
   createTargetAppearance(scene, monk, 'holyMonk');
@@ -5580,7 +5588,7 @@ function spawnHolyMonk(scene) {
     changeEvent.remove();
     scene.tweens.add({
       targets: monk,
-      x: fromRight ? GAME_WIDTH+450 : -450,
+      x: offscreenActorX(scene,fromRight),
       duration: 1500,
       ease: 'Linear',
       onComplete: () => {
@@ -5592,8 +5600,8 @@ function spawnHolyMonk(scene) {
 
 function spawnRoyal(scene, option = {}) {
   const fromRight = Phaser.Math.Between(0, 1) === 1;
-  const startX = fromRight ? GAME_WIDTH+450 : -450;
-  const stopX = option.courier ? (fromRight ? -450 : GAME_WIDTH+450) : (fromRight ? 500 : 300);
+  const startX = scene.cameras ? offscreenActorX(scene,fromRight) : (fromRight ? GAME_WIDTH+450 : -450);
+  const stopX = option.courier ? offscreenActorX(scene,!fromRight) : (fromRight ? 500 : 300);
   const royal = scene.add.container(startX, CHARACTER_BASE_Y).setDepth(20);
   royal.targetType = 'royal';
   royal.fameMultiplier=option.reward || 1;
@@ -5621,7 +5629,7 @@ function spawnRoyal(scene, option = {}) {
         if(!royal.active)return;
         scene.tweens.add({
           targets: royal,
-          x: fromRight ? GAME_WIDTH+450 : -450,
+          x: offscreenActorX(scene,fromRight),
           duration: 1500,
           ease: 'Linear',
           onComplete: () => royal.destroy()
@@ -5639,18 +5647,22 @@ function birdFlightLane(weaponMultiplier, launchY) {
 }
 
 function spawnBird(scene) {
-  if (targetGroup.getChildren().some(target => target.targetType === 'bird' && target.active && !target.collected)) return;
+  const zoom=scene.cameras?.main.zoom || 1;
+  const birdLimit=zoom<.45?6:zoom<.7?3:1;
+  if (targetGroup.getChildren().filter(target => target.targetType === 'bird' && target.active && !target.collected).length>=birdLimit) return;
   const launchY = prisoner.y + prisonerHead.y;
   const weaponMultiplier = getWeaponPowerMultiplier();
-  const laneY = birdFlightLane(weaponMultiplier, launchY);
+  let laneY = birdFlightLane(weaponMultiplier, launchY);
+  if(zoom<.7){const top=scene.cameras.main.worldView.y+GAME_HEIGHT*.23/zoom;const rise=Math.pow(500*weaponMultiplier-100,2)/800;laneY=Math.max(top+100,launchY-rise*.7+Phaser.Math.Between(0,180));}
   const windY = FEATURES.weather && currentWeather === 'wind' ? windForce.y : 0;
   const fullPowerRise = Math.pow(Math.max(0, 500 * weaponMultiplier - windY), 2) / 800;
   if (launchY - fullPowerRise > laneY) return;
   const fromRight = Phaser.Math.Between(0, 1) === 1;
-  const startX = fromRight ? GAME_WIDTH+450 : -450;
-  const endX = fromRight ? -450 : GAME_WIDTH+450;
+  const startX = scene.cameras ? offscreenActorX(scene,fromRight) : (fromRight ? GAME_WIDTH+450 : -450);
+  const endX = scene.cameras ? offscreenActorX(scene,!fromRight) : (fromRight ? -450 : GAME_WIDTH+450);
   // Teach the bonus first. Reputation-costing doves join after a few upgrades.
-  const kind = player.weaponLevel < 4 ? 'crow' : (Phaser.Math.Between(0, 1) ? 'dove' : 'crow');
+  const kinds=zoom<.45?['crow','dove','swallow','magpie','owl','phoenix']:zoom<.7?['crow','dove','swallow','magpie']:['crow','dove'];
+  const kind = player.weaponLevel < 4 && zoom>=.7 ? 'crow' : kinds[Phaser.Math.Between(0,kinds.length-1)];
   const bird = scene.add.container(startX, laneY).setDepth(20);
   bird.targetType = 'bird';
   bird.birdKind = kind;
@@ -5669,7 +5681,7 @@ function spawnBird(scene) {
   bird.moveTween = scene.tweens.add({
     targets: bird,
     x: endX,
-    duration: 3000,
+    duration: zoom<.7?7000:3000,
     ease: 'Linear',
     yoyo: true,
     repeat: 0,
@@ -5682,7 +5694,7 @@ function spawnBird(scene) {
 }
 
 function pickSpacedTargetX(existingTargetXs = [], zoom = 1) {
-  const extra=GAME_WIDTH*.5*(1/Math.max(.55,zoom)-1);
+  const extra=GAME_WIDTH*.5*(1/Math.max(.35,zoom)-1);
   const minX = Math.ceil(100-extra);
   const maxX = Math.floor(700+extra);
   const minSpacing = 90;
@@ -5708,7 +5720,7 @@ function updateTargetMotion(target, time) {
 function populateRoundTargets(scene) {
   const targetCount = Phaser.Math.Between(2, player.weaponLevel >= 4 ? 5 : 3);
   const residents = targetGroup.getChildren().filter(t => t.jester && !t.collected && !t.leaving);
-  const usedTargetXs = residents.map(t => t.jester.x);
+  const usedTargetXs = residents.flatMap(t => t.washingLine ? [t.x-140,t.x,t.x+140] : [t.jester.x]);
   for (let i = residents.length; i < targetCount; i++) spawnTarget(scene, usedTargetXs);
   // Persistent timed/multi-hit props must not consume every scoring slot.
   // Keep them on stage, and leave one straightforward route to another hit.
@@ -5730,8 +5742,10 @@ function spawnTarget(scene, existingTargetXs = [], guaranteedOption = null) {
     return;
   }
   const fromRight = Phaser.Math.Between(0, 1) === 1;
-  const startX = fromRight ? GAME_WIDTH+450 : -450;
-  const targetX = pickSpacedTargetX(existingTargetXs,scene.cameras.main.zoom);
+  const startX = scene.cameras ? offscreenActorX(scene,fromRight) : (fromRight ? GAME_WIDTH+450 : -450);
+  const extra=GAME_WIDTH*.5*(1/scene.cameras.main.zoom-1);
+  const candidate=pickSpacedTargetX(existingTargetXs,scene.cameras.main.zoom);
+  const targetX=option?.art==='line'?Phaser.Math.Clamp(candidate,200-extra,600+extra):candidate;
   existingTargetXs.push(targetX);
   const profile=ChopCore.targetProfile(currentCity,level,player.weaponLevel,Phaser.Math.Between(1,100));
   profile.high=!!option?.high;
@@ -5743,7 +5757,7 @@ function spawnTarget(scene, existingTargetXs = [], guaranteedOption = null) {
   const maxVisiblePoleHeight = Math.max(540, CHARACTER_BASE_Y - 20 - visibleSkyTop);
   const reach=Math.max(180,Math.floor(Math.pow(Math.max(0,500*getWeaponPowerMultiplier()-100),2)/800-60));
   const tallPoleMax = Math.min(reach, maxVisiblePoleHeight);
-  const poleHeight = isYorkTallWaver
+  const poleHeight = option?.art==='line' ? Math.min(reach,260) : isYorkTallWaver
     ? Phaser.Math.Between(Math.min(360,tallPoleMax), tallPoleMax)
     : Phaser.Math.Between(Math.min(reach,60+Math.min(100,(level-1)*12)),Math.min(reach,100+Math.min(180,(level-1)*20)));
 
@@ -5794,6 +5808,10 @@ function spawnTarget(scene, existingTargetXs = [], guaranteedOption = null) {
   target.barrelPulseTween = null;
   targetGroup.add(target);
   applyTargetWeather(scene, target);
+  if(option?.art==='line'){
+    scene.physics.world.enable(target);target.body.setAllowGravity(false).setImmovable(true);
+    target.lineDestination=targetX;initializeSpecialTarget(scene,target);return;
+  }
 
   scene.tweens.add({
     targets: jester,
@@ -5916,6 +5934,8 @@ function update(time, delta) {
   if (!gameStarted || menuOpen) return;
   updateComboCamera(this,delta);
   anchorCoinChest(this);
+  updateSkyEncounters(this);
+  updateWideWeather(this);
   CastArt.crowd(this,killStreak);
   targetGroup?.getChildren().forEach(target=>{updateTargetMotion(target,this.time.now);CastArt.syncPoleTarget(target);if(target.targetOption?.effect)updateSpecialTarget(this,target);if(target.jester?.poleHands)CastArt.holdPole(target.jester.poleHands,target.jesterPole.rotation);});
   if(chest)chest.setVisible(true);
@@ -5951,7 +5971,7 @@ function update(time, delta) {
       cloud.x -= 12 * delta / 1000;
       if (cloud.x < -800-cloud.width / 2) {
         cloud.x = config.width + 800 + cloud.width / 2;
-        cloud.y = Phaser.Math.Between(-1500, CLOUD_MAX_Y);
+        cloud.y = Phaser.Math.Between(-2700, CLOUD_MAX_Y);
         cloud.setAlpha(Phaser.Math.FloatBetween(0.4, 0.6));
         cloud.setScale(Phaser.Math.FloatBetween(0.8, 1.2));
       }
@@ -5959,9 +5979,9 @@ function update(time, delta) {
     cloudLayerNear.getChildren().forEach(cloud => {
       cloud.setTint(cloudTint);
       cloud.x -= 24 * delta / 1000;
-      if (cloud.x < -cloud.width / 2) {
+      if (cloud.x < -800-cloud.width / 2) {
         cloud.x = config.width + 800 + cloud.width / 2;
-        cloud.y = Phaser.Math.Between(-1500, CLOUD_MAX_Y);
+        cloud.y = Phaser.Math.Between(-2700, CLOUD_MAX_Y);
         cloud.setAlpha(Phaser.Math.FloatBetween(0.4, 0.6));
         cloud.setScale(Phaser.Math.FloatBetween(0.8, 1.2));
       }
@@ -5978,7 +5998,7 @@ function update(time, delta) {
   // Apply extra gravity once heads start falling in the rain
   if (FEATURES.weather && (currentWeather === 'rain' || currentWeather === 'snow') && bodyGroup) {
     bodyGroup.getChildren().forEach(obj => {
-      if ((obj.isHead || obj.isFallingBird) && !obj.rainGravityApplied && obj.body.velocity.y > 0) {
+      if ((obj.isHead || obj.isFallingBird || obj.isFlyingFruit) && obj.body?.enable && !obj.rainGravityApplied && obj.body.velocity.y > 0) {
         obj.body.setGravityY(currentWeather==='snow'?120:300);
         obj.rainGravityApplied = true;
       }

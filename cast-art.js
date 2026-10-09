@@ -253,7 +253,8 @@
   }
   function bird(scene,kind,fromRight) {
     const dove=kind==='dove', outline=0x152b31;
-    const plumage=dove?0xf4e9d1:0x294953, feather=dove?0xd6c9ac:0x537a7c;
+    const palettes={crow:[0x294953,0x537a7c],dove:[0xf4e9d1,0xd6c9ac],swallow:[0x24546e,0xe5bc8b],magpie:[0x233e51,0xe4eddb],owl:[0x986950,0xe6bb7c],phoenix:[0xcb563c,0xffc54f]};
+    const [plumage,feather]=palettes[kind] || palettes.crow;
     const art=scene.add.container(0,0).setScale(fromRight?-1:1,1);
     const tail=scene.add.polygon(-24,5,[0,0,22,6,3,18,7,9],plumage).setStrokeStyle(2,outline);
     const body=scene.add.polygon(0,5,[0,13,9,1,30,0,43,13,34,27,9,25],plumage).setStrokeStyle(2,outline);
@@ -263,6 +264,9 @@
     const beak=scene.add.triangle(33,-3,0,0,13,5,0,8,0xf9c66b).setStrokeStyle(1,outline);
     const eye=scene.add.circle(23,-7,2.5,dove?outline:0xf9c66b);
     art.add([tail,body,facet,wing,head,beak,eye]);
+    if(kind==='owl'){art.add([scene.add.circle(18,-6,6,0xe5cba1),scene.add.circle(28,-6,6,0xe5cba1),scene.add.circle(18,-6,2,outline),scene.add.circle(28,-6,2,outline)]);}
+    if(kind==='swallow')art.add(scene.add.polygon(-34,9,[0,0,20,6,0,20,9,9],plumage).setStrokeStyle(2,outline));
+    if(kind==='phoenix')art.add(scene.add.polygon(19,-20,[0,15,-8,1,3,7,8,-4,13,14],feather).setStrokeStyle(2,outline));
     art.add([scene.add.polygon(-10,12,[0,0,14,4,6,9],dove?0xfff3d8:0x71918c),scene.add.polygon(14,-14,[0,0,12,3,5,8],dove?0xfff3d8:0x71918c),scene.add.polygon(-23,17,[0,0,8,3,4,5],dove?0xb2bca6:0x1d343c)]);
     const flap=scene.tweens.add({targets:wing,angle:{from:-25,to:25},scaleY:{from:.65,to:1},duration:dove?230:280,yoyo:true,repeat:-1,ease:'Sine.easeInOut'});
     art.flapTween=flap;art.once('destroy',()=>flap.stop());

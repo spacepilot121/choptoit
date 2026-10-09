@@ -1,9 +1,9 @@
 (function(root){
   const towns=['York','Durham','Newcastle','Chester','Hull','Lincoln','Canterbury','London','Dover','Norwich','Winchester','Colchester','Oxford','Southampton','Gloucester'];
   const rows=[
-    ['Dinner Bell','bell','buff','Rings out: nearby targets earn double fame for 8 seconds.',{}],
-    ['Apple Crate','crate','scatter','Bursts into five small apples to hit before they fall.',{pieces:5}],
-    ['Washing Line','line','parts','Four hats can be knocked off separately in one flight.',{pieces:4,partArt:'hat'}],
+    ['Dinner Bell','bell','buff','A sonic wave hits nearby targets and doubles fame for 8 seconds.',{}],
+    ['Apple Crate','crate','scatter','Five apples scatter as falling projectiles, blown by wind and weighed down by rain.',{pieces:5}],
+    ['Washing Line','line','parts','Two carriers hold a tall line of hats and clothes. Clear every item before they leave.',{pieces:4,partArt:'hat'}],
     ['Choir Chimes','chimes','sequence','Hit the lit bell three times, with separate projectiles, to complete the tune.',{hits:3,reward:4}],
     ['Stained-glass Wheel','glass','gate','A rotating shutter exposes the golden centre briefly.',{period:2200,window:.42,reward:5}],
     ['Incense Pot','incense','fog','A hit disperses the foreground fog for 8 seconds.',{}],
@@ -60,6 +60,7 @@
     if(!blast && ['offering','bounce'].includes(o.effect)&&!(projectile?.body?.velocity.y>0))return reject();
     if(o.effect==='sequence'&&o.descending&&projectile?.body?.velocity.y<0){target.trickHits=0;api.flash(target,'RESET',0xe0b668);return reject();}
     if(projectile)target.hitSources.add(projectile);
+    if(['bell','chimes'].includes(o.art))api.sonic?.(target,projectile);
     target.specialGold=o.gold || 0;target.fameMultiplier=o.reward || 2;
     if(['armour','sequence'].includes(o.effect)){
       target.trickHits=(target.trickHits || 0)+1;

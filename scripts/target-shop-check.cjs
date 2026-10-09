@@ -40,8 +40,8 @@ const market=ui.targetMarketMarkup();assert.equal((market.match(/data-target-buy
 const journal=ui.arcadeMarkup();assert.equal((journal.match(/data-challenge=/g)||[]).length,100);assert.ok(journal.includes('100 FACES'));assert.ok(journal.includes('Level 15 required'));assert.ok(journal.includes('2000% 2000%'));
 ui.window.Arcade.miss(12);assert.ok(ui.arcadeMarkup().includes('class="missed"'));assert.ok(ui.arcadeMarkup().includes('0 collected · 1 missed'));
 const escape={window:{Arcade:ui.window.Arcade,MobileGame:{feedback(){}}},prisoner:{},prisonerHeadSprite:{castFaceIndex:12},GAME_WIDTH:800,CHARACTER_BASE_Y:1020,CastArt:{expression(){},walk(){}}};
-vm.createContext(escape);vm.runInContext(html.slice(html.indexOf('function savePrisoner('),html.indexOf('function beheadPrisoner(')),escape);
-escape.savePrisoner({tweens:{add(){}}});escape.savePrisoner({tweens:{add(){}}});assert.equal(ui.window.Arcade.state.missedHeads[12],2,'An escaped prisoner is counted once, even if an animation is retriggered');
+escape.CENTER_X=400;vm.createContext(escape);vm.runInContext(html.slice(html.indexOf('function offscreenActorX('),html.indexOf('function anchorCoinChest(')),escape);vm.runInContext(html.slice(html.indexOf('function savePrisoner('),html.indexOf('function beheadPrisoner(')),escape);
+escape.savePrisoner({cameras:{main:{zoom:.35,scrollX:0}},tweens:{add(){}}});escape.savePrisoner({cameras:{main:{zoom:.35,scrollX:0}},tweens:{add(){}}});assert.equal(ui.window.Arcade.state.missedHeads[12],2,'An escaped prisoner is counted once, even if an animation is retriggered');
 const spread={GAME_WIDTH:800,Phaser:{Math:{Between:(min,max)=>min}}};vm.createContext(spread);vm.runInContext(html.slice(html.indexOf('function pickSpacedTargetX('),html.indexOf('function spawnTarget(')),spread);
 assert.equal(spread.pickSpacedTargetX([],1),100);assert.ok(spread.pickSpacedTargetX([],.55)<-200,'A wide combo view offers targets beyond the original left boundary');
 spread.Phaser.Math.Between=(min,max)=>max;assert.ok(spread.pickSpacedTargetX([],.55)>1000,'The expanded right side is playable too');

@@ -50,8 +50,8 @@ class DayNightCycle {
     this.container = scene.add.container(0, 0).setDepth(celestialDepth);
     this.stars = scene.add.graphics();
     for (let i=0;i<300;i++) {
-      const x=i===0?10:i===1?scene.scale.width-10:(Math.random()*3-1)*scene.scale.width;
-      const y=i===2?scene.scale.height*.59:-1600+Math.random()*(1600+scene.scale.height*.6);
+      const x=i===0?10:i===1?scene.scale.width-10:(Math.random()*4-1.5)*scene.scale.width;
+      const y=i===2?scene.scale.height*.59:-4000+Math.random()*(4000+scene.scale.height*.6);
       this.stars.fillStyle(0xf4ead5,.75+(i%3)*.1).fillCircle(x,y,i%5===0?3.4:2.1);
     }
     this.container.add(this.stars);
@@ -80,8 +80,8 @@ class DayNightCycle {
     this.overlay = scene.add.rectangle(
       scene.scale.width / 2,
       scene.scale.height / 2,
-      scene.scale.width * 3,
-      scene.scale.height * 3,
+      scene.scale.width * 4,
+      scene.scale.height * 6,
       this.config.overlayColor,
       1
     );

@@ -1,6 +1,6 @@
 self.CHOP_RELEASE = {
-  "version": "1c82c58a076db7cd",
-  "bytes": 9753426,
+  "version": "bfadc23edd2dcd28",
+  "bytes": 10875122,
   "files": [
     "./arcade.js",
     "./assets/agnes-angular.png",

@@ -126,15 +126,15 @@ for(const floor of [1270,1420,1588]) {
   const camera=new cameras.Camera(0,0,800,1600);
   const gameScene={cameras:{main:camera},remainsFloor:floor};
   context.killStreak=0;context.updateComboCamera(gameScene,16);assert.equal(camera.zoom,1);
-  context.killStreak=20;
+  context.killStreak=40;
   for(let i=0;i<360;i++) {
     context.updateComboCamera(gameScene,16);camera.preRender();
     const worldFloor=camera.getWorldPoint(400,floor);
     assert.ok(Math.abs(worldFloor.y-floor)<.001,'The collection floor stays fixed above the controls throughout zoom');
     assert.ok(Math.abs(worldFloor.x-400)<.001,'The stage stays horizontally centred');
   }
-  assert.ok(Math.abs(camera.zoom-.55)<.00001);assert.ok(camera.worldView.height>2800);assert.ok(camera.worldView.width>1400);
-  assert.ok(camera.worldView.x>=-800&&camera.worldView.right<=1600&&camera.worldView.y>=-1600,'The expanded sky covers the entire zoomed viewport');
+  assert.ok(Math.abs(camera.zoom-.35)<.00001);assert.ok(camera.worldView.height>2800);assert.ok(camera.worldView.width>1400);
+  assert.ok(camera.worldView.x>=-800&&camera.worldView.right<=1600&&camera.worldView.y>=-4000,'The expanded sky covers the entire zoomed viewport');
   context.killStreak=0;
   for(let i=0;i<360;i++)context.updateComboCamera(gameScene,16);
   assert.equal(camera.zoom,1);assert.equal(camera.scrollY,0,'A broken streak returns to the original camera');
@@ -155,7 +155,7 @@ let bounds;
 Object.assign(context,{GAME_WIDTH:800,GAME_HEIGHT:1600,GROUND_Y:1588,STAGE_Y:1080,chest:null,bloodPool:null,bodyGroup:null,document:{querySelector:()=>null}});
 vm.runInContext(html.slice(html.indexOf('function updateRemainsFloor('),html.indexOf('function spawnBasketCarrier(')),context);
 context.updateRemainsFloor({game:{canvas:null},physics:{world:{setBounds(...args){bounds=args;}}}});
-assert.equal(bounds[0],-400);assert.equal(bounds[2],1600);assert.equal(bounds[1]+bounds[3],1588);assert.equal(bounds[6],false,'Heads have more sideways room and no ceiling; the collection floor stays unchanged');
+assert.equal(bounds[0],-1000);assert.equal(bounds[2],2800);assert.equal(bounds[1]+bounds[3],1588);assert.equal(bounds[6],false,'Heads have more sideways room and no ceiling; the collection floor stays unchanged');
 
 // Landmark art belongs only to the central panel; outskirts fill the wide view.
 for(const town of ['york','canterbury','london','dover','durham','norwich','winchester','chester','hull','newcastle','colchester','lincoln','oxford','southampton','gloucester']){
@@ -201,6 +201,7 @@ for(const zoom of [1,.88,.7,.55])for(const floor of [1270,1420,1588]){
  camera.destroy();
 }
 console.log('Prisoner and guard entrances clear every zoom; chest size and position stay fixed; gold and silver fall from above the visible screen.');
+scene.cameras={main:{zoom:.35,scrollX:0}};
 
 // Repeated catches and departures use real Phaser parent destruction safely.
 context.CastArt=art;context.gainFame=()=>{};context.Campaign={state:{targets:0}};context.splatEmitter={explode(){}};context.targetGroup={remove(){}};
@@ -211,7 +212,7 @@ for(let hit=0;hit<22;hit++){
  Object.assign(disc,{targetType:'standard',collected:false,jester:holder,body:{enable:true,setVelocity(){},setAllowGravity(){},setImmovable(){},setCollideWorldBounds(){},destroy(){}}});
  context.handleTargetHit(scene,disc,null);const drop=tweens.at(-1);drop.config.onComplete();
  assert.equal(disc.parentContainer,holder,'Holder catches the hit target');const departure=tweens.at(-1);
- assert.equal(departure.config.x,holder.startFromRight?1250:-450,'Holder exits beyond the widest view');
+ assert.equal(departure.config.x,context.offscreenActorX(scene,holder.startFromRight),'Holder exits beyond the widest view');
  assert.ok(scene.departingCarriers.has(holder));assert.doesNotThrow(()=>departure.config.onComplete());
  assert.equal(holder.scene,undefined);assert.equal(disc.scene,undefined);assert.equal(scene.departingCarriers.size,0);
 }
