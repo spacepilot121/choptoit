@@ -5647,6 +5647,17 @@ function birdFlightLane(weaponMultiplier, launchY) {
   return Math.max(420, Math.min(760, Math.round(launchY - maximumRise + 80)));
 }
 
+function spreadBirdFlightLane(top,bottom,birds,bandCount){
+  const bandHeight=(bottom-top)/bandCount,counts=Array(bandCount).fill(0);
+  for(const bird of birds){
+    const band=Math.max(0,Math.min(bandCount-1,Math.floor((bird.y-top)/bandHeight)));
+    counts[band]++;
+  }
+  const least=Math.min(...counts),available=counts.map((count,i)=>count===least?i:-1).filter(i=>i>=0);
+  const band=available[Phaser.Math.Between(0,available.length-1)];
+  return top+(band+.2+Phaser.Math.Between(0,60)/100)*bandHeight;
+}
+
 function spawnBird(scene) {
   const zoom=scene.cameras?.main.zoom || 1;
   const birdLimit=zoom<.45?6:zoom<.7?3:1;
@@ -5654,9 +5665,15 @@ function spawnBird(scene) {
   const launchY = prisoner.y + prisonerHead.y;
   const weaponMultiplier = getWeaponPowerMultiplier();
   let laneY = birdFlightLane(weaponMultiplier, launchY);
-  if(zoom<.7){const top=scene.cameras.main.worldView.y+GAME_HEIGHT*.23/zoom;const rise=Math.pow(500*weaponMultiplier-100,2)/800;laneY=Math.max(top+100,launchY-rise*.7+Phaser.Math.Between(0,180));}
   const windY = FEATURES.weather && currentWeather === 'wind' ? windForce.y : 0;
   const fullPowerRise = Math.pow(Math.max(0, 500 * weaponMultiplier - windY), 2) / 800;
+  if(zoom<.7){
+    const top=Math.max(scene.cameras.main.worldView.y+GAME_HEIGHT*.2/zoom+80,launchY-fullPowerRise+100);
+    const bottom=launchY-160;
+    if(top>=bottom)return;
+    const flock=targetGroup.getChildren().filter(t=>t.targetType==='bird'&&t.active&&!t.collected);
+    laneY=spreadBirdFlightLane(top,bottom,flock,birdLimit);
+  }
   if (launchY - fullPowerRise > laneY) return;
   const fromRight = Phaser.Math.Between(0, 1) === 1;
   const startX = scene.cameras ? offscreenActorX(scene,fromRight) : (fromRight ? GAME_WIDTH+450 : -450);

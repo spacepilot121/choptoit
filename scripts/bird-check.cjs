@@ -61,3 +61,16 @@ for(const direction of [0,1]) {
   assert.equal(objects.length,count,'Do not spawn a bird above the best shot in adverse wind');
 }
 console.log('Birds stay within the current blade’s reach, face their flight path and release flight/wing animations on destruction.');
+
+// Six birds use six distinct parts of the reachable sky, even with adversarial random choices.
+for(const pick of ['first','last']){
+ const context={Phaser:{Math:{Between:(min,max)=>pick==='first'?min:max}}};vm.createContext(context);
+ vm.runInContext(html.slice(html.indexOf('function spreadBirdFlightLane('),html.indexOf('function spawnBird(')),context);
+ const birds=[];for(let i=0;i<6;i++)birds.push({y:context.spreadBirdFlightLane(-1800,900,birds,6)});
+ const bands=birds.map(b=>Math.floor((b.y+1800)/450));
+ assert.equal(new Set(bands).size,6,'Every flight band receives a bird before any is reused');
+ assert.ok(birds.every(b=>b.y>-1800&&b.y<900));
+ assert.ok(Math.max(...birds.map(b=>b.y))-Math.min(...birds.map(b=>b.y))>2200,'Birds span the sky instead of sharing a narrow lane');
+ const survivor=birds[0];assert.ok(Number.isFinite(context.spreadBirdFlightLane(-400,900,[survivor],3)),'Older flights outside a changed camera view cannot break band selection');
+}
+console.log('Wide flocks fill separate randomized heights across the reachable sky.');
