@@ -112,7 +112,22 @@
     priorFocus?.focus();
     showPendingHint();
   }
+  const flashTimers=new WeakMap();
+  function clearFlash(element) {
+    if(!element)return;
+    clearTimeout(flashTimers.get(element));flashTimers.delete(element);
+    element.classList.remove('unlock-flash','rank-flash');
+  }
+  function flashElement(element,className,duration) {
+    if(!element)return;
+    clearFlash(element);void element.offsetWidth;element.classList.add(className);
+    flashTimers.set(element,setTimeout(()=>clearFlash(element),duration));
+  }
+  function flashUnlock(name) {
+    flashElement(ui.querySelector('.mobile-nav [data-screen="'+name+'"]'),'unlock-flash',6000);
+  }
   function show(name) {
+    clearFlash(ui.querySelector('.mobile-nav [data-screen="'+name+'"]'));
     if (!scene) return;
     const previousScreen = screen;
     const body = el('dialog-body');
@@ -465,8 +480,8 @@
       el('loading-retry').addEventListener('click', () => { el('loading-retry').disabled=true; retry(); });
     },
     ready(s) { clearTimeout(loadingTimer); el('game-loading')?.remove(); scene = s; ui.hidden = false; update(); if (SaveManager.unreadable) show('recovery'); else if (!introRead) { tutorialActive=true;ui.classList.add('is-tutorial'); } if (document.hidden) suspendGame(); if (SaveManager.recovered) toast('Recovered your progress from the last backup.'); else showPendingHint(); },
-    journeyStart(travel) { activeTravel=travel;screen='journey';ui.hidden=true; },
-    journeyFinish(city) { activeTravel=null;screen=null;el('game-dialog').hidden=true;ui.hidden=false;ui.querySelectorAll('.mobile-hud,.mobile-controls,.mobile-nav').forEach(n=>{n.inert=false;});const specialities=window.TargetShop.catalog.filter(p=>p.city===city&&!p.free&&!window.TargetShop.owns(p.id));toast('Welcome to '+city+(specialities.length?' · '+specialities.length+' specialities discovered! Try them here; buy them in the market.':'')); },
+    journeyStart(travel) { travel.firstVisit=!Campaign.state.visited.includes(travel.city.name);activeTravel=travel;screen='journey';ui.hidden=true; },
+    journeyFinish(city) { const discovered=activeTravel?.firstVisit;activeTravel=null;screen=null;el('game-dialog').hidden=true;ui.hidden=false;ui.querySelectorAll('.mobile-hud,.mobile-controls,.mobile-nav').forEach(n=>{n.inert=false;});const specialities=window.TargetShop.catalog.filter(p=>p.city===city&&!p.free&&!window.TargetShop.owns(p.id));if(discovered&&specialities.length)flashUnlock('market'); },
     combo(count,gold,kind) {
       if(count<2)return;
       el('game-toast').hidden=true;
@@ -477,15 +492,13 @@
     },
     strike, isPaused:() => !!screen,
     hint(message) { pendingHint = message; showPendingHint(); },
-    rankUp(rank) {
-      const keys=cities.filter(c=>Math.max(1,c.fameReq)===rank&&!c.unlocked).map(c=>c.name);
-      const cast=ChopCore.castUnlocked(rank),newChallenges=window.Arcade.progress(rank).filter(c=>c.level===rank).length;
-      const message=cast.faces+' faces · '+cast.bodies+' bodies available. '+newChallenges+' new arcade challenges! Visit new cities to discover target-shop specials.';
-      const card=document.createElement('div');card.className='rank-celebration';card.setAttribute('role','status');
-      card.innerHTML='<h2>↑ '+roman(rank)+'</h2>'+icon('workshop');card.setAttribute('aria-label','Rank '+rank+'. '+message);card.title=message;
-      ui.append(card);setTimeout(()=>card.remove(),4800);
-      ui.querySelector('[data-screen="workshop"]')?.classList.add('upgrade-ready');
-      setTimeout(()=>ui.querySelector('[data-screen="workshop"]')?.classList.remove('upgrade-ready'),8000);
+    rankUp(rank, previousRank=rank-1) {
+      const before=ChopCore.castUnlocked(previousRank),after=ChopCore.castUnlocked(rank);
+      const journal=after.faces>before.faces || after.bodies>before.bodies || window.Arcade.progress(rank).some(c=>c.level>previousRank&&c.level<=rank&&!c.claimed);
+      const travel=cities.some(c=>Math.max(1,c.fameReq)>previousRank&&Math.max(1,c.fameReq)<=rank&&!c.unlocked);
+      if(journal)flashUnlock('journal');
+      if(travel)flashUnlock('travel');
+      if(!journal&&!travel)flashElement(el('hud-rank'),'rank-flash',1000);
       ChopAudio.play('reward');
     },
     reward(gold, silver) {

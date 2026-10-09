@@ -107,7 +107,6 @@ body #start-overlay small { color:#dccdb5; font-size:12px; }
 @media(max-height:560px){.mobile-controls{bottom:69px;padding:4px 12px 6px}.shot-steps{margin-bottom:3px;font-size:8px}.shot-meter{height:12px;margin-bottom:5px}#mobile-ui #shot-button{min-height:44px;padding:6px 10px;font-size:14px}.shot-hint{margin-top:4px;font-size:9px;min-height:10px}}
 @media(max-height:560px){.shot-steps,.shot-hint{display:none}#mobile-ui #shot-button{min-height:40px}}
 
-.rank-celebration{position:absolute;left:8%;right:8%;top:27%;z-index:80;text-align:center;padding:22px;background:#25343bf2;border:3px solid #f9c66b;border-radius:16px;color:#f4e9d1;pointer-events:none;animation:rank-pop .4s ease-out}.rank-celebration h2{font:900 36px Georgia;margin:8px;color:#f9c66b}.rank-celebration p{font-size:15px}.upgrade-ready{animation:upgrade-glow .7s alternate infinite}@keyframes rank-pop{from{transform:scale(.6) rotate(-6deg);opacity:0}to{transform:scale(1);opacity:1}}@keyframes upgrade-glow{to{box-shadow:0 0 18px #f9c66b;background:#72594b}}
 
 #hud-gold::before,#hud-fame::before{content:"";display:inline-block;width:12px;height:12px;margin-right:5px;border-radius:50%;vertical-align:-1px;background:#f9c66b;border:2px solid #9c7339;box-sizing:border-box}#hud-fame{color:#cbd5dc;margin-top:3px}#hud-fame::before{width:9px;height:9px;background:#cbd5dc;border-color:#70858e}
 
@@ -141,8 +140,6 @@ body #start-overlay small { color:#dccdb5; font-size:12px; }
 .is-tutorial .shot-hint{display:block;font-size:12px;line-height:1.4;color:#f7eed6}
 .is-tutorial #shot-button:not(:disabled){animation:axe-beacon 1.4s ease-in-out infinite}
 @keyframes axe-beacon{50%{box-shadow:0 0 24px #f9c66b80,0 3px 0 #907149;filter:brightness(1.1)}}
-.rank-celebration{left:32%;right:32%;padding:12px;background:#25343be8}
-.rank-celebration svg{width:26px;height:26px}
 
 /* Five deliberate presses pull back from a sleeping figure into sunrise. */
 body #start-overlay.awakening{display:block;padding:0;background:#07141d;--wake-progress:0;overflow:hidden}
@@ -165,3 +162,11 @@ body #start-overlay.awakening{display:block;padding:0;background:#07141d;--wake-
 #wake-button:disabled{opacity:.7}
 #wake-button:focus-visible{outline:3px solid #fff2d2;outline-offset:6px}
 @media(prefers-reduced-motion:reduce){.wake-world,.wake-pose,.wake-legs,.wake-sun,.wake-shade,.wake-dawn{transition:none}.wake-sleep,#wake-button,.is-tutorial #shot-button:not(:disabled),#mobile-ui .mobile-nav .reward-ready{animation:none}.mobile-nav .reward-ready{box-shadow:inset 0 0 22px #f9c66b66}}
+
+/* Unlocks point to their menu without covering or interrupting the game. */
+#mobile-ui .mobile-nav button.unlock-flash{animation:unlock-beacon .6s ease-in-out 10}
+#mobile-ui .mobile-nav button.unlock-flash svg{filter:drop-shadow(0 0 6px #ffd777)}
+#hud-rank.rank-flash{animation:rank-beacon .25s ease-in-out 4}
+@keyframes unlock-beacon{50%{background:#f9c66b35;box-shadow:inset 0 0 22px #f9c66b77;filter:brightness(1.5)}}
+@keyframes rank-beacon{50%{color:#fff6d6;text-shadow:0 0 12px #ffd777;opacity:.5}}
+@media(prefers-reduced-motion:reduce){#mobile-ui .mobile-nav button.unlock-flash,#hud-rank.rank-flash{animation:none;background:#f9c66b25;box-shadow:inset 0 0 14px #f9c66b66}#hud-rank.rank-flash{color:#fff6d6;text-shadow:0 0 8px #ffd777}}

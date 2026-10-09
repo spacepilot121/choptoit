@@ -5857,7 +5857,7 @@ function addXP(scene, amount) {
     level++;
     xpThreshold = Math.floor(xpThreshold * 1.33);
   }
-  if (level > previousLevel) onLevelUp(scene);
+  if (level > previousLevel) onLevelUp(scene,previousLevel);
   updateXPUI();
   SaveManager.save();
 }
@@ -5868,10 +5868,10 @@ function updateXPUI() {
   xpBarFill.displayWidth = maxWidth * (xp / xpThreshold);
 }
 
-function onLevelUp(scene) {
+function onLevelUp(scene, previousLevel=level-1) {
   if (window.MobileGame) {
     const reached=level;
-    scene.time.delayedCall(650,()=>window.MobileGame.rankUp(reached));
+    scene.time.delayedCall(650,()=>window.MobileGame.rankUp(reached,previousLevel));
     return;
   }
   const msg = scene.add.text(CENTER_X, CENTER_Y, 'LEVEL UP!', { font: '48px monospace', fill: '#ffff00' })
