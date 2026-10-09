@@ -1624,11 +1624,12 @@ function createTargetAppearance(scene, target, type) {
         const outerRadius = target.targetRadius || (isYorkTallWaverTarget ? 30 : 20);
         const innerRadius = outerRadius * .4;
         const outerColor = target.targetColor ?? (target.greenTarget ? 0x8bd1b2 : 0xec805d);
+        const rim = scene.add.circle(0,0,outerRadius+3,0x152b31).setStrokeStyle(1.5,0xf4e9d1);
         const outer = scene.add.circle(0, 0, outerRadius, outerColor).setStrokeStyle(3, 0x152b31);
         const inner = scene.add.circle(0, 0, innerRadius + 3, 0xf4e9d1);
         const bullseye = scene.add.circle(0, 0, Math.max(4, innerRadius / 2), 0x152b31);
         const finish=scene.add.graphics();finish.fillStyle(0xffffff,.14).fillTriangle(-outerRadius+4,-4,-3,-outerRadius+3,1,-innerRadius-4);finish.lineStyle(1,0x152b31,.25).lineBetween(-outerRadius+5,7,-innerRadius-5,10);
-        target.add([outer,finish,inner,bullseye]);
+        target.add([rim,outer,finish,inner,bullseye]);
         for(const a of[0,Math.PI/2,Math.PI,Math.PI*1.5]){const bolt=scene.add.circle(Math.cos(a)*(outerRadius-5),Math.sin(a)*(outerRadius-5),1.7,0xe2b668);target.add(bolt);}
       }
   }
@@ -2091,6 +2092,8 @@ function create() {
   backgroundRect = scene.add.image(CENTER_X, CENTER_Y, window.MobileGame ? `background-${currentCity.toLowerCase()}` : 'background');
   setBackdropCover(backgroundRect, GAME_WIDTH, GAME_HEIGHT, true);
   backgroundRect.setDepth(-2);
+  // A soft daylight haze pushes scenery back while leaving actors saturated.
+  scene.daylightVeil=scene.add.rectangle(CENTER_X,CENTER_Y,GAME_WIDTH*3,GAME_HEIGHT*3,0xd9e2cc).setDepth(-1.6).setAlpha(0);
   // Apply the initial background for the starting city
   updateBackground(scene);
 
@@ -2172,10 +2175,11 @@ function create() {
     .setAngle(25);
   const execBody = scene.add.image(0, 66, 'executionerFigure')
     .setOrigin(0.5, 1).setDisplaySize(136, 208);
-  executioner.add([execBody, executionerWeapon]);
+  const execOutline=scene.add.image(0,66,'executionerFigure').setOrigin(.5,1).setDisplaySize(142,214).setTint(0x152b31);
+  executioner.add([execOutline, execBody, executionerWeapon]);
   scene.executionerHands = scene.add.graphics();
   executioner.add(scene.executionerHands);
-  scene.tweens.add({targets:execBody,y:64,duration:1100,yoyo:true,repeat:-1,ease:'Sine.easeInOut'});
+  scene.tweens.add({targets:[execBody,execOutline],y:64,duration:1100,yoyo:true,repeat:-1,ease:'Sine.easeInOut'});
   executioner.setVisible(false);
 
   // Condemned figure with separate head and body
@@ -5936,6 +5940,7 @@ function update(time, delta) {
 
   if (this.dayNight) {
     this.dayNight.update(delta / 1000);
+    this.daylightVeil?.setAlpha(.22 * .5 * (1-Math.cos(this.dayNight.timeOfDay*Math.PI*2)));
   }
 
   if (FEATURES.clouds && cloudLayerFar && cloudLayerNear) {
@@ -6130,5 +6135,6 @@ if (!window.Phaser || !window.ChopCore || !window.Campaign || !window.Arcade || 
 }
 </script>
 
+<script src="opening.js"></script>
 </body>
 </html>

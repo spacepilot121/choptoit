@@ -13,30 +13,48 @@
     try{toast('Game error recorded · open the ledger for details');}catch(_){}
   }
   window.addEventListener('error',recordRuntimeError);
+  const icons={
+    axe:'M6 21L16 5M12 5L17 2 22 5 20 11 15 12 11 9',
+    aim:'M12 2v4M12 18v4M2 12h4M18 12h4M7 12a5 5 0 1 0 10 0 5 5 0 1 0-10 0',
+    power:'M12 21V3M6 9l6-6 6 6M6 17h12',
+    wait:'M6 2h12M6 22h12M7 2v5l10 10v5M17 2v5L7 17v5',
+    workshop:'M4 20l10-10M10 6l4-4 8 8-4 4zM3 17l4 4',
+    market:'M3 10l2-7h14l2 7M4 10v11h16V10M8 21v-7h5v7M3 10c0 4 6 4 6 0 0 4 6 4 6 0 0 4 6 4 6 0',
+    travel:'M3 12a9 9 0 1 0 18 0 9 9 0 1 0-18 0M16 8l-3 5-5 3 3-5z',
+    journal:'M12 5C8 2 4 3 2 4v16c4-2 7-1 10 1 3-2 6-3 10-1V4c-3-1-7-2-10 1v16M5 8h4M15 8h4M5 12h4M15 12h4',
+    clear:'M12 2v2M12 20v2M2 12h2M20 12h2M5 5l1 1M18 18l1 1M5 19l1-1M18 6l1-1M7 12a5 5 0 1 0 10 0 5 5 0 1 0-10 0',
+    moon:'M20 15A9 9 0 0 1 9 3a9 9 0 1 0 11 12',
+    rain:'M5 13a4 4 0 0 1 0-8 6 6 0 0 1 11 0 4 4 0 0 1 3 8H5M7 16l-2 4M13 16l-2 4M19 16l-2 4',
+    snow:'M12 2v20M3 7l18 10M3 17L21 7M9 3l3 3 3-3M9 21l3-3 3 3',
+    wind:'M2 7h14c6 0 6-6 1-5M2 12h18M2 17h11c6 0 6 6 1 5',
+    fog:'M3 5h12M6 10h15M2 15h16M7 20h14'
+  };
+  const icon=name=>'<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="'+icons[name]+'"/></svg>';
+  const roman=n=>{let result='';for(const [value,symbol]of [[1000,'M'],[900,'CM'],[500,'D'],[400,'CD'],[100,'C'],[90,'XC'],[50,'L'],[40,'XL'],[10,'X'],[9,'IX'],[5,'V'],[4,'IV'],[1,'I']])while(n>=value){result+=symbol;n-=value;}return result;};
   const ui = document.createElement('main');
   ui.id = 'mobile-ui';
   ui.hidden = true;
   ui.innerHTML = `
     <header class="mobile-hud">
-      <div class="hud-row"><div class="hud-place"><strong id="hud-city">York</strong><small id="hud-date"></small></div><div class="hud-gold"><span id="hud-gold">0</span><small>GOLD IN YOUR PURSE</small><small id="hud-fame" aria-label="Fame"></small></div></div>
+      <div class="hud-row"><div class="hud-place"><strong id="hud-city">York</strong><small id="hud-date"></small></div><div class="hud-gold"><span id="hud-gold" aria-label="Gold">0</span><small id="hud-fame" aria-label="Fame"></small></div></div>
       <div class="hud-row hud-meta"><span id="hud-rank"></span><span id="hud-weather"></span></div><div class="rank-track"><i id="hud-xp"></i></div>
-      <button id="contract-track" data-screen="journal" type="button"><small id="contract-caption"></small><span id="contract-next"></span><b aria-hidden="true">›</b></button>
-      <button id="arcade-track" data-screen="journal" type="button"></button>
+      <button id="contract-track" hidden data-screen="journal" type="button"><small id="contract-caption"></small><span id="contract-next"></span><b aria-hidden="true">›</b></button>
+      <button id="arcade-track" hidden data-screen="journal" type="button"></button>
     </header>
     <div id="combo-banner" aria-hidden="true"></div><div class="mobile-toast" id="game-toast" role="status" hidden></div>
     <section class="mobile-controls" aria-label="Shot controls">
-      <div class="shot-steps"><span id="step-timing">01 · TIMING</span><span id="step-aim">02 · AIM</span><span id="step-power">03 · POWER</span></div>
+      <div class="shot-steps"><span id="step-timing">${icon("axe")}</span><span id="step-aim">${icon("aim")}</span><span id="step-power">${icon("power")}</span></div>
       <div class="shot-meter" id="shot-meter" aria-hidden="true"><i class="zone outer"></i><i class="zone middle"></i><i class="zone inner"></i><i class="needle"></i></div>
-      <button id="shot-button" type="button">GET READY</button><p class="shot-hint" id="shot-hint">Your next customer is on the way.</p>
+      <button id="shot-button" type="button" aria-label="Get ready">${icon("wait")}</button><p class="shot-hint" id="shot-hint">Your next customer is on the way.</p>
     </section>
-    <nav class="mobile-nav" aria-label="Game menus"><button data-screen="workshop"><b>⚒</b>Workshop</button><button data-screen="market"><b>◇</b>Market</button><button data-screen="travel"><b>⌁</b>Travel</button><button data-screen="journal"><b>☷</b>Journal</button></nav>
+    <nav class="mobile-nav" aria-label="Game menus"><button data-screen="workshop" aria-label="Workshop" title="Workshop">${icon("workshop")}</button><button data-screen="market" aria-label="Market" title="Market">${icon("market")}</button><button data-screen="travel" aria-label="Travel" title="Travel">${icon("travel")}</button><button data-screen="journal" aria-label="Journal" title="Journal">${icon("journal")}</button></nav>
     <section class="mobile-dialog" id="game-dialog" role="dialog" aria-modal="true" aria-labelledby="dialog-title" hidden>
       <header class="dialog-header"><div><small id="dialog-kicker">CHOP TO IT</small><h2 id="dialog-title"></h2></div><button id="dialog-close" aria-label="Return to game">×</button></header><div class="dialog-body" id="dialog-body"></div>
     </section>`;
   document.body.append(ui);
   const el = id => document.getElementById(id);
   let scene, screen = null, toastTimer, priorFocus, pendingHint = null;
-  let introRead = false;
+  let introRead = false, tutorialActive = false;
   let navigating = false;
   let travelLoading = false;
   let activeTravel = null;
@@ -184,7 +202,7 @@
   function strike() {
     if (!scene || screen || SaveManager.conflict || !inputEnabled || menuOpen) return;
     if (awaitingAngle) { chooseAngle(scene); ChopAudio.play('aim'); }
-    else if (awaitingPower) { choosePower(scene); ChopAudio.play('launch'); }
+    else if (awaitingPower) { choosePower(scene); ChopAudio.play('launch'); if(tutorialActive){tutorialActive=false;introRead=true;ui.classList.remove('is-tutorial');try{localStorage.setItem('choptoit-intro-read','yes');}catch(_){} } }
     else if (swingActive) endSwing(scene);
   }
   function update() {
@@ -204,23 +222,29 @@
     if (el('contract-caption').textContent !== contract.caption) el('contract-caption').textContent = contract.caption;
     if (el('contract-next').textContent !== contract.text) el('contract-next').textContent = contract.text;
     el('contract-track').classList.toggle('reward-ready',contract.ready);
-    ui.querySelector('[data-screen="journal"]:not(#contract-track)').classList.toggle('reward-ready',contract.ready);
+    const journal=ui.querySelector('.mobile-nav [data-screen="journal"]');
+    const rewardReady=contract.ready||progress.some(c=>!c.locked&&!c.claimed&&c.current>=c.goal);
+    journal.classList.toggle('reward-ready',rewardReady);
+    journal.setAttribute('aria-label',rewardReady?'Journal · rewards ready':'Journal');
     if (!Campaign.state.ending && chapterProgress.length && chapterProgress.every(g=>g.current>=g.value) && lastReadyChapter !== Campaign.state.claimed) {
-      lastReadyChapter=Campaign.state.claimed; toast('Contract complete · collect your reward in the Journal');
+      lastReadyChapter=Campaign.state.claimed;
     }
     el('hud-city').textContent = currentCity;
     const t = scene.dayNight.timeOfDay;
     el('hud-date').textContent = `${getDateString()} · ${String(Math.floor(t*24)).padStart(2,'0')}:${String(Math.floor(t*1440)%60).padStart(2,'0')}`;
     el('hud-gold').textContent = Math.floor(player.gold).toLocaleString();
-    el('hud-fame').textContent = Math.floor(fame).toLocaleString()+' FAME';
-    el('hud-rank').textContent = `RANK ${level} · ${killStreak ? `${killStreak} streak` : 'Find your rhythm'}`;
+    el('hud-fame').textContent = Math.floor(fame).toLocaleString();
+    el('hud-rank').textContent = roman(level); el('hud-rank').setAttribute('aria-label','Rank '+level);
     const weatherNames = { clear: 'Clear skies', rain: 'Rain · heavier falls', wind: 'Wind '+arrowForWind(windForce.x,windForce.y)+' · drifting shots', fog: 'Thick fog · watch for gaps', snow:'Snow · heavier falls' };
-    el('hud-weather').textContent = weatherNames[currentWeather];
+    const weatherIcon=currentWeather==='clear'&&(t<.25||t>.75)?'moon':currentWeather;
+    if(el('hud-weather').dataset.icon!==weatherIcon){el('hud-weather').innerHTML=icon(weatherIcon);el('hud-weather').dataset.icon=weatherIcon;}
+    el('hud-weather').setAttribute('aria-label',weatherNames[currentWeather]);el('hud-weather').title=weatherNames[currentWeather];
     el('hud-xp').style.width = `${Math.min(100,xp/xpThreshold*100)}%`;
     let phase = awaitingAngle ? 'aim' : awaitingPower ? 'power' : swingActive ? 'timing' : 'wait';
     ['timing','aim','power'].forEach(p => el(`step-${p}`).classList.toggle('active',phase === p));
     const button = el('shot-button');
-    button.textContent = {timing:'CHOP',aim:'LOCK AIM',power:'LET IT FLY',wait:'GET READY'}[phase];
+    if(button.dataset.phase!==phase){button.innerHTML=icon({timing:'axe',aim:'aim',power:'power',wait:'wait'}[phase]);button.dataset.phase=phase;}
+    button.setAttribute('aria-label',{timing:'Chop',aim:'Lock aim',power:'Launch',wait:'Get ready'}[phase]);
     button.disabled = phase === 'wait' || !inputEnabled || !!screen;
     el('shot-hint').textContent = {timing:'Tap when the marker reaches the mint centre.',aim:'Turn the brass pointer toward a target.',power:'The ribbon previews your arc. Tap to launch.',wait:'Your next customer is on the way.'}[phase];
     let fraction = (cursor.x - 250)/300;
@@ -440,7 +464,7 @@
       el('loading-retry').replaceWith(el('loading-retry').cloneNode(true));
       el('loading-retry').addEventListener('click', () => { el('loading-retry').disabled=true; retry(); });
     },
-    ready(s) { clearTimeout(loadingTimer); el('game-loading')?.remove(); scene = s; ui.hidden = false; update(); if (SaveManager.unreadable) show('recovery'); else if (!introRead) show('welcome'); if (document.hidden) suspendGame(); if (SaveManager.recovered) toast('Recovered your progress from the last backup.'); else showPendingHint(); },
+    ready(s) { clearTimeout(loadingTimer); el('game-loading')?.remove(); scene = s; ui.hidden = false; update(); if (SaveManager.unreadable) show('recovery'); else if (!introRead) { tutorialActive=true;ui.classList.add('is-tutorial'); } if (document.hidden) suspendGame(); if (SaveManager.recovered) toast('Recovered your progress from the last backup.'); else showPendingHint(); },
     journeyStart(travel) { activeTravel=travel;screen='journey';ui.hidden=true; },
     journeyFinish(city) { activeTravel=null;screen=null;el('game-dialog').hidden=true;ui.hidden=false;ui.querySelectorAll('.mobile-hud,.mobile-controls,.mobile-nav').forEach(n=>{n.inert=false;});const specialities=window.TargetShop.catalog.filter(p=>p.city===city&&!p.free&&!window.TargetShop.owns(p.id));toast('Welcome to '+city+(specialities.length?' · '+specialities.length+' specialities discovered! Try them here; buy them in the market.':'')); },
     combo(count,gold,kind) {
@@ -458,7 +482,7 @@
       const cast=ChopCore.castUnlocked(rank),newChallenges=window.Arcade.progress(rank).filter(c=>c.level===rank).length;
       const message=cast.faces+' faces · '+cast.bodies+' bodies available. '+newChallenges+' new arcade challenges! Visit new cities to discover target-shop specials.';
       const card=document.createElement('div');card.className='rank-celebration';card.setAttribute('role','status');
-      card.innerHTML='<small>A CUT ABOVE!</small><h2>RANK '+rank+'!</h2><p>'+message+'</p>'+(keys.length?'<p>City keys available: '+keys.join(', ')+'</p>':'');
+      card.innerHTML='<h2>↑ '+roman(rank)+'</h2>'+icon('workshop');card.setAttribute('aria-label','Rank '+rank+'. '+message);card.title=message;
       ui.append(card);setTimeout(()=>card.remove(),4800);
       ui.querySelector('[data-screen="workshop"]')?.classList.add('upgrade-ready');
       setTimeout(()=>ui.querySelector('[data-screen="workshop"]')?.classList.remove('upgrade-ready'),8000);

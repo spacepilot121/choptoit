@@ -117,3 +117,51 @@ body #start-overlay small { color:#dccdb5; font-size:12px; }
 #mobile-ui #arcade-track{width:100%;min-height:28px;padding:5px 9px;margin-top:5px;font-size:10px;text-align:left;color:#f4deb0;background:#263d39e8;border:1px solid #ad956366;border-radius:3px}
 
 .platform-preview svg{display:block;width:100%;height:auto;margin:12px 0;filter:drop-shadow(0 4px 0 #20313744)}
+
+/* A quiet HUD; detailed progress and instructions live in the journal. */
+.visually-hidden{position:absolute;width:1px;height:1px;overflow:hidden;clip-path:inset(50%);white-space:nowrap}
+.mobile-hud{padding-bottom:22px;background:linear-gradient(#203c40e8, #203c4090 70%,transparent)}
+#hud-rank{font:700 18px Georgia;letter-spacing:2px;color:#f4deb0}
+#hud-weather svg{width:23px;height:23px;display:block;color:#dce7d7}
+#hud-fame{font-size:13px;letter-spacing:0}
+#mobile-ui .mobile-nav button{display:flex;align-items:center;justify-content:center;padding:6px;position:relative}
+.mobile-nav svg{width:27px;height:27px;color:var(--gold)}
+#mobile-ui .mobile-nav .reward-ready{animation:journal-beacon 1.4s ease-in-out infinite}
+.mobile-nav .reward-ready:after{content:'';position:absolute;right:22%;top:9px;width:6px;height:6px;border-radius:50%;background:#ffe2a0;box-shadow:0 0 9px #ffce6f}
+@keyframes journal-beacon{50%{background:#e3b86625;box-shadow:inset 0 0 22px #f9c66b44}}
+.shot-steps{justify-content:center;gap:24px}
+.shot-steps span{display:flex;justify-content:center;opacity:.3}
+.shot-steps span.active{opacity:1}
+.shot-steps svg{width:18px;height:18px}
+#mobile-ui #shot-button svg{display:block;width:32px;height:32px;margin:auto}
+#mobile-ui #shot-button{min-height:56px;padding:8px;box-shadow:0 3px 0 #907149, inset 0 1px 0 #fff2c899}
+#mobile-ui #shot-button[data-phase="aim"]{background:#b0d1bf}
+#mobile-ui #shot-button[data-phase="power"]{background:#e9ac79}
+.shot-hint{display:none}
+.is-tutorial .shot-hint{display:block;font-size:12px;line-height:1.4;color:#f7eed6}
+.is-tutorial #shot-button:not(:disabled){animation:axe-beacon 1.4s ease-in-out infinite}
+@keyframes axe-beacon{50%{box-shadow:0 0 24px #f9c66b80,0 3px 0 #907149;filter:brightness(1.1)}}
+.rank-celebration{left:32%;right:32%;padding:12px;background:#25343be8}
+.rank-celebration svg{width:26px;height:26px}
+
+/* Five deliberate presses pull back from a sleeping figure into sunrise. */
+body #start-overlay.awakening{display:block;padding:0;background:#07141d;--wake-progress:0;overflow:hidden}
+.wake-stage{position:relative;width:min(100vw,calc(var(--shell-vh) / 2));height:var(--shell-vh);margin:auto;overflow:hidden;background:#182a38}
+.wake-dawn{position:absolute;inset:0;background:linear-gradient(#78b3c0 30%,#e7c995 75%,#b7b889);opacity:var(--wake-progress);transition:opacity .75s}
+.wake-world{position:absolute;inset:0;width:100%;height:100%;transform:scale(calc(1.38 - var(--wake-progress) * .38));transform-origin:52% 73%;transition:transform .8s ease-in-out}
+.wake-shade{position:absolute;inset:0;background:#050e19;opacity:calc(.66 - var(--wake-progress) * .66);pointer-events:none;transition:opacity .75s}
+.wake-stars,.wake-moon{opacity:calc(1 - var(--wake-progress));transition:opacity .75s}
+.wake-sun{opacity:var(--wake-progress);transform:translateY(calc(var(--wake-progress) * -410px));transition:transform .75s,opacity .75s}
+.wake-pose{transform:translateY(calc(35px - var(--wake-progress) * 35px)) rotate(calc(-18deg + var(--wake-progress) * 18deg));transform-origin:0 40px;transition:transform .7s}
+.wake-legs{transform:scaleX(calc(1.4 - var(--wake-progress) * .4)) scaleY(calc(.7 + var(--wake-progress) * .3));transition:transform .7s}
+.wake-eyes{opacity:1;transition:opacity .5s}
+[data-wake="3"] .wake-eyes,[data-wake="4"] .wake-eyes,[data-wake="5"] .wake-eyes{opacity:0}
+.wake-sleep{position:absolute;left:67%;top:63%;color:#d7e2ce;font:italic 24px Georgia;animation:sleep-drift 2.5s ease-in-out infinite;opacity:calc(1 - var(--wake-progress) * 2);pointer-events:none}
+.wake-sleep small{font-size:14px}
+@keyframes sleep-drift{50%{transform:translateY(-10px);opacity:.35}}
+#wake-button{position:absolute;bottom:max(7%,35px);left:50%;transform:translateX(-50%);width:112px;height:68px;border:1px solid #e4c58c;border-radius:18px;background:#ebc17a;color:#25343b;cursor:pointer;touch-action:manipulation;animation:axe-beacon 1.5s ease-in-out infinite;box-shadow:0 0 22px #f9c66b66;transition:opacity .4s}
+#wake-button[hidden]{display:none}
+#wake-button svg{width:38px;height:38px}
+#wake-button:disabled{opacity:.7}
+#wake-button:focus-visible{outline:3px solid #fff2d2;outline-offset:6px}
+@media(prefers-reduced-motion:reduce){.wake-world,.wake-pose,.wake-legs,.wake-sun,.wake-shade,.wake-dawn{transition:none}.wake-sleep,#wake-button,.is-tutorial #shot-button:not(:disabled),#mobile-ui .mobile-nav .reward-ready{animation:none}.mobile-nav .reward-ready{box-shadow:inset 0 0 22px #f9c66b66}}

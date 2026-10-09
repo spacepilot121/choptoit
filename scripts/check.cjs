@@ -50,7 +50,7 @@ for(const [name,count] of [['heads',400],['bodies',100],['jesters',4],['weapons'
 }
 console.log('Angular cast atlases contain 100 faces with four expressions each, 100 costumes, four jesters and 30 weapons inside their image bounds.');
 for (const match of html.matchAll(/<script(?:\s[^>]*)?>([\s\S]*?)<\/script>/g)) new vm.Script(match[1]);
-for (const filename of ['arcade.js','target-shop.js','mobile.js','caravan-art.js','cast-art.js','audio.js','dayNightCycle.js','game-core.js','campaign.js','offline.js','sw.js']) new vm.Script(fs.readFileSync(path.join(root,filename),'utf8'));
+for (const filename of ['arcade.js','target-shop.js','mobile.js','opening.js','caravan-art.js','cast-art.js','audio.js','dayNightCycle.js','game-core.js','campaign.js','offline.js','sw.js']) new vm.Script(fs.readFileSync(path.join(root,filename),'utf8'));
 const {advanceMeter} = require('../game-core.js');
 const {launchVelocity,launchPreview}=require('../game-core.js');
 assert.deepEqual(launchVelocity(0,2,1.5,{x:30,y:-10}),{x:30,y:-760});

@@ -8,7 +8,7 @@ const {createPreview}=require('./serve.cjs');
  try{
   for(const persistent of [false,true]){
    const context=await browser.newContext({viewport:{width:390,height:844},isMobile:true,hasTouch:true,serviceWorkers:'block'});
-   await context.addInitScript(()=>localStorage.setItem('choptoit-save',JSON.stringify({gold:321,fame:0,xp:1,level:1,itemsOwned:{},citiesUnlocked:['York'],upgradesOwned:{storageLevel:1,weaponLevel:1}})));
+   await context.addInitScript(()=>{localStorage.setItem('choptoit-intro-read','yes');localStorage.setItem('choptoit-save',JSON.stringify({gold:321,fame:0,xp:1,level:1,itemsOwned:{},citiesUnlocked:['York'],upgradesOwned:{storageLevel:1,weaponLevel:1}}));});
    const page=await context.newPage(),errors=[],requests=[];let unavailable=true;
    page.on('pageerror',error=>errors.push(error.message));
    const asset=persistent?'cast-heads-angular.json':'platform-angular.png';
@@ -29,7 +29,6 @@ const {createPreview}=require('./serve.cjs');
    await page.waitForFunction(()=>!document.querySelector('#game-loading')&&!document.querySelector('#mobile-ui').hidden);
    assert.ok(requests[1].includes('?artwork-retry='),'Retry bypasses a cached failed response');
    assert.equal(await page.evaluate(()=>player.gold),321,'Recovery retains the purse');
-   await page.locator('[data-action="begin"]').tap();
    await page.waitForFunction(()=>swingActive&&inputEnabled);
    assert.deepEqual(errors,[]);
    console.log(persistent?'Persistent atlas error names the file; manual retry recovers with saved gold intact.':'Interrupted artwork recovers automatically.');

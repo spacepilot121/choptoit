@@ -21,8 +21,8 @@ const output=path.resolve(__dirname,'../qa/2026-10-09',process.argv.includes('--
  }
  page.on('pageerror',e=>{errors.push(e.stack);console.log('RUNTIME ERROR',e.stack);});
  try{
-  await page.goto('http://127.0.0.1:'+server.address().port);await page.locator('#start-overlay').tap();
-  if(!process.argv.includes('--resume'))await page.locator('[data-action="begin"]').tap();
+  const enterGame=async()=>{if(await page.locator('#wake-button').count()){await page.locator('#wake-button').waitFor({state:'visible'});for(let i=0;i<5;i++){await page.locator('#wake-button').tap();await page.waitForTimeout(500);}}else await page.locator('#start-overlay').tap();};
+  await page.goto('http://127.0.0.1:'+server.address().port);await enterGame();
   await page.waitForFunction(()=>swingActive&&inputEnabled);
   await page.evaluate(()=>{window.qaEvents=[];for(const name of ['startSwingMeter','spawnPrisoner','endSwing','chooseAngle','choosePower','beheadPrisoner']){const original=window[name];window[name]=function(...args){window.qaEvents.push({name,time:performance.now(),sceneTime:game.scene.scenes[0].time.now,stack:new Error().stack.split('\n').slice(1,4)});return original(...args);};}});
   await page.screenshot({path:path.join(output,'fresh-york.png')});
@@ -30,11 +30,11 @@ const output=path.resolve(__dirname,'../qa/2026-10-09',process.argv.includes('--
   await page.waitForFunction(()=>awaitingAngle);await page.locator('#shot-button').tap();
   await page.waitForFunction(()=>awaitingPower);await page.locator('#shot-button').tap();
   await page.waitForTimeout(1150);
-  const state=await page.evaluate(()=>({kills:killCount,swingActive,betweenSwings,awaitingAngle,awaitingPower,headAttached:prisonerHead.parentContainer===prisoner,headPhysics:prisonerHead.body?.enable,phase:document.querySelector('#shot-button').textContent,round:roundCount}));
+  const state=await page.evaluate(()=>({kills:killCount,swingActive,betweenSwings,awaitingAngle,awaitingPower,headAttached:prisonerHead.parentContainer===prisoner,headPhysics:prisonerHead.body?.enable,phase:document.querySelector('#shot-button').dataset.phase,round:roundCount}));
   console.log('FAST FIRST SHOT',JSON.stringify(state));
   assert.equal(state.round,1,'Only one entrance may run at startup');
   assert.equal(state.swingActive,false,'A launch must not restart the timing meter during flight');
-  assert.equal(state.phase,'GET READY');
+  assert.equal(state.phase,'wait');
   console.log('SHOT EVENTS',JSON.stringify(await page.evaluate(()=>qaEvents)));
   await page.screenshot({path:path.join(output,'fast-shot.png')});
   await page.locator('.mobile-nav [data-screen="journal"]').tap();
@@ -104,16 +104,17 @@ const output=path.resolve(__dirname,'../qa/2026-10-09',process.argv.includes('--
     await page.screenshot({path:path.join(output,'layout-'+width+'.png')});
    }
    const beforeReload=await page.evaluate(()=>{SaveManager.performSave();return {gold:player.gold,kills:killCount,city:currentCity,rank:level};});
-   await page.reload();await page.locator('#start-overlay').tap();await page.waitForFunction(()=>swingActive&&inputEnabled);
+   await page.reload();await enterGame();await page.waitForFunction(()=>swingActive&&inputEnabled);
    assert.deepEqual(await page.evaluate(()=>({gold:player.gold,kills:killCount,city:currentCity,rank:level})),beforeReload,'Reload during power selection preserves earned progress');
    for(const weather of ['clear','wind','rain','snow','fog']){
-    await page.evaluate(weather=>{const random=Math.random,pick=Phaser.Utils.Array.GetRandom;try{Math.random=()=>weather==='clear'?0:.99;Phaser.Utils.Array.GetRandom=()=>weather;applyRandomWeather(game.scene.scenes[0]);}finally{Math.random=random;Phaser.Utils.Array.GetRandom=pick;}},weather);
+    await page.evaluate(weather=>{const random=Math.random,pick=Phaser.Utils.Array.GetRandom,chops=killCount;try{killCount=Math.max(3,killCount);Math.random=()=>weather==='clear'?0:.99;Phaser.Utils.Array.GetRandom=()=>weather;applyRandomWeather(game.scene.scenes[0]);}finally{killCount=chops;Math.random=random;Phaser.Utils.Array.GetRandom=pick;}},weather);
     await page.waitForTimeout(weather==='fog'?7000:500);assert.equal(await page.evaluate(()=>currentWeather),weather);
     await page.screenshot({path:path.join(output,'weather-'+weather+'.png')});
    }
    await page.evaluate(()=>localStorage.setItem('choptoit-runtime-error',JSON.stringify({message:'Test diagnostic',time:new Date().toISOString()})));
-   await page.locator('.mobile-nav [data-screen="journal"]').tap();await page.locator('[data-action="new-game"]').tap();await page.locator('[data-action="confirm-new"]').tap();
-   await page.locator('#start-overlay').tap();await page.locator('[data-action="begin"]').tap();
+   await page.locator('.mobile-nav [data-screen="journal"]').tap();await page.locator('[data-action="new-game"]').tap();await Promise.all([page.waitForEvent('load'),page.locator('[data-action="confirm-new"]').tap()]);
+   await enterGame();
+   await page.waitForFunction(()=>swingActive&&inputEnabled);
    const reset=await page.evaluate(()=>({gold:player.gold,kills:killCount,rank:level,error:localStorage.getItem('choptoit-runtime-error')}));
    assert.deepEqual(reset,{gold:0,kills:0,rank:1,error:null});
    console.log('MOBILE CHECKS',JSON.stringify({sizes:4,pausedPhases:3,reload:true,weather:5,newGame:reset,errors}));
@@ -148,7 +149,7 @@ const output=path.resolve(__dirname,'../qa/2026-10-09',process.argv.includes('--
    for(let shot=0;shot<(process.argv.includes('--diagnostic')?5:120);shot++){
     if(await claimAndPrepare())break;
     await page.waitForFunction(()=>swingActive&&inputEnabled,{},{timeout:20000});
-    await page.waitForFunction(()=>{const button=document.querySelector('#shot-button');if(swingActive&&inputEnabled&&!button.disabled&&button.textContent==='CHOP'&&Math.abs(cursor.x-redZone.x)<5){button.click();return true;}return false;});
+    await page.waitForFunction(()=>{const button=document.querySelector('#shot-button');if(swingActive&&inputEnabled&&!button.disabled&&button.dataset.phase==='timing'&&Math.abs(cursor.x-redZone.x)<5){button.click();return true;}return false;});
     const plan=await page.evaluate(()=>{
      const origin={x:prisoner.x,y:prisoner.y-64},all=targetGroup.getChildren().filter(t=>t.active&&!t.collected&&t.body?.enable),basic=all.filter(t=>t.targetType==='standard'),targets=basic.length?basic:all;
      let best={distance:Infinity,angle:0,power:1.8};
@@ -156,9 +157,9 @@ const output=path.resolve(__dirname,'../qa/2026-10-09',process.argv.includes('--
      return {...best,origin,weather:currentWeather,targets:targets.map(t=>({x:t.x,y:t.y,id:t.targetOption?.id,type:t.targetType,motion:t.targetOption?.motion}))};
     });
     await page.evaluate(()=>window.qaPreviousAngle=aimArrow.angle);
-    await page.waitForFunction(angle=>{const previous=window.qaPreviousAngle;window.qaPreviousAngle=aimArrow.angle;const button=document.querySelector('#shot-button');if(awaitingAngle&&!button.disabled&&button.textContent==='LOCK AIM'&&(Math.abs(aimArrow.angle-angle)<2||(previous-angle)*(aimArrow.angle-angle)<0)){button.click();return true;}return false;},plan.angle);
+    await page.waitForFunction(angle=>{const previous=window.qaPreviousAngle;window.qaPreviousAngle=aimArrow.angle;const button=document.querySelector('#shot-button');if(awaitingAngle&&!button.disabled&&button.dataset.phase==='aim'&&(Math.abs(aimArrow.angle-angle)<2||(previous-angle)*(aimArrow.angle-angle)<0)){button.click();return true;}return false;},plan.angle);
     await page.evaluate(()=>window.qaPreviousPower=aimArrow.scaleY);
-    await page.waitForFunction(power=>{const previous=window.qaPreviousPower;window.qaPreviousPower=aimArrow.scaleY;const button=document.querySelector('#shot-button');if(awaitingPower&&!button.disabled&&button.textContent==='LET IT FLY'&&(Math.abs(aimArrow.scaleY-power)<.025||(previous-power)*(aimArrow.scaleY-power)<0)){button.click();return true;}return false;},plan.power);
+    await page.waitForFunction(power=>{const previous=window.qaPreviousPower;window.qaPreviousPower=aimArrow.scaleY;const button=document.querySelector('#shot-button');if(awaitingPower&&!button.disabled&&button.dataset.phase==='power'&&(Math.abs(aimArrow.scaleY-power)<.025||(previous-power)*(aimArrow.scaleY-power)<0)){button.click();return true;}return false;},plan.power);
     await page.waitForFunction(()=>swingActive&&inputEnabled,{},{timeout:20000});
     diagnostics.push({plan,actual:await page.evaluate(()=>qaLastLaunch),hits:await page.evaluate(()=>Campaign.state.targets)});
     fs.writeFileSync(path.join(output,'shots.json'),JSON.stringify(diagnostics,null,2));
@@ -170,9 +171,10 @@ const output=path.resolve(__dirname,'../qa/2026-10-09',process.argv.includes('--
    console.log('FINAL',JSON.stringify({ending:final.campaign.ending,kills:final.kills,level:final.level,gold:final.gold,targets:final.campaign.targets,errors}));
   }
  }catch(error){
+  console.log('PLAYTEST FAILURE',error.message);
   await page.screenshot({path:path.join(output,'failure.png')});
   fs.writeFileSync(path.join(output,'failure-events.json'),JSON.stringify(await page.evaluate(()=>window.qaEvents||[]),null,2));
-  console.log('FAILURE STATE',JSON.stringify(await page.evaluate(()=>({swingActive,awaitingAngle,awaitingPower,inputEnabled,paused:MobileGame.isPaused(),phase:document.querySelector('#shot-button').textContent,angle:aimArrow.angle,power:aimArrow.scaleY,kills:killCount,round:roundCount}))));
+  console.log('FAILURE STATE',JSON.stringify(await page.evaluate(()=>({swingActive,awaitingAngle,awaitingPower,inputEnabled,paused:MobileGame.isPaused(),phase:document.querySelector('#shot-button')?.dataset.phase,angle:aimArrow?.angle,power:aimArrow?.scaleY,kills:killCount,round:roundCount}))));
   await page.evaluate(()=>SaveManager.performSave());
   fs.writeFileSync(path.join(output,'checkpoint.json'),JSON.stringify(await page.evaluate(()=>localStorage.getItem('choptoit-save'))));
   throw error;
