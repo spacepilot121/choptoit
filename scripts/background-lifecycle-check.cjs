@@ -114,6 +114,13 @@ for(const roll of [.2,.6,.9]) {
   art.roadLife(scene,'farmland');
   timers[first].callback();
   const encounter=tweens.at(-1);
+  if(roll===.9){
+    assert.equal(encounter.config.targets.fieldGrazer,true,'Field encounter is a grazing horse');
+    assert.equal(encounter.config.targets.y,1053,'Horse feet belong to the field behind the fence');
+    assert.ok(encounter.config.targets.depth<0,'The fence occludes the field horse');
+    assert.ok(encounter.config.duration>=15000,'Field animal moves at scenery speed');
+    assert.ok(encounter.config.targets.list.length>=3,'Faceted body has separate neck and tail rigs');
+  }
   assert.doesNotThrow(()=>encounter.config.onComplete());
   assert.equal(encounter.config.targets.scene,undefined);
 }

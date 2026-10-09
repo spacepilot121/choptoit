@@ -204,7 +204,7 @@
       const face=scene.add.polygon(20,-5,[0,0,7,-3,13,5,9,14,2,12],0x655748);sheep.add(face);animate(face,{angle:{from:-12,to:18},duration:1300+i*330,yoyo:true,repeat:-1});
     }
     for(let i=0;i<12;i++){
-      const near=i>=8,y=near?1390:1138;
+      const near=i>=8,y=near?1440:1039-(i%3)*21;
       const prop=scene.add.container(i*115-100,y).setDepth(near?12:-1);
       prop.roadSpeed=near?.21:.065;
       const size=.6+((i*7)%5)*.17;prop.setScale(size);
@@ -212,18 +212,70 @@
         prop.add([scene.add.polygon(0,-8,[0,19,11,1,32,0,48,17,32,27,6,26],0x839383),scene.add.polygon(3,-12,[0,12,12,0,32,0,23,13],0xb1b6a0)]);
       }else if(i%4===1&&route!=='woodland'){
         prop.add([scene.add.rectangle(0,-25,8,50,0x79634c),scene.add.polygon(0,-45,[0,0,66,0,77,12,66,24,0,24],0xbfa57b).setStrokeStyle(2,0x665548),scene.add.rectangle(23,-45,18,3,0x665548)]);
+      }else if(near){
+        paintShapes(scene,prop,[{kind:'polygon',points:[[-12,0],[-8,-19],[-2,-4],[5,-28],[9,-4],[20,-14],[13,3]],fill:'#91a071'},{kind:'polygon',points:[[2,-21],[6,-28],[12,-22],[7,-17]],fill:'#dfb776'}]);
       }else{
         paintShapes(scene,prop,window.CaravanArt.tree(i+(route==='uplands'?2:0)));
       }
       props.push(prop);
     }
+    // A separate foreground layer occludes trees and animals in the field.
+    const fence=scene.add.graphics().setDepth(0);
+    for(let i=0;i<13;i++){
+      const x=i*69;
+      fence.fillStyle(0x78664e).fillRect(x,1080,7,94);
+      fence.fillStyle(0xbda476).fillTriangle(x,1080,x+4,1069,x+7,1080);
+    }
+    fence.lineStyle(7,0xb49770).lineBetween(0,1103,800,1103).lineBetween(0,1135,800,1135);
     return props;
+  }
+  function grazingHorse(scene) {
+    const horse=scene.add.container(900,1053).setDepth(-.4).setScale(.88);
+    horse.fieldGrazer=true;
+    const facet=(points,fill)=>({kind:'polygon',points,fill});
+    // Feet stay planted while the field passes; joints never rotate like walking legs.
+    paintShapes(scene,horse,[
+      facet([[-38,-49],[-26,-47],[-24,-25],[-31,-6],[-29,0],[-41,0],[-39,-9],[-35,-27]],'#735443'),
+      facet([[24,-47],[35,-45],[33,-23],[27,-5],[31,0],[18,0],[21,-9],[23,-25]],'#735443'),
+      facet([[-57,-63],[-43,-79],[16,-78],[43,-65],[39,-43],[25,-34],[-30,-36],[-51,-47]],'#ad7954'),
+      facet([[-54,-61],[-39,-74],[9,-72],[27,-62],[-2,-53],[-35,-52]],'#ce9a6c'),
+      facet([[-49,-48],[-24,-44],[16,-44],[36,-56],[27,-36],[-28,-36]],'#8b5f46'),
+      facet([[-22,-69],[12,-72],[29,-60],[8,-54],[-17,-55]],'#ba865d'),
+      facet([[-48,-49],[-35,-47],[-32,-25],[-39,-6],[-37,0],[-49,0],[-47,-10],[-42,-28]],'#b48059'),
+      facet([[-40,-45],[-35,-47],[-32,-25],[-39,-6],[-43,-8],[-38,-27]],'#d1a579'),
+      facet([[13,-44],[25,-47],[24,-25],[18,-6],[22,0],[9,0],[12,-10],[13,-26]],'#bc8b62'),
+      facet([[20,-44],[25,-47],[24,-25],[18,-6],[14,-8],[19,-26]],'#dbb183'),
+      facet([[-49,-5],[-38,-5],[-37,0],[-50,0]],'#3c4240'),
+      facet([[10,-5],[20,-5],[22,0],[9,0]],'#3c4240')
+    ]);
+    const tail=scene.add.container(-53,-63);horse.add(tail);
+    paintShapes(scene,tail,[facet([[0,0],[-10,5],[-14,25],[-24,40],[-13,36],[-6,21],[4,5]],'#493f37'),facet([[-6,7],[-10,26],[-20,37],[-10,32],[0,9]],'#786250')]);
+    const neck=scene.add.container(29,-66);horse.add(neck);
+    paintShapes(scene,neck,[
+      facet([[0,-4],[12,-2],[20,16],[32,39],[22,47],[6,25],[-5,10]],'#ae7a52'),
+      facet([[7,1],[12,-2],[20,16],[32,39],[26,42],[13,19]],'#d5a476'),
+      facet([[-5,-4],[1,-5],[9,7],[16,23],[25,38],[19,42],[7,26],[-2,14]],'#4f4135'),
+      facet([[19,31],[30,33],[38,47],[41,56],[35,62],[24,60],[15,47]],'#b9845d'),
+      facet([[27,35],[33,38],[39,52],[32,55],[23,48]],'#dbb58a'),
+      facet([[25,50],[40,52],[41,58],[35,62],[24,59]],'#d4b89a'),
+      facet([[18,37],[13,27],[20,29],[25,39]],'#a1714e'),
+      facet([[27,36],[27,24],[32,27],[33,39]],'#bf936e'),
+      facet([[30,38],[33,46],[31,51],[27,45]],'#f0d8b0'),
+      facet([[19,34],[24,36],[28,44],[22,44]],'#564639'),
+      {kind:'circle',x:24,y:43,r:1.8,fill:'#263637'},
+      {kind:'circle',x:36,y:56,r:1.5,fill:'#6d5e50'},
+      {kind:'line',points:[[29,59],[35,60]],width:1,fill:'#8a6d56'}
+    ]);
+    const animate=(target,config)=>{const tween=scene.tweens.add({targets:target,...config});horse.once('destroy',()=>tween.stop());};
+    animate(neck,{angle:{from:-3,to:3},duration:2100,yoyo:true,repeat:-1,ease:'Sine.easeInOut'});
+    animate(tail,{angle:{from:-6,to:12},duration:900,hold:100,repeatDelay:2600,yoyo:true,repeat:-1,ease:'Sine.easeInOut'});
+    return horse;
   }
   function roadLife(scene,route) {
     const animate=(actor,config)=>{const tween=scene.tweens.add({targets:actor,...config,onComplete:()=>actor.destroy()});actor.once('destroy',()=>tween.stop());};
     const spawn=()=>{
       const roll=Math.random();
-      if(roll<.4){
+      if(roll<.4||((route==='coast'||route==='estuary')&&roll>=.75)){
         const edges=backgroundBirdEdges(scene);
         const birdArt=bird(scene,'dove',false).setPosition(edges.left,430+Math.random()*180).setScale(.65).setDepth(-.5);
         animate(birdArt,{x:edges.right,y:birdArt.y-35,duration:4800});
@@ -235,10 +287,9 @@
         const pack=scene.add.polygon(-34,-16,[0,0,28,-8,32,28,6,35],0xb38d60).setStrokeStyle(2,0x655748);
         passer.add([pack,coat,face]);walk(scene,passer,6200);animate(passer,{x:fromRight?-80:880,duration:6200});
       }else{
-        const deer=scene.add.container(900,1050).setDepth(-.4);
-        deer.add([scene.add.polygon(0,-24,[0,9,12,0,47,0,66,12,57,26,11,25],0xb89768),scene.add.polygon(30,-43,[0,0,14,-5,17,39,2,36],0xb89768),scene.add.polygon(42,-64,[0,0,17,-8,35,0,27,12,5,12],0xb89768),scene.add.polygon(37,-78,[0,12,4,0,10,12],0xb89768),scene.add.polygon(4,-28,[0,0,25,4,37,19,8,16],0xd2b487),scene.add.circle(49,-66,2,0x25343b)]);
-        for(const x of [-23,20]){const leg=scene.add.rectangle(x,-8,6,28,0x584c40);deer.add(leg);const gait=scene.tweens.add({targets:leg,angle:{from:-25,to:25},duration:160,yoyo:true,repeat:-1});leg.once('destroy',()=>gait.stop());}
-        animate(deer,{x:-100,duration:3100});
+        const horse=grazingHorse(scene);
+        // Match the slow field parallax, rather than sliding a running animal past.
+        animate(horse,{x:-160,duration:16300});
       }
     };
     scene.time.delayedCall(1000,spawn);
