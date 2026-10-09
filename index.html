@@ -1959,75 +1959,86 @@ function pickClass() {
 
 function preload() {
   this.assetLoadFailed = false;
-  this.load.on('progress', value => window.MobileGame?.loadProgress(value));
-  this.load.on('loaderror', () => {
+  this.failedArtwork = [];
+  // Scene restarts retain loaded textures. Replace listeners on each retry.
+  if (this.artworkProgress) this.load.off('progress', this.artworkProgress);
+  if (this.artworkError) this.load.off('loaderror', this.artworkError);
+  this.artworkProgress = value => window.MobileGame?.loadProgress(value);
+  this.artworkError = file => {
     this.assetLoadFailed = true;
-    window.MobileGame?.loadFailed();
-  });
-  this.load.image('logo', 'logo.png');
+    this.failedArtwork.push(String(file?.src || file?.url || file?.key || 'Unknown artwork'));
+  };
+  this.load.on('progress', this.artworkProgress);
+  this.load.on('loaderror', this.artworkError);
+  if (window.MobileGame) this.load.maxParallelDownloads = 4;
+  // Bypass cached failed responses. Normal offline paths stay unchanged.
+  const artworkURL = file => this.artworkRetryCount ? file + '?artwork-retry=' + this.artworkRetryCount + '-' + Date.now() : file;
+  const loadImage = (key, file) => this.load.image(key, artworkURL(file));
+  const loadAtlas = (key, image, json) => this.load.atlas(key, artworkURL(image), artworkURL(json));
+  loadImage('logo', 'logo.png');
   for (let i = 1; !window.MobileGame && i <= 10; i++) {
-    this.load.image(`intro${i}`, `intro${i}.png`);
+    loadImage(`intro${i}`, `intro${i}.png`);
   }
-  if (!window.MobileGame) this.load.image('shop', 'shop.png');
-  this.load.image('platform', 'assets/platform-angular.png');
-  this.load.atlas('specialTargets','assets/special-targets.png','assets/special-targets.json');
-  this.load.atlas('stageUpgrades','assets/stage-upgrades.png','assets/stage-upgrades.json');
-  this.load.image('executionerHead', 'executionerhead.png');
-  this.load.image('executionerFigure', 'assets/executioner-angular.png');
-  this.load.image('angularRoad','assets/road-angular.png');
-  for(const route of ['farmland','woodland','coast','estuary','uplands'])this.load.image('road-'+route,'assets/road-'+route+'-angular.png');
-  this.load.atlas('castHeads','assets/cast-heads-angular.png','assets/cast-heads-angular.json');
-  this.load.atlas('castBodies','assets/cast-bodies-angular.png','assets/cast-bodies-angular.json');
-  this.load.atlas('castJesters','assets/cast-jesters-angular.png','assets/cast-jesters-angular.json');
-  this.load.atlas('castWeapons','assets/cast-weapons-angular.png','assets/cast-weapons-angular.json');
-  this.load.image('executionerBody', 'executionerbody.png');
-  this.load.image('escortHead', 'escorthead.png');
-  this.load.image('escortBody', 'escortbody.png');
-  this.load.image('chestOpen', 'goldchest_open.png');
-  this.load.image('chestClosed', 'goldchest_closed.png');
+  if (!window.MobileGame) loadImage('shop', 'shop.png');
+  loadImage('platform', 'assets/platform-angular.png');
+  loadAtlas('specialTargets','assets/special-targets.png','assets/special-targets.json');
+  loadAtlas('stageUpgrades','assets/stage-upgrades.png','assets/stage-upgrades.json');
+  loadImage('executionerHead', 'executionerhead.png');
+  loadImage('executionerFigure', 'assets/executioner-angular.png');
+  loadImage('angularRoad','assets/road-angular.png');
+  for(const route of ['farmland','woodland','coast','estuary','uplands'])loadImage('road-'+route,'assets/road-'+route+'-angular.png');
+  loadAtlas('castHeads','assets/cast-heads-angular.png','assets/cast-heads-angular.json');
+  loadAtlas('castBodies','assets/cast-bodies-angular.png','assets/cast-bodies-angular.json');
+  loadAtlas('castJesters','assets/cast-jesters-angular.png','assets/cast-jesters-angular.json');
+  loadAtlas('castWeapons','assets/cast-weapons-angular.png','assets/cast-weapons-angular.json');
+  loadImage('executionerBody', 'executionerbody.png');
+  loadImage('escortHead', 'escorthead.png');
+  loadImage('escortBody', 'escortbody.png');
+  loadImage('chestOpen', 'goldchest_open.png');
+  loadImage('chestClosed', 'goldchest_closed.png');
   if (!window.MobileGame) {
-    this.load.image('signTravel', 'sign_travel.png');
-    this.load.image('signStorage', 'sign_storage.png');
-    this.load.image('signWeapons', 'sign_weapons.png');
-    this.load.image('signClose', 'sign_close.png');
-    this.load.image('mapNorth', 'map_north.png');
-    this.load.image('mapSouth', 'map_south.png');
-    this.load.image('backgroundTravel', 'background_travel1.png');
-    this.load.image('backgroundTravelMenu', 'background_travelmenu.png');
-    this.load.image('backgroundStorage', 'background_storage.png');
-    this.load.image('upgradeButton', 'upgrade_button.png');
-    for (let i = 1; i <= 16; i++) this.load.image(`storage${i}`, `storage_${i}.png`);
-    this.load.image('backgroundWeapons', 'background_weapons.png');
-    for (let i = 1; i <= 30; i++) this.load.image(`weapons${i}`, `weapons${i}.png`);
-    this.load.image('background', 'background.png');
-    this.load.image('backgroundSky', 'background_bluesky.png');
+    loadImage('signTravel', 'sign_travel.png');
+    loadImage('signStorage', 'sign_storage.png');
+    loadImage('signWeapons', 'sign_weapons.png');
+    loadImage('signClose', 'sign_close.png');
+    loadImage('mapNorth', 'map_north.png');
+    loadImage('mapSouth', 'map_south.png');
+    loadImage('backgroundTravel', 'background_travel1.png');
+    loadImage('backgroundTravelMenu', 'background_travelmenu.png');
+    loadImage('backgroundStorage', 'background_storage.png');
+    loadImage('upgradeButton', 'upgrade_button.png');
+    for (let i = 1; i <= 16; i++) loadImage(`storage${i}`, `storage_${i}.png`);
+    loadImage('backgroundWeapons', 'background_weapons.png');
+    for (let i = 1; i <= 30; i++) loadImage(`weapons${i}`, `weapons${i}.png`);
+    loadImage('background', 'background.png');
+    loadImage('backgroundSky', 'background_bluesky.png');
   }
   // All townsfolk faces are supplied by castHeads; legacy numeric IDs still
   // select the same illustrated variants through CastArt.head.
   for (let i = 1; i <= 3; i++) {
     const bodyKey = `prisonerBody${i}`;
     const bodyFile = i === 1 ? 'prisonerbody.png' : `prisonerbody${i}.png`;
-    this.load.image(bodyKey, bodyFile);
+    loadImage(bodyKey, bodyFile);
   }
-  this.load.image('priestBody', 'prisonerbody_priest.png');
-  this.load.image('jesterHead1', 'jesterhead.png');
-  this.load.image('jesterBody1', 'jesterbody.png');
-  this.load.image('jesterHead2', 'jesterhead2.png');
-  this.load.image('jesterBody2', 'jesterbody2.png');
-  this.load.image('jesterHead3', 'jesterhead3.png');
-  this.load.image('jesterBody3', 'jesterbody3.png');
-  this.load.image('jesterHead4', 'jesterhead4.png');
-  this.load.image('jesterBody4', 'jesterbody4.png');
+  loadImage('priestBody', 'prisonerbody_priest.png');
+  loadImage('jesterHead1', 'jesterhead.png');
+  loadImage('jesterBody1', 'jesterbody.png');
+  loadImage('jesterHead2', 'jesterhead2.png');
+  loadImage('jesterBody2', 'jesterbody2.png');
+  loadImage('jesterHead3', 'jesterhead3.png');
+  loadImage('jesterBody3', 'jesterbody3.png');
+  loadImage('jesterHead4', 'jesterhead4.png');
+  loadImage('jesterBody4', 'jesterbody4.png');
   // Mobile starts with only the saved town. Other towns remain in the offline
   // package and are decoded on travel, avoiding fourteen large startup images.
   Object.entries(cityBackgrounds).filter(([name]) => !window.MobileGame || name === currentCity).forEach(([name, file]) => {
     const key = `background-${name.toLowerCase()}`;
-    this.load.image(key, file);
+    loadImage(key, file);
   });
   // Load dedicated travel backgrounds.
   if (!window.MobileGame) travelBackgrounds.forEach((file, i) => {
     const key = `background-travel${i + 1}`;
-    this.load.image(key, file);
+    loadImage(key, file);
   });
 }
 
@@ -2055,7 +2066,20 @@ function create() {
   const scene = this;
   // World bounds use the world's flags, rather than Body.checkCollision.up.
   scene.physics.world.checkCollision.up=false;
-  if (scene.assetLoadFailed) { scene.scene.pause(); return; }
+  if (scene.assetLoadFailed) {
+    scene.scene.pause();
+    const retry = () => {
+      scene.artworkRetryCount = (scene.artworkRetryCount || 0) + 1;
+      window.MobileGame?.loading('Retrying the artwork download…');
+      scene.scene.restart();
+    };
+    // Retry one brief interruption automatically; keep persistent failures
+    // visible with filenames and a manual retry without changing the save.
+    if (window.MobileGame && !scene.artworkRetryCount) retry();
+    else window.MobileGame?.loadFailed(scene.failedArtwork, retry);
+    return;
+  }
+  scene.artworkRetryCount = 0;
 
   // Background and stage art
   skyRect = window.MobileGame

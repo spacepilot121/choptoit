@@ -406,11 +406,13 @@
     try { SaveManager.checkCurrent(); } catch (error) { SaveManager.handleError(error); }
   });
   window.MobileGame = {
-    loading() {
+    loading(message) {
       loadingFailed = false;
+      el('game-loading')?.remove();
       const loading = document.createElement('div'); loading.id = 'game-loading'; loading.setAttribute('role','status');
       loading.innerHTML = '<span class="eyebrow">CHOP TO IT</span><h2>Opening the gates…</h2><p id="loading-copy">Gathering the townsfolk and sharpening your axe.</p><progress id="loading-progress" max="100" value="0" aria-label="Game download progress"></progress><span id="loading-percent">0%</span><button id="loading-retry" type="button" hidden>Try again</button>';
       document.body.append(loading);
+      if (message) el('loading-copy').textContent=message;
       el('loading-retry').addEventListener('click', () => location.reload());
       clearTimeout(loadingTimer);
       loadingTimer = setTimeout(() => {
@@ -425,14 +427,18 @@
       el('loading-progress').value=percent; el('loading-percent').textContent=`${percent}%`;
       if (percent===100) el('loading-copy').textContent='Opening the town square…';
     },
-    loadFailed() {
+    loadFailed(files = [], retry = () => location.reload()) {
       clearTimeout(loadingTimer); loadingFailed=true;
       const loading=el('game-loading'); if (!loading) return;
       loading.setAttribute('role','alert');
       loading.querySelector('h2').textContent='The gates are stuck';
-      el('loading-copy').textContent='Some game artwork could not download. Check your connection and try again. Your saved progress has not been changed.';
+      const filenames=[...new Set(files.map(file=>String(file).split('?')[0].split('/').pop()))].join(', ');
+      el('loading-copy').textContent='Artwork could not load'+(filenames?': '+filenames:'')+'. Try again when connected. Your saved progress is safe.';
+      recordRuntimeError({message:'Artwork download failed: '+files.join(', ')});
       el('loading-progress').hidden=true; el('loading-percent').hidden=true;
       el('loading-retry').hidden=false;
+      el('loading-retry').replaceWith(el('loading-retry').cloneNode(true));
+      el('loading-retry').addEventListener('click', () => { el('loading-retry').disabled=true; retry(); });
     },
     ready(s) { clearTimeout(loadingTimer); el('game-loading')?.remove(); scene = s; ui.hidden = false; update(); if (SaveManager.unreadable) show('recovery'); else if (!introRead) show('welcome'); if (document.hidden) suspendGame(); if (SaveManager.recovered) toast('Recovered your progress from the last backup.'); else showPendingHint(); },
     journeyStart(travel) { activeTravel=travel;screen='journey';ui.hidden=true; },
