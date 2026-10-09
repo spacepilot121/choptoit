@@ -111,9 +111,9 @@
     }
     const townIndex=['york','canterbury','london','dover','durham','norwich','winchester','chester','hull','newcastle','colchester','lincoln','oxford','southampton','gloucester'].indexOf(city.toLowerCase());
     // Poles are fixed to the two house gables; only the fabric moves around its attachment.
-    for(const [x,roof]of [[38,695+(townIndex%3)*35],[770,730-(townIndex%4)*20]]){const pole=scene.add.rectangle(x,roof-22,4,48,0x665548),flag=scene.add.polygon(x,roof-45,[0,0,34,3,28,26,0,23],city.length%2?0xba6857:0x728ea0).setOrigin(0,0);life.add([pole,flag]);animate(flag,{scaleX:{from:.86,to:1},duration:900,yoyo:true,repeat:-1,ease:'Sine.easeInOut'});}
+    for(const [x,roof]of [[-52.5,695+(townIndex%3)*35],[810,730-(townIndex%4)*20]]){const pole=scene.add.rectangle(x,roof-22,4,48,0x665548),flag=scene.add.polygon(x,roof-45,[0,0,34,3,28,26,0,23],city.length%2?0xba6857:0x728ea0).setOrigin(0,0);life.add([pole,flag]);animate(flag,{scaleX:{from:.86,to:1},duration:900,yoyo:true,repeat:-1,ease:'Sine.easeInOut'});}
     // Anchors match the chimneys painted into the two foreground house roofs.
-    for(const [cx,cy]of [[87,692+(townIndex%3)*35],[710,727-(townIndex%4)*20]]){
+    for(const [cx,cy]of [[-3,692+(townIndex%3)*35],[750,727-(townIndex%4)*20]]){
       for(let i=0;i<3;i++){const smoke=scene.add.ellipse(cx,cy-5,13+i*7,17+i*6,0xd0d3bd,.2);life.add(smoke);animate(smoke,{y:cy-80,x:cx+25,alpha:0,duration:2600,delay:i*750,repeat:-1});}
     }
     if(['Hull','Dover','Southampton','Newcastle'].includes(city)){

@@ -167,10 +167,15 @@ for(const town of ['york','canterbury','london','dover','durham','norwich','winc
  assert.ok(!svg.includes('clip-path="url(#town-panel)"'),'Scenery joins must not cut buildings in half: '+town);
  assert.equal((svg.match(/data-continuous-skyline=/g)||[]).length,1,'One skyline spans every join: '+town);
  assert.equal((svg.match(/data-continuous-street=/g)||[]).length,1,'Street and quay patterns do not restart at joins: '+town);
+ const townAnimation=art.townLife(scene,town);
+ const poles=townAnimation.list.filter(part=>part.width===4&&part.height===48);
+ assert.equal(poles.length,2);
  for(const [side,seam] of [['left',800],['right',1600]]){
   const building=svg.match(new RegExp('<g data-seam-building="'+side+'">([\\s\\S]*?)</g>'))?.[1];
   const wall=building?.match(/<rect x="([\d.]+)" y="[\d.]+" width="([\d.]+)"/);
   assert.ok(wall&&Number(wall[1])<seam&&Number(wall[1])+Number(wall[2])>seam,'A complete building crosses the '+side+' join: '+town);
+  const pole=poles[side==='left'?0:1];
+  assert.equal(pole.x,Number(wall[1])+Number(wall[2])/2-800,'Animated flag stays on its house gable: '+town);
  }
 }
 const coverStart=html.indexOf('function setBackdropCover(');
