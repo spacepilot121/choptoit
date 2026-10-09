@@ -43,8 +43,11 @@ assert.ok(fogConfig.y.min<-1200&&fogConfig.y.max>1100,'Fog reaches both high and
 assert.equal(fogConfig.alpha.end,0,'Each bank dissipates rather than remaining opaque');
 assert.ok(fogConfig.frequency<=500&&fogConfig.maxParticles<=40,'Dense fog has a bounded mobile particle budget');
 let emitted=0,started=0;
+Object.assign(context,{killCount:5,Campaign:{state:{claimed:1}}});
 Object.assign(context,{FEATURES:{weather:true},Math:{random:()=>.9},currentMonth:5,Phaser:{Utils:{Array:{GetRandom:()=> 'fog'}}},windForce:{},weatherText:{setText(){}},weatherIndicator:{setText(){}},rainEmitter:null,snowEmitter:null,windEmitter:null,targetGroup:{getChildren:()=>[]},fogEmitter:{stop(){},start(){started++;},emitParticle(n){emitted+=n;}}});
 vm.runInContext(html.slice(html.indexOf('function applyRandomWeather('),html.indexOf('function arrowForWind(')),context);
 context.applyRandomWeather({time:{now:0}});assert.equal(started,1);assert.equal(emitted,10,'Initial fog banks enter from the edge; none spawn inside the view');
 context.applyRandomWeather({time:{now:100},trickClearFogUntil:8000});assert.equal(started,1,'Incense stops fog from returning during its eight-second bonus');
+context.killCount=0;context.Campaign.state.claimed=0;
+context.applyRandomWeather({time:{now:200}});assert.equal(context.currentWeather,'clear','Fresh players learn the shot before visibility and wind challenges');
 console.log('Thicker foreground fog wafts from the side across high and low targets, drifts and dissipates with a capped particle budget.');

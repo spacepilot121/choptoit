@@ -25,4 +25,27 @@ play.endSwing(scene);play.endSwing(scene);play.endSwing(scene);
 assert.deepEqual(wages,[10,20,60],'Third consecutive perfect chop starts double-gold frenzy');assert.equal(scene.feverChops,2);assert.equal(notices.at(-1)[2],'frenzy');
 play.cursor.x=460;play.endSwing(scene);assert.equal(wages.at(-1),40,'Frenzy applies to remaining successful chops');
 play.cursor.x=900;play.endSwing(scene);assert.equal(scene.feverChops,0,'A miss ends frenzy');assert.equal(play.window.Arcade.state.heads[5],4);
+// Rapidly locking aim and power clears both flags before the old hide timer.
+// Neither a fast launch nor a later aim selection may restart a successful shot.
+const timers=[];let starts=0,spawns=0;
+play.swingBar=display;
+scene.time.delayedCall=(delay,callback)=>{timers.push({delay,callback});};
+play.startSwingMeter=()=>{starts++;};play.spawnPrisoner=()=>{spawns++;};
+play.cursor.x=400;play.awaitingAngle=false;play.awaitingPower=false;
+play.endSwing(scene);timers.shift().callback();
+assert.equal(starts,0);assert.equal(spawns,0);assert.equal(timers.length,0,'The next entrance owns successful shot progression');
+play.cursor.x=900;play.missStreak=0;play.endSwing(scene);
+timers.shift().callback();assert.equal(timers[0].delay,500);timers.shift().callback();
+assert.equal(starts,1,'A missed chop still retries the same prisoner');
+play.missStreak=2;play.savePrisoner=()=>{};play.endSwing(scene);
+timers.shift().callback();assert.equal(timers[0].delay,2000);timers.shift().callback();
+assert.equal(spawns,1,'Three misses still bring in a new prisoner after the escape');
+const slashes=[];let launches=0;
+Object.assign(play,{aimArrow:{scaleY:1,setVisible(){}},arrowPowerTween:null,selectedAngle:0,pendingBlood:150,pendingSpawnSide:'left',slashExecutioner(_scene,_angle,cb){slashes.push(cb);},beheadPrisoner(){launches++;}});
+vm.runInContext(html.slice(html.indexOf('function choosePower('),html.indexOf('function slashExecutioner(')),play);
+scene.roundToken=0;play.awaitingPower=true;play.choosePower(scene);
+scene.roundToken++;slashes.shift()();assert.equal(launches,0,'Travel during the wind-up cancels the old beheading');
+play.awaitingPower=true;play.choosePower(scene);slashes.shift()();assert.equal(launches,1);
+scene.roundToken++;timers.shift().callback();assert.equal(spawns,1,'Travel during flight cancels the old next prisoner');
+play.awaitingPower=true;play.choosePower(scene);slashes.shift()();timers.shift().callback();assert.equal(spawns,2,'A same-city shot still brings in exactly one next prisoner');
 console.log('Arcade records, face collection, 100 level-gated challenges, bank-shot scoring, migration and one-time rewards persist across saves and town changes.');

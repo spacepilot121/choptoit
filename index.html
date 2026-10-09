@@ -1652,7 +1652,8 @@ function applyTargetWeather(scene, target) {
 
 function applyRandomWeather(scene) {
   const clearChance = 0.5;
-  if (!FEATURES.weather || Math.random() < clearChance) {
+  const learning = killCount < 3 && Campaign.state.claimed === 0;
+  if (!FEATURES.weather || learning || Math.random() < clearChance) {
     currentWeather = 'clear';
   } else {
     currentWeather = Phaser.Utils.Array.GetRandom(currentMonth<=1 || currentMonth>=10 ? ['rain','wind','fog','snow'] : ['rain','wind','fog']);
@@ -2702,9 +2703,7 @@ function create() {
     allowGravity: false,
     immovable: true
   });
-  scene.physics.add.overlap(prisonerHead, targetGroup, (_, target) => {
-    handleTargetHit(scene, target, prisonerHead);
-  });
+  setupProjectileCollisions(scene);
   yorkRingPlatformEvent = null;
   // Enable collisions between bodies so they pile up
   scene.headPileCounts=Array(60).fill(0);
@@ -3733,6 +3732,18 @@ function hideTradeMenu(scene) {
 // }
 
 function resetForNewCity(scene) {
+  scene.roundToken = (scene.roundToken || 0) + 1;
+  swingActive = false;
+  inputEnabled = false;
+  awaitingAngle = false;
+  awaitingPower = false;
+  betweenSwings = true;
+  arrowTween?.stop();
+  arrowPowerTween?.stop();
+  slashTween?.stop();
+  aimArrow.setVisible(false);
+  if (hideMeterEvent) { hideMeterEvent.remove(false); hideMeterEvent = null; }
+  scene.tweens.killTweensOf([prisoner, leftEscort, rightEscort, executioner]);
   scene.trickBuffUntil=0;scene.trickClearFogUntil=0;
   window.Arcade?.newShow();
   scene.perfectRun=0;scene.feverChops=0;
@@ -3763,7 +3774,7 @@ function resetForNewCity(scene) {
   prisoner.setVisible(false);
   leftEscort.setVisible(false);
   rightEscort.setVisible(false);
-  introExecutioner(scene, () => spawnPrisoner(scene, false, false));
+  introExecutioner(scene, () => spawnPrisoner(scene, false));
 }
 
 // Update the background image based on the current city. If a specific
@@ -3926,9 +3937,6 @@ function beheadPrisoner(scene, bloodAmount, angleDeg, power = 1) {
   flyingHead.prevX = flyingHead.x;
   flyingHead.prevY = flyingHead.y;
   const hBody = flyingHead.body;
-  scene.physics.add.overlap(flyingHead, targetGroup, (head, target) => {
-    handleTargetHit(scene, target, head);
-  });
   hBody.setAllowGravity(true);
   hBody.onWorldBounds = true;
   hBody.setCollideWorldBounds(true);
@@ -4135,14 +4143,17 @@ function chooseAngle(scene) {
 
 function choosePower(scene) {
   if (!awaitingPower) return;
+  const roundToken = scene.roundToken;
   awaitingPower = false;
   if (arrowPowerTween) arrowPowerTween.stop();
   let power = aimArrow.scaleY;
   aimArrow.setVisible(false);
   slashExecutioner(scene, selectedAngle, () => {
+    if (scene.roundToken !== roundToken) return;
     beheadPrisoner(scene, pendingBlood, selectedAngle, power);
     // give the head time to fly off screen before the next prisoner arrives
     scene.time.delayedCall(2600, () => {
+      if (scene.roundToken !== roundToken) return;
       spawnPrisoner(scene, pendingSpawnSide === 'right');
     });
   });
@@ -4270,6 +4281,9 @@ function retirePreviousRoundTargets(scene) {
 }
 
 function spawnPrisoner(scene, fromRight, withTarget = true) {
+  // Reserve the round during the entrance too. An hourly callback must not
+  // create another prisoner tween that can later reset an active launch.
+  betweenSwings = true;
   if(scene.basketCarrier?.active&&!scene.basketCarrier.leaving){scene.basketCarrier.caughtHead?.destroy();scene.basketCarrier.caughtHead=null;scene.basketCarrier.used=false;}
   spawnBasketCarrier(scene);
   const city = cities.find(c => c.name === currentCity);
@@ -4314,12 +4328,7 @@ function spawnPrisoner(scene, fromRight, withTarget = true) {
   // Spawn up to 3 targets (jesters, barrels, etc.) each time a prisoner appears
   // The number of targets is chosen at random to keep gameplay varied
   if (withTarget) {
-    const targetCount = Phaser.Math.Between(2,player.weaponLevel>=4?5:3);
-    const residents=targetGroup.getChildren().filter(t=>t.jester&&!t.collected);
-    const usedTargetXs = residents.map(t=>t.jester.x);
-    for (let i = residents.length; i < targetCount; i++) {
-      spawnTarget(scene, usedTargetXs);
-    }
+    populateRoundTargets(scene);
   }
   if (withTarget && shouldSpawnYorkRingPlatformEvent()) {
     spawnYorkRingPlatformEvent(scene);
@@ -4424,6 +4433,7 @@ function startSwingMeter(scene) {
 }
 
 function endSwing(scene) {
+  const roundToken = scene.roundToken;
   swingActive = false;
   betweenSwings = true;
   cursor.setVisible(false);
@@ -4524,11 +4534,17 @@ function endSwing(scene) {
 
   // Leave the meter visible briefly so players can see the result
   hideMeterEvent = scene.time.delayedCall(1000, () => {
+    if (scene.roundToken !== roundToken) return;
+    hideMeterEvent = null;
     swingBar.setVisible(false);
     redZone.setVisible(false);
     yellowZone.setVisible(false);
     greenZone.setVisible(false);
+    // Successful launches schedule the next prisoner in choosePower. The
+    // aim flags are false during flight too, so do not restart this round.
+    if (!missed) return;
     scene.time.delayedCall(spawnDelay, () => {
+      if (scene.roundToken !== roundToken) return;
       if (awaitingAngle || awaitingPower) {
         return;
       }
@@ -4588,6 +4604,15 @@ function showGoldGain(scene, amount) {
   });
 }
 
+function setupProjectileCollisions(scene) {
+  scene.projectileCollider?.destroy();
+  scene.projectileCollider = scene.physics.add.overlap(bodyGroup, targetGroup, (projectile, target) => {
+    if ((projectile.isHead || projectile.isFallingBird) && !projectile.hasSettled && projectile.body?.enable) {
+      handleTargetHit(scene, target, projectile);
+    }
+  });
+}
+
 function dropHitBird(scene,bird,source) {
   bird.birdSprite?.flapTween?.stop();
   bird.isFallingBird=true;bird.isCorpse=true;bird.bounceCount=0;bird.prevX=bird.x;bird.prevY=bird.y;
@@ -4599,7 +4624,6 @@ function dropHitBird(scene,bird,source) {
   bird.body.setBounce(.25).setDrag(35,0).setGravityY(0);
   bird.body.setVelocity((source?.body?.velocity?.x || 0)*.25,80);
   bird.body.setAngularVelocity(bird.fromRight?-140:140);
-  scene.physics.add.overlap(bird,targetGroup,(fallen,target)=>handleTargetHit(scene,target,fallen));
 }
 
 function settleFallenBird(scene,bird) {
@@ -5653,9 +5677,22 @@ function updateTargetMotion(target, time) {
   target.jesterPole.setDisplaySize(6,pose.height).setRotation(pose.angle);
 }
 
-function spawnTarget(scene, existingTargetXs = []) {
-  const type = chooseTargetType();
-  const option=FEATURES.specialTargets?window.TargetShop?.lastChoice:null;
+function populateRoundTargets(scene) {
+  const targetCount = Phaser.Math.Between(2, player.weaponLevel >= 4 ? 5 : 3);
+  const residents = targetGroup.getChildren().filter(t => t.jester && !t.collected && !t.leaving);
+  const usedTargetXs = residents.map(t => t.jester.x);
+  for (let i = residents.length; i < targetCount; i++) spawnTarget(scene, usedTargetXs);
+  // Persistent timed/multi-hit props must not consume every scoring slot.
+  // Keep them on stage, and leave one straightforward route to another hit.
+  const available = targetGroup.getChildren().filter(t => t.jester && !t.collected && !t.leaving);
+  if (FEATURES.specialTargets && !available.some(t => t.targetType === 'standard')) {
+    spawnTarget(scene, usedTargetXs, window.TargetShop.catalog.find(p => p.id === 'red'));
+  }
+}
+
+function spawnTarget(scene, existingTargetXs = [], guaranteedOption = null) {
+  const type = guaranteedOption?.type || chooseTargetType();
+  const option = guaranteedOption || (FEATURES.specialTargets ? window.TargetShop?.lastChoice : null);
   if (type === 'holyMonk') {
     spawnHolyMonk(scene);
     return;

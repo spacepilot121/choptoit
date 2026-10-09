@@ -23,7 +23,7 @@ for(const zoom of [1,.88,.7,.55])for(const floor of [1270,1420,1588]){
  sky.timeOfDay=.8;sky.updateCelestials();assert.ok((sky.sun.x-400)*zoom+400>800);
 }
 let snowStarts=0,snowStops=0;
-const weather={FEATURES:{weather:true},currentMonth:0,currentWeather:'clear',Math:{random:()=>.9},Phaser:{Utils:{Array:{GetRandom:items=>items.at(-1)}}},weatherText:{setText(){}},weatherIndicator:{setText(){}},targetGroup:{getChildren:()=>[]},rainEmitter:null,fogEmitter:null,windEmitter:null,snowEmitter:{start(){snowStarts++;},stop(){snowStops++;}}};vm.createContext(weather);
+const weather={killCount:5,Campaign:{state:{claimed:1}},FEATURES:{weather:true},currentMonth:0,currentWeather:'clear',Math:{random:()=>.9},Phaser:{Utils:{Array:{GetRandom:items=>items.at(-1)}}},weatherText:{setText(){}},weatherIndicator:{setText(){}},targetGroup:{getChildren:()=>[]},rainEmitter:null,fogEmitter:null,windEmitter:null,snowEmitter:{start(){snowStarts++;},stop(){snowStops++;}}};vm.createContext(weather);
 vm.runInContext(html.slice(html.indexOf('function applyRandomWeather('),html.indexOf('function arrowForWind(')),weather);
 weather.applyRandomWeather({});assert.equal(weather.currentWeather,'snow');assert.equal(snowStarts,1);
 weather.currentMonth=5;weather.applyRandomWeather({});assert.notEqual(weather.currentWeather,'snow');assert.equal(snowStops,2);

@@ -48,5 +48,12 @@ spread.Phaser.Math.Between=(min,max)=>max;assert.ok(spread.pickSpacedTargetX([],
 const local=create();assert.equal(local.basket('York'),0);assert.ok([2,3].includes(local.basket('Chester')));assert.ok(local.enabled('rings','Winchester'));assert.ok(!local.enabled('rings','York'));assert.ok(local.buy('rings',{gold:9999},['Winchester']));assert.ok(local.enabled('rings','York'));
 for(const city of ['Durham','Newcastle','Hull','Lincoln','Canterbury','London','Dover','Norwich','Winchester','Colchester','Gloucester']){const ids=new Set(Array.from({length:100},(_,r)=>create().choose(r+1,city).id));for(const p of catalog.filter(p=>p.city===city&&p.type!=='event'))assert.ok(ids.has(p.id),'Local city demos speciality before buying: '+p.id);}
 const motion=require('../target-shop.js').motion;
+const residents=Array.from({length:5},(_,i)=>({jester:{x:100+i*100},targetType:'special',collected:false}));let refills=0;
+const round={Phaser:{Math:{Between:()=>3}},player:{weaponLevel:8},FEATURES:{specialTargets:true},window:{TargetShop:create()},targetGroup:{getChildren:()=>residents},spawnTarget(_scene,_xs,option){refills++;assert.equal(option.id,'red');residents.push({jester:{x:650},targetType:option.type,collected:false});}};
+vm.createContext(round);vm.runInContext(html.slice(html.indexOf('function populateRoundTargets('),html.indexOf('function spawnTarget(')),round);
+round.populateRoundTargets({});assert.equal(residents.length,6);assert.equal(refills,1,'A square full of hard props gets one accessible bullseye');
+round.populateRoundTargets({});assert.equal(refills,1,'An existing accessible target is not duplicated');
+residents.pop();round.populateRoundTargets({});assert.equal(refills,2,'A collected bullseye is replenished without removing hard props');
+assert.equal(residents.filter(t=>t.targetType==='special').length,5);
 assert.deepEqual(motion({},400,200),{height:200,angle:0});assert.equal(motion({motion:'vertical'},400,200).height,245);assert.equal(motion({motion:'vertical'},400,200).angle,0);assert.equal(motion({motion:'horizontal'},0,200).height,200);assert.ok(motion({motion:'horizontal'},0,200).angle>0);assert.ok(motion({motion:'horizontal'},800,200).angle<0);assert.ok(motion({motion:'orbit'},200,200).height>200);assert.ok(motion({motion:'orbit'},200,200).angle>0);
 console.log('100 distinct faces and bodies unlock with rank; 100 challenges enforce level gates; city-discovered target purchases persist, charge once and join every city.');
