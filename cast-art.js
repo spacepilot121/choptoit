@@ -36,13 +36,15 @@
   }
   function expression(sprite,mood) { sprite.setFrame(String((sprite.castFaceIndex || 0)+(mood==='startled'?100:mood==='dazed'?200:mood==='happy'?300:0))); }
   function walk(scene,actor,duration=1500,joy=false) {
+    // A new walk owns its timers: an old entrance must never stop a later exit.
+    actor.walkEvent?.remove(false);actor.stepEvent?.remove(false);
     actor.walkTween?.stop();actor.stepTween?.stop();
-    const base=actor.y;
+    const base=actor.walkBaseY ?? actor.y;actor.walkBaseY=base;
     actor.walkTween=scene.tweens.add({targets:actor,y:base-(joy?10:4),angle:{from:joy?-5:-2,to:joy?5:2},duration:joy?110:170,yoyo:true,repeat:-1,ease:'Sine.easeInOut'});
     const body=actor.list?.find(part=>part.texture?.key==='castBodies');
-    if(body){const angle=body.angle;actor.stepTween=scene.tweens.add({targets:body,angle:{from:-3,to:3},duration:170,yoyo:true,repeat:-1});scene.time.delayedCall(duration,()=>{actor.stepTween?.stop();body.setAngle(angle);});}
-    scene.time.delayedCall(duration,()=>{actor.walkTween?.stop();if(actor.active!==false)actor.setY(base).setAngle(0);});
-    actor.once('destroy',()=>{actor.walkTween?.stop();actor.stepTween?.stop();});
+    if(body){const angle=body.angle;actor.stepTween=scene.tweens.add({targets:body,angle:{from:-3,to:3},duration:170,yoyo:true,repeat:-1});actor.stepEvent=scene.time.delayedCall(duration,()=>{actor.stepTween?.stop();if(body.scene)body.setAngle(angle);});}
+    actor.walkEvent=scene.time.delayedCall(duration,()=>{actor.walkTween?.stop();if(actor.scene)actor.setY(base).setAngle(0);});
+    if(!actor.walkCleanup){actor.walkCleanup=true;actor.once('destroy',()=>{actor.walkEvent?.remove(false);actor.stepEvent?.remove(false);actor.walkTween?.stop();actor.stepTween?.stop();});}
   }
   function nervous(scene,head,body) {
     head.personaTween?.stop();body.personaTween?.stop();

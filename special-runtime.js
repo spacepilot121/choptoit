@@ -124,6 +124,8 @@ function prepareWashingLine(scene,target){
 }
 
 function departWashingLine(scene,target){
+  if(!target?.scene || target.disposing || target.lineDeparting)return;
+  target.lineDeparting=true;
   target.collected=true;target.leaving=true;targetGroup.remove(target);
   if(target.body)target.body.enable=false;
   for(const part of target.specialParts || []){targetGroup.remove(part);if(part.active)part.destroy();}
@@ -134,7 +136,7 @@ function departWashingLine(scene,target){
   carriers.forEach((carrier,i)=>{
     scene.tweens.killTweensOf(carrier);carrier.running=true;CastArt.walk(scene,carrier,1600,true);
     (scene.departingCarriers ||= new Set()).add(carrier);
-    carrier.once('destroy',()=>{carrier.lineDisposing=true;scene.departingCarriers.delete(carrier);if(--remaining===0 && target.scene && !target.disposing)target.destroy();});
+    carrier.once('destroy',()=>{carrier.lineDisposing=true;carrier.exitTween?.stop();scene.departingCarriers.delete(carrier);if(--remaining===0 && target.scene && !target.disposing){target.disposing=true;target.destroy();}});
     carrier.exitTween=scene.tweens.add({targets:carrier,x:offscreenActorX(scene,i===1),duration:1600,ease:'Linear',onComplete:()=>{
       if(carrier.scene)carrier.destroy();
     }});

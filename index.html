@@ -3786,13 +3786,13 @@ function resetForNewCity(scene) {
   missText.setText(`Misses: ${missStreak}`);
   bodyGroup.clear(true, true);
   scene.basketCarrier?.destroy(true);scene.basketCarrier=null;
-  for(const carrier of scene.departingCarriers || []){carrier.exitTween?.stop();if(carrier.active)carrier.destroy(true);}scene.departingCarriers=new Set();
-  (scene.parkedTargets || []).forEach(t=>{t.jester?.destroy(true);if(t.active)t.destroy();});scene.parkedTargets=[];
+  for(const carrier of scene.departingCarriers || []){carrier.exitTween?.stop();if(carrier.scene)carrier.destroy();}scene.departingCarriers=new Set();
+  (scene.parkedTargets || []).slice().forEach(t=>{if(t.jester?.scene)t.jester.destroy();if(t.scene)t.destroy();});scene.parkedTargets=[];
   scene.headPileCounts=Array(60).fill(0);
-  targetGroup.getChildren().forEach(t => {
+  targetGroup.getChildren().slice().forEach(t => {
     if (t.yorkWaveTween) { t.yorkWaveTween.stop(); t.yorkWaveTween = null; }
-    if (t.jester) t.jester.destroy();
-    t.destroy();
+    if (t.jester?.scene) t.jester.destroy();
+    if(t.scene)t.destroy();
   });
   bloodPool.setVisible(false);
   bloodPool.displayHeight = 1;
