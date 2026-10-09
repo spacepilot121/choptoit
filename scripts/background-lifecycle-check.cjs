@@ -165,7 +165,7 @@ for(const town of ['york','canterbury','london','dover','durham','norwich','winc
  assert.equal((svg.match(/data-town-panel="outskirts"/g)||[]).length,2);
  assert.equal((svg.match(/data-town-panel="landmark"/g)||[]).length,1);
  assert.ok(!svg.includes('clip-path="url(#town-panel)"'),'Scenery joins must not cut buildings in half: '+town);
- assert.equal((svg.match(/data-continuous-skyline=/g)||[]).length,1,'One skyline spans every join: '+town);
+ assert.equal((svg.match(/data-continuous-skyline=/g)||[]).length,0,'The pyramid-like distant hills are removed: '+town);
  assert.equal((svg.match(/data-continuous-street=/g)||[]).length,1,'Street and quay patterns do not restart at joins: '+town);
  const townAnimation=art.townLife(scene,town);
  const poles=townAnimation.list.filter(part=>part.width===4&&part.height===48);

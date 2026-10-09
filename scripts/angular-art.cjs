@@ -170,11 +170,8 @@ function countryGround(i){
  let s='<defs><linearGradient id="rural-fade" x1="0" x2="2400" gradientUnits="userSpaceOnUse"><stop offset="0" stop-color="white"/><stop offset=".19" stop-color="white"/><stop offset=".3" stop-color="white" stop-opacity="0"/><stop offset=".7" stop-color="white" stop-opacity="0"/><stop offset=".81" stop-color="white"/><stop offset="1" stop-color="white"/></linearGradient><mask id="rural-mask"><rect width="2400" height="1600" fill="url(#rural-fade)"/></mask></defs><g mask="url(#rural-mask)">';for(const [x,w]of [[0,750],[1650,750]]){s+=poly(`${x},1000 ${x+w},1000 ${x+w},1600 ${x},1600`,'#82906f')+poly(`${x},1050 ${x+w},1035 ${x+w},1090 ${x},1155`,'#b09a72');for(let k=0;k<38;k++){const px=x+(k*127+i*23)%w,py=1130+(k*71)%460;s+=line(`M${px} ${py}l8-11m-2 9l9-4`,'#5e7854',2);}for(let k=0;k<10;k++)s+=poly(`${x+k*57},1100 ${x+k*57+18},1097 ${x+k*57+23},1103 ${x+k*57+2},1107`,'#c7b38c');}return s+'</g>';
 }
 function panoramicTown(i){
- // A single skyline and street span the panorama. Building layers overlap
- // naturally across former panel boundaries instead of clipping their roofs.
- let s='<g data-continuous-skyline="true">'+(i===8?
-  poly('0,875 260,856 610,870 960,852 1240,870 1560,858 1910,872 2200,851 2400,865 2400,1080 0,1080','#9aafa0'):
-  poly('0,850 120,740 370,810 600,760 880,850 1030,740 1230,810 1400,720 1570,810 1710,760 1910,850 2110,770 2260,805 2400,840 2400,1080 0,1080','#9bafa0'))+'</g>';
+ // Buildings and countryside meet the open sky directly.
+ let s='';
  s += '<g data-town-panel="outskirts">'+countryFringe(i,false)+'</g><g transform="translate(800 0)" data-town-panel="landmark">'+town(i,0)+'</g><g data-town-panel="outskirts">'+countryFringe(i,true)+'</g>';
  // These are complete, distinct buildings, each straddling a scenery join.
  s+='<g data-seam-building="left">'+house(635,760+(i%3)*35,225,240-(i%3)*35,i+3,i===7)+'</g>';
