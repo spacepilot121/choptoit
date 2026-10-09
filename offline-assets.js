@@ -1,5 +1,5 @@
 self.CHOP_RELEASE = {
-  "version": "f244d4c81246ddea",
+  "version": "9ec2e7688bb0d485",
   "bytes": 10767101,
   "files": [
     "./arcade.js",
