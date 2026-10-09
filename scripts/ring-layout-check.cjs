@@ -3,12 +3,13 @@ const root=path.resolve(__dirname,'..'),html=fs.readFileSync(path.join(root,'ind
 const ChopCore=require('../game-core.js');
 const png=fs.readFileSync(path.join(root,'platform.png'));
 const dimensions={width:png.readUInt32BE(16),height:png.readUInt32BE(20)};
-const context={currentCity:'Winchester',player:{weaponLevel:7},yorkRingPlatformEvent:null,YORK_RING_EVENT_TEST_CHANCE:45,Phaser:{Math:{Between:()=>1}}};
+const context={window:{TargetShop:{enabled:()=>true}},currentCity:'Winchester',player:{weaponLevel:7},yorkFlyingIslandEvent:null,yorkRingPlatformEvent:null,YORK_RING_EVENT_TEST_CHANCE:45,Phaser:{Math:{Between:()=>1}}};
 vm.createContext(context);
 vm.runInContext(html.slice(html.indexOf('function shouldSpawnYorkRingPlatformEvent('),html.indexOf('function createYorkRingGuard(')),context);
 assert.equal(context.shouldSpawnYorkRingPlatformEvent(),false);
 context.player.weaponLevel=8;assert.equal(context.shouldSpawnYorkRingPlatformEvent(),true);
-context.currentCity='London';assert.equal(context.shouldSpawnYorkRingPlatformEvent(),false);
+context.currentCity='London';assert.equal(context.shouldSpawnYorkRingPlatformEvent(),true,'Bought rings work in every city');
+context.yorkFlyingIslandEvent={active:true};assert.equal(context.shouldSpawnYorkRingPlatformEvent(),false,'Purchased troupes cannot overlap an active island');context.yorkFlyingIslandEvent=null;
 context.currentCity='Winchester';context.yorkRingPlatformEvent={active:true};assert.equal(context.shouldSpawnYorkRingPlatformEvent(),false);
 Object.assign(context,{GAME_HEIGHT:1600,CHARACTER_BASE_Y:1020,YORK_RING_THROW_ARC_HEIGHT:108,prisonerHead:{y:-64},getWeaponPowerMultiplier:()=>1.42,cleanupYorkRingPlatformEvent(){},scene:{textures:{get(){return {getSourceImage:()=>dimensions};}}}});
 vm.runInContext(html.slice(html.indexOf('function minimumReachableYorkRingEventY('),html.indexOf('function spawnYorkRingPlatformEvent(')),context);

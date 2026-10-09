@@ -86,9 +86,19 @@ body #start-overlay small { color:#dccdb5; font-size:12px; }
 /* Leave a visible foreground shelf for the accumulating heads and ketchup. */
 #combo-banner {position:absolute;top:23%;left:8%;right:8%;text-align:center;font:900 25px Georgia;color:var(--gold);text-shadow:3px 3px var(--ink);opacity:0;pointer-events:none;}
 #combo-banner.burst {animation:combo-burst 1.5s ease-out;}
-#combo-banner {background:#263d39ed;border:2px solid #e0bc73;box-shadow:5px 5px 0 #102b2ba6;padding:12px 8px;transform:rotate(-3deg)}
+#combo-banner {padding:12px 8px;transform:rotate(-3deg)}
 #combo-banner b{display:block;font-size:29px;line-height:1.05;color:#ffe1a0}#combo-banner small{display:block;font:700 11px 'Trebuchet MS',sans-serif;letter-spacing:1px;margin-top:8px}
 #combo-banner[data-tier="hot"]{border-color:#ef9766}#combo-banner[data-tier="legend"] b{color:#9ce2bf}
+.reward-gold {color:#ffd36b!important}
+.target-shop-art {width:66px;height:74px;float:right;margin:0 0 8px 12px;filter:drop-shadow(2px 3px 0 #20313744)}
+.target-shop-card {overflow:hidden}
+.head-album .missed>div {filter:none;opacity:1}
+.head-album .missed {border-bottom:2px solid #de9468}
+.head-album .collected {border-bottom:2px solid #8bd1b2}
+.challenge-section summary,.head-album+summary,details>summary {cursor:pointer;padding:12px 0;font-weight:bold;color:var(--gold)}
+.reward-silver {color:#dce6ed!important}
+#game-toast .reward-gold,#game-toast .reward-silver {display:inline-block;margin:0 12px;font:bold 25px 'Trebuchet MS',sans-serif;text-shadow:1px 2px #203137}
+#combo-banner small.reward-gold {font-size:22px;letter-spacing:0}
 @keyframes combo-burst {0%{opacity:0;transform:scale(.65) rotate(-5deg)}15%{opacity:1;transform:scale(1.2) rotate(2deg)}35%,70%{opacity:1;transform:scale(1)}100%{opacity:0;transform:translateY(-22px)}}
 @media(prefers-reduced-motion:reduce){#combo-banner.burst{animation:none;opacity:0;}}
 @media(max-height:690px){.mobile-controls{bottom:109px;padding-top:14px}.mobile-nav{height:59px}}
@@ -96,3 +106,14 @@ body #start-overlay small { color:#dccdb5; font-size:12px; }
 @media(max-height:690px){.mobile-controls{bottom:89px;padding-top:10px}}
 @media(max-height:560px){.mobile-controls{bottom:69px;padding:4px 12px 6px}.shot-steps{margin-bottom:3px;font-size:8px}.shot-meter{height:12px;margin-bottom:5px}#mobile-ui #shot-button{min-height:44px;padding:6px 10px;font-size:14px}.shot-hint{margin-top:4px;font-size:9px;min-height:10px}}
 @media(max-height:560px){.shot-steps,.shot-hint{display:none}#mobile-ui #shot-button{min-height:40px}}
+
+.rank-celebration{position:absolute;left:8%;right:8%;top:27%;z-index:80;text-align:center;padding:22px;background:#25343bf2;border:3px solid #f9c66b;border-radius:16px;color:#f4e9d1;pointer-events:none;animation:rank-pop .4s ease-out}.rank-celebration h2{font:900 36px Georgia;margin:8px;color:#f9c66b}.rank-celebration p{font-size:15px}.upgrade-ready{animation:upgrade-glow .7s alternate infinite}@keyframes rank-pop{from{transform:scale(.6) rotate(-6deg);opacity:0}to{transform:scale(1);opacity:1}}@keyframes upgrade-glow{to{box-shadow:0 0 18px #f9c66b;background:#72594b}}
+
+#hud-gold::before,#hud-fame::before{content:"";display:inline-block;width:12px;height:12px;margin-right:5px;border-radius:50%;vertical-align:-1px;background:#f9c66b;border:2px solid #9c7339;box-sizing:border-box}#hud-fame{color:#cbd5dc;margin-top:3px}#hud-fame::before{width:9px;height:9px;background:#cbd5dc;border-color:#70858e}
+
+.runtime-error{white-space:pre-wrap;overflow-wrap:anywhere;user-select:text;font-size:11px;color:#f4e9d1}
+.record-grid{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:12px}.record-grid b{display:block;font:700 26px Georgia;color:var(--gold)}.record-grid small{display:block;font-size:10px}
+.head-album{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:8px}.head-album figure{margin:0;text-align:center}.head-album figure>div{width:100%;aspect-ratio:1;image-rendering:auto}.head-album figcaption{font-size:9px}.head-album .unknown>div{filter:brightness(.25) grayscale(1);opacity:.5}.challenge-card h3{font-size:18px;margin:6px 0}
+#mobile-ui #arcade-track{width:100%;min-height:28px;padding:5px 9px;margin-top:5px;font-size:10px;text-align:left;color:#f4deb0;background:#263d39e8;border:1px solid #ad956366;border-radius:3px}
+
+.platform-preview svg{display:block;width:100%;height:auto;margin:12px 0;filter:drop-shadow(0 4px 0 #20313744)}

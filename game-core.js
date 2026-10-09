@@ -60,12 +60,18 @@
     const moving=roll<= (lively?70:highTown?55:veteran?45:city==='York'?15:35);
     return {high,moving,amplitude:high?50:lively?42:26,duration:Math.max(650,(lively?1100:1500)-Math.min(8,rank-1)*65),reward:high?(highTown?3:2):moving?2:1};
   }
-  function basketMultiplier(city,rank=1) {
+  function basketMultiplier(city,rank=1,blade=1) {
     if(city==='Hull'||city==='Southampton')return 2;
-    if(city==='Chester'||city==='Norwich')return rank>=3?3:2;
-    if(city==='Oxford')return rank>=6?4:3;
+    if(city==='Chester'||city==='Norwich')return blade>=4?3:2;
+    if(city==='Oxford')return blade>=8?4:blade>=4?3:2;
     if(city==='York'&&rank>=7)return 2;
     return 0;
+  }
+  function debugGrant(player,cities) { player.gold=Math.min(Number.MAX_SAFE_INTEGER,player.gold+1000000);cities.forEach(city=>{city.unlocked=true;}); }
+  function cityKeyCost(city) { return city.name==='York'?0:50+city.fameReq*50; }
+  function buyCityKey(city,player,rank=1) {
+    if(!city || city.unlocked || rank<Math.max(1,city.fameReq) || player.gold<cityKeyCost(city))return false;
+    player.gold-=cityKeyCost(city);city.unlocked=true;return true;
   }
   function basketCatch(previous,current,basket,radius=12) {
     if(!basket || current.y<=previous.y)return false;
@@ -73,13 +79,15 @@
     if(before>0 || after<0)return false;
     const t=-before/(after-before || 1),headX=previous.x+(current.x-previous.x)*t;
     const basketX=(basket.previousX??basket.x)+(basket.x-(basket.previousX??basket.x))*t;
-    return Math.abs(headX-basketX)<=Math.max(0,basket.halfWidth-radius);
+    // A head's centre must enter the mouth; its full circular silhouette needn't fit inside.
+    return Math.abs(headX-basketX)<=Math.max(0,basket.halfWidth-radius*.5);
   }
   function comboName(count,kind='chops') {
     const tiers=kind==='targets'?[[5,'CROWD PLEASER!'],[4,'HEAD PARADE!'],[3,'HAT TRICK!'],[2,'DOUBLE TROUBLE!']]:[[20,'AXE LEGEND!'],[12,'ROYAL FLUSH!'],[8,'GRAVY TRAIN!'],[5,'HEADS WILL ROLL!'],[3,'CHOP CHOP!'],[2,'A CUT ABOVE!']];
     return tiers.find(([threshold])=>count>=threshold)?.[1] || 'NICE CHOP!';
   }
-  const api = { advanceMeter, tradeProfiles, tradeRole, marketQuote, affordableQuantity, launchVelocity, launchPreview,targetProfile,basketMultiplier,basketCatch,comboName };
+  function castUnlocked(rank=1){return {faces:Math.min(100,16+Math.max(0,rank-1)*6),bodies:Math.min(100,12+Math.max(0,rank-1)*7)};}
+  const api = { advanceMeter, tradeProfiles, tradeRole, marketQuote, affordableQuantity, launchVelocity, launchPreview,targetProfile,debugGrant,cityKeyCost,buyCityKey,basketMultiplier,basketCatch,comboName,castUnlocked };
   if (typeof module !== 'undefined') module.exports = api;
   else root.ChopCore = api;
 })(typeof window !== 'undefined' ? window : globalThis);

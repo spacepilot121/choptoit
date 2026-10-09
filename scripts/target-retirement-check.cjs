@@ -14,10 +14,12 @@ context.retirePreviousRoundTargets(scene);
 assert.equal(removedFromGroup,1,'Only an unhit pole target leaves the physics group');
 assert.equal(old.collected,true);assert.equal(old.body.enable,false);
 assert.equal(stopped,3);assert.equal(removedTimer,1);
-assert.equal(exit.x,-100);assert.equal(exit.duration,650);
+assert.equal(exit.x,-450);assert.equal(exit.duration,650);
 assert.equal(old.active,true,'The old jester remains visible during the exit animation');
 exit.onComplete();
 assert.equal(old.active,false);assert.equal(jester.active,false);
 assert.equal(bird.active,true,'A passing bird keeps its flight window');
 assert.equal(bird.body.enable,true);
-console.log('Old pole targets leave between customers without shortening bird flights or staying collidable.');
+console.log('Missed-strike cleanup dismisses resident pole targets without shortening bird flights or staying collidable.');
+
+assert.ok(!html.slice(html.indexOf('function spawnPrisoner('),html.indexOf('// Wrapper for the hourly')).includes('retirePreviousRoundTargets(scene)'),'Successful prisoner arrivals retain existing carriers');

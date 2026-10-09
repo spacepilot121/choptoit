@@ -1,0 +1,11 @@
+const assert=require('node:assert/strict'),fs=require('node:fs'),vm=require('node:vm'),path=require('node:path'),core=require('../game-core.js');
+const player={gold:40,weaponLevel:3,storageLevel:2};const cities=[{name:'York',unlocked:true},{name:'Gloucester',unlocked:false}];
+core.debugGrant(player,cities);assert.equal(player.gold,1000040);assert.ok(cities.every(c=>c.unlocked));assert.equal(player.weaponLevel,3);assert.equal(player.storageLevel,2);
+const html=fs.readFileSync(path.join(__dirname,'../index.html'),'utf8');let cancelled=0,stopped=0;const motions=[],timers=[];
+const chest={active:true,lid:{}};const scene={tweens:{add(config){motions.push(config);return {stop(){stopped++;}};}},time:{delayedCall(delay,cb){timers.push({delay,cb});return {remove(){cancelled++;}};}}};
+const context={chest};vm.createContext(context);vm.runInContext(html.slice(html.indexOf('function openChest('),html.indexOf('function pickClass(')),context);
+context.openChest(scene);assert.equal(motions[0].targets,chest.lid);assert.equal(motions[0].y,-24);
+context.openChest(scene);assert.equal(cancelled,1,'A later coin replaces the previous close timer');assert.equal(stopped,1);
+timers[1].cb();assert.equal(motions[2].y,-8);assert.equal(motions[2].angle,0);
+chest.active=false;context.openChest(scene);assert.equal(timers.length,2,'Destroyed chests cannot animate');
+console.log('Debug grants add exactly one million gold and all city keys without upgrading equipment; chest bites cancel stale close timers and shut after each coin.');

@@ -49,9 +49,9 @@ class DayNightCycle {
     // the wash while remaining below characters and gameplay targets.
     this.container = scene.add.container(0, 0).setDepth(celestialDepth);
     this.stars = scene.add.graphics();
-    for (let i=0;i<90;i++) {
-      const x=i===0?10:i===1?scene.scale.width-10:Math.random()*scene.scale.width;
-      const y=scene.scale.height*(i===2?.59:.03+Math.random()*.58);
+    for (let i=0;i<300;i++) {
+      const x=i===0?10:i===1?scene.scale.width-10:(Math.random()*3-1)*scene.scale.width;
+      const y=i===2?scene.scale.height*.59:-1600+Math.random()*(1600+scene.scale.height*.6);
       this.stars.fillStyle(0xf4ead5,.75+(i%3)*.1).fillCircle(x,y,i%5===0?3.4:2.1);
     }
     this.container.add(this.stars);
@@ -80,13 +80,13 @@ class DayNightCycle {
     this.overlay = scene.add.rectangle(
       scene.scale.width / 2,
       scene.scale.height / 2,
-      scene.scale.width,
-      scene.scale.height,
+      scene.scale.width * 3,
+      scene.scale.height * 3,
       this.config.overlayColor,
       1
     );
     this.overlay.setDepth(overlayDepth);
-    this.overlay.setScrollFactor(0);
+    this.overlay.setScrollFactor(1);
     this.overlay.setAlpha(this.config.minDarkAlpha);
 
     return this;
@@ -155,15 +155,25 @@ class DayNightCycle {
   updateCelestials() {
     const { sunriseStart, sunriseEnd, sunsetStart, sunsetEnd } = this.config;
     const width = this.scene.scale.width;
-    const baseY = this.scene.scale.height * .43;
-    const arc = this.scene.scale.height * .19;
+    const height = this.scene.scale.height;
+    const baseY = height * .30;
+    const arc = height * .12;
+    const camera = this.scene.cameras?.main;
+    const zoom = camera?.zoom || 1;
+    // Keep the celestial arc in the upper visible sky as the world expands.
+    const position = (object, x, y) => object.setPosition(
+      (camera?.scrollX || 0) + width / 2 + (x - width / 2) / zoom,
+      (camera?.scrollY || 0) + height / 2 + (y - height / 2) / zoom
+    );
+    this.sun.setScale(1 / zoom);
+    this.moon.setDisplaySize(48 / zoom, 48 / zoom);
     const t = this.timeOfDay;
 
     // --- Sun ---
     if (t >= sunriseStart && t <= sunsetEnd) {
       const sunT = Phaser.Math.Clamp((t - sunriseStart) / (sunsetEnd - sunriseStart), 0, 1);
       const angle = sunT * Math.PI;
-      this.sun.setPosition(-60 + (width+120)*sunT, baseY - Math.sin(angle) * arc);
+      position(this.sun, -60 + (width+120)*sunT, baseY - Math.sin(angle) * arc);
       if (t < sunriseEnd) {
         const p = (t - sunriseStart) / (sunriseEnd - sunriseStart);
         this.sun.setAlpha(Phaser.Math.Easing.Quadratic.InOut(p));
@@ -186,7 +196,7 @@ class DayNightCycle {
       moonT = (t + (1 - sunsetStart)) / nightLength;
     }
     const moonAngle = moonT * Math.PI;
-    this.moon.setPosition(-60 + (width+120)*moonT, baseY - Math.sin(moonAngle) * arc);
+    position(this.moon, -60 + (width+120)*moonT, baseY - Math.sin(moonAngle) * arc);
 
     let moonAlpha = 0;
     if (t >= sunsetStart && t <= sunsetEnd) {

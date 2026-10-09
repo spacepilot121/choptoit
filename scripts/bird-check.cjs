@@ -14,7 +14,7 @@ for(const direction of [0,1]) {
   const active=new Set(),objects=[];
   const scene={add:{},tweens:{add(config){const tween={config,stop(){active.delete(tween);}};active.add(tween);return tween;}},physics:{world:{enable(bird){bird.body={setAllowGravity(){},setImmovable(){},setSize(w,h){this.size=[w,h];},setOffset(x,y){this.offset=[x,y];}};}}}};
   for(const shape of ['container','polygon','ellipse','circle','triangle'])scene.add[shape]=(x,y)=>new Object2D(x,y);
-  const context={window:{},Phaser:{Math:{Between:()=>direction}},targetGroup:{add:bird=>objects.push(bird),getChildren:()=>objects.filter(bird=>bird.active&&!bird.collected)},applyTargetWeather(){},prisoner:{y:1020},prisonerHead:{y:-64},player:{weaponLevel:8},getWeaponPowerMultiplier:()=>1.42,FEATURES:{weather:true},currentWeather:'clear',windForce:{y:0}};
+  const context={GAME_WIDTH:800,window:{},Phaser:{Math:{Between:()=>direction}},targetGroup:{add:bird=>objects.push(bird),getChildren:()=>objects.filter(bird=>bird.active&&!bird.collected)},applyTargetWeather(){},prisoner:{y:1020},prisonerHead:{y:-64},player:{weaponLevel:8},getWeaponPowerMultiplier:()=>1.42,FEATURES:{weather:true},currentWeather:'clear',windForce:{y:0}};
   vm.createContext(context);
   vm.runInContext(fs.readFileSync(path.join(root,'cast-art.js'),'utf8'),context);
   context.CastArt=context.window.CastArt;
@@ -25,7 +25,7 @@ for(const direction of [0,1]) {
   const bird=objects[0],motion=bird.moveTween.config;
   assert.equal(bird.y,420,'Bird lane remains below the portrait HUD');
   assert.equal(bird.birdSprite.scaleX,direction?-1:1,'Bird faces its outbound path');
-  assert.equal(motion.x,direction?-50:850);
+  assert.equal(motion.x,direction?-450:1250);
   assert.deepEqual(bird.body.size,[100,50]);
   assert.deepEqual(bird.body.offset,[-50,-20]);
   context.spawnBird(scene);

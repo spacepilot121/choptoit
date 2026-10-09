@@ -98,8 +98,14 @@
   <meta name="apple-mobile-web-app-capable" content="yes">
   <script src="vendor/phaser-3.55.2.min.js"></script>
   <script src="dayNightCycle.js"></script>
+  <script src="caravan-art.js"></script>
+  <script src="arcade.js"></script>
+  <script src="special-targets.js"></script>
+  <script src="target-shop.js"></script>
+  <script src="platform-art.js"></script>
   <script src="cast-art.js"></script>
   <script src="game-core.js"></script>
+  <script src="special-runtime.js"></script>
   <script src="campaign.js"></script>
 </head>
 <body>
@@ -207,13 +213,15 @@ function createCloudTextures(scene) {
     const texture=scene.textures.createCanvas(key,w,h),ctx=texture.context;
     ctx.fillStyle='#e6dbbd';ctx.beginPath();shape.forEach(([x,y],i)=>i?ctx.lineTo(x,y):ctx.moveTo(x,y));ctx.closePath();ctx.fill();
     ctx.fillStyle='#c5cbbb';ctx.fillRect(6,h-22,w-12,10);texture.refresh();
+    ctx.save();ctx.beginPath();shape.forEach(([x,y],i)=>i?ctx.lineTo(x,y):ctx.moveTo(x,y));ctx.closePath();ctx.clip();
+    for(const [color,points]of [['#f6e8c8',[[w*.2,h*.4],[w*.43,h*.07],[w*.58,h*.12],[w*.49,h*.47]]],['#d7d6bd',[[w*.53,h*.4],[w*.8,h*.42],[w*.93,h*.7],[w*.5,h*.67]]]]){ctx.fillStyle=color;ctx.beginPath();points.forEach(([x,y],i)=>i?ctx.lineTo(x,y):ctx.moveTo(x,y));ctx.closePath();ctx.fill();}ctx.restore();texture.refresh();
   }
 }
 const WIND_MAX_Y = ATMOS_BOTTOM_Y;
 const MAX_COIN_ANIMS = 150;
 
 function createWindEmitZone() {
-  return new Phaser.Geom.Rectangle(-20, WIND_MIN_Y, GAME_WIDTH + 40, (WIND_MAX_Y - WIND_MIN_Y) + 40);
+  return new Phaser.Geom.Rectangle(-800, -1600, GAME_WIDTH * 3, WIND_MAX_Y + 1640);
 }
 
 function setBackdropCover(image, width = GAME_WIDTH, height = GAME_HEIGHT, alignBottom = false) {
@@ -248,28 +256,18 @@ const player = {
   storageLevel: 1,
   maxStorage: 10, // 10 items per level
   weaponLevel: 1,
+  platformLevel: 1,
 };
 
 const WEAPON_UPGRADE_RATIO = Math.pow(2000000 / 10, 1 / 28);
 
 function formatGold(amount) {
-  if (amount < 1000) return amount.toString();
-  const units = ['k', 'M', 'B', 'T'];
-  let unitIndex = -1;
-  let value = amount;
-  while (value >= 1000 && unitIndex < units.length - 1) {
-    value /= 1000;
-    unitIndex++;
-  }
-  const rounded = Math.round(value * 10) / 10;
-  const display = rounded % 1 === 0 ? rounded.toFixed(0) : rounded;
-  return `${display}${units[unitIndex]}`;
+  return Math.round(amount).toLocaleString('en-GB');
 }
 
 let goldText;
 let fame = 0;
 let fameText;
-let nextCityKeyCost = 10;
 let lastGoldGain = 0;
 let pendingCoins = 0;
 let swingActive = false;
@@ -1150,6 +1148,8 @@ const SaveManager = {
       timeOfDay: game?.scene?.scenes[0]?.dayNight?.timeOfDay ?? restoredTimeOfDay,
       killCount,
       campaign: Campaign.state,
+      arcade: window.Arcade?.state,
+      targetShop: window.TargetShop?.state,
       market: marketItems.map(m => ({name:m.name,buy:m.currentBuy,sell:m.currentSell,stock:m.stock})),
       marketSpecials: {buy:dailyBuySpecial,sell:dailySellSpecial},
       citiesUnlocked: cities.filter(c => c.unlocked).map(c => c.name),
@@ -1157,6 +1157,7 @@ const SaveManager = {
       upgradesOwned: {
         storageLevel: player.storageLevel,
         weaponLevel: player.weaponLevel,
+        platformLevel: player.platformLevel,
         purchasedUpgrades: gameUpgrades.map(u => !!u.purchased),
       },
     };
@@ -1211,6 +1212,7 @@ const SaveManager = {
     if (!data.upgradesOwned || !Number.isInteger(data.upgradesOwned.storageLevel) ||
         !bounded(data.upgradesOwned.storageLevel, 1, 16) || !Number.isInteger(data.upgradesOwned.weaponLevel) ||
         !bounded(data.upgradesOwned.weaponLevel, 1, 30)) return false;
+    if (data.upgradesOwned.platformLevel !== undefined && (!Number.isInteger(data.upgradesOwned.platformLevel) || !bounded(data.upgradesOwned.platformLevel,1,25))) return false;
     if (!Object.keys(data.itemsOwned).every(name => marketItems.some(item => item.name === name)) ||
         Object.values(data.itemsOwned).reduce((sum, quantity) => sum + quantity, 0) > data.upgradesOwned.storageLevel * 10) return false;
     const hasValidDay = data.currentDay === undefined || (typeof data.currentDay === 'number' && Number.isFinite(data.currentDay));
@@ -1223,8 +1225,8 @@ const SaveManager = {
       hasValidDay && hasValidMonth;
   },
   apply(data, updateUI = false) {
-    player.gold = data.gold || 0;
-    fame = data.fame || 0;
+    player.gold = Math.round(data.gold || 0);
+    fame = Math.round(data.fame || 0);
     xp = data.xp || 0;
     level = data.level || 1;
     inventory = data.itemsOwned || {};
@@ -1235,9 +1237,10 @@ const SaveManager = {
       player.storageLevel = data.upgradesOwned.storageLevel || 1;
       player.maxStorage = player.storageLevel * 10;
       player.weaponLevel = data.upgradesOwned.weaponLevel || 1;
+      player.platformLevel = data.upgradesOwned.platformLevel || 1;
       const purchased = data.upgradesOwned.purchasedUpgrades || [];
       gameUpgrades.forEach((u, i) => { u.purchased = !!purchased[i]; });
-      fameMultiplier = Math.max(1, ...gameUpgrades.filter(u => u.purchased).map(u => u.mult));
+      fameMultiplier = Math.max(1+(player.platformLevel-1)*.05, ...gameUpgrades.filter(u => u.purchased).map(u => u.mult));
     }
     currentDay = Phaser.Math.Clamp(Math.floor(typeof data.currentDay === 'number' ? data.currentDay : currentDay), 1, 30);
     currentMonth = Phaser.Math.Clamp(Math.floor(typeof data.currentMonth === 'number' ? data.currentMonth : currentMonth), 0, months.length - 1);
@@ -1247,6 +1250,8 @@ const SaveManager = {
     restoredTimeOfDay = Number.isFinite(data.timeOfDay) ? Phaser.Math.Clamp(data.timeOfDay, 0, 0.999999) : 0.2;
     killCount = Number.isSafeInteger(data.killCount) && data.killCount >= 0 ? data.killCount : 0;
     Campaign.restore(data.campaign, currentMonth * 30 + currentDay - 1);
+    window.Arcade?.restore(data.arcade,killCount);
+    window.TargetShop?.restore(data.targetShop);
     Campaign.visit(currentCity);
     if (Array.isArray(data.market) && data.market.length === marketItems.length && data.market.every((m,i) =>
         m && m.name === marketItems[i].name && Number.isSafeInteger(m.buy) && m.buy > 0 && m.buy <= 1000000 &&
@@ -1549,34 +1554,48 @@ function refreshMarketPrices() {
 
 function chooseTargetType() {
   if (!FEATURES.specialTargets) return 'standard';
-  const r = Phaser.Math.Between(1,100);
-  if (currentCity === 'York') return typeof level==='number' && level>=7 && r<=25?'woodenShield':'standard';
-  if (['London','Oxford','Gloucester'].includes(currentCity) && r <= 12) return 'royal';
-  if (['Canterbury','Lincoln','Winchester'].includes(currentCity) && r <= 15) return 'holyMonk';
-  if (['Chester','Hull','Newcastle','Dover','Southampton'].includes(currentCity) && r <= 30) return 'explodingBarrel';
-  if (r <= 45) return 'woodenShield';
-  return 'standard';
+  return window.TargetShop?.choose(Phaser.Math.Between(1,100),currentCity).type || 'standard';
 }
 
 function createTargetAppearance(scene, target, type) {
   target.removeAll(true);
   switch (type) {
+    case 'special': {
+      const option=target.targetOption;
+      target.specialSprite=scene.add.image(0,0,'specialTargets',String(target.fragmentFrame ?? option?.frame ?? 0)).setDisplaySize(target.fragmentFrame!==undefined?32:72,target.fragmentFrame!==undefined?32:72);
+      target.add(target.specialSprite);
+      if(option?.effect==='precision')target.specialSprite.setPosition(-26,29);
+      target.specialStatus=scene.add.graphics();target.add(target.specialStatus);
+      refreshSpecialTarget(target);break;
+    }
     case 'woodenShield': {
       const c = scene.add.circle(0, 0, 20, 0xaa7546).setStrokeStyle(3, 0x152b31);
       const grain = scene.add.rectangle(0, 0, 3, 34, 0x714a32);
       const band = scene.add.rectangle(0, 0, 34, 4, 0xe0bd78);
       const m = scene.add.circle(0, 0, 6, 0xf4e9d1).setStrokeStyle(2, 0x152b31);
       target.add([c, grain, band, m]);
+      const detail=scene.add.graphics();detail.lineStyle(1,0x654832,.7);
+      for(let x=-12;x<=12;x+=6)detail.lineBetween(x,-15,x,15);
+      detail.lineStyle(1,0xeed2a1,.7).lineBetween(-13,-9,-9,-13).lineBetween(8,13,13,8);
+      target.add(detail);
+      for(const x of[-13,13])for(const y of[-5,5])target.add(scene.add.circle(x,y,1.4,0xe3c58b));
       break;
     }
     case 'explodingBarrel': {
-      const b = scene.add.rectangle(0, 0, 30, 40, 0xaa7546).setStrokeStyle(3, 0x152b31);
+      const b = scene.add.polygon(0,0,[4,0,26,0,31,9,31,32,26,40,4,40,0,32,0,9],0xaa7546).setStrokeStyle(3,0x152b31);
       const f = scene.add.rectangle(0, -22, 4, 8, 0xec805d);
       const upperBand = scene.add.rectangle(0, -11, 32, 5, 0xf9c66b);
       const lowerBand = scene.add.rectangle(0, 11, 32, 5, 0xf9c66b);
       target.barrelBodyRect = b;
       target.barrelFuseRect = f;
-      target.add([b,scene.add.rectangle(8,0,7,34,0x714a32,.45),upperBand,lowerBand,f]);
+      const art=scene.add.container(0,0,[b,scene.add.rectangle(8,0,7,34,0x714a32,.45),upperBand,lowerBand,f]).setScale(target.barrelScale || 1);
+      const grain=scene.add.graphics();grain.lineStyle(1,0x624936,.7);
+      for(let x=-10;x<=10;x+=5)grain.lineBetween(x,-16,x,16);
+      grain.lineStyle(1,0xddb67f,.75).lineBetween(-9,-7,-8,4).lineBetween(2,1,3,8);
+      art.add(grain);
+      for(const y of[-11,11])for(const x of[-10,0,10])art.add(scene.add.circle(x,y,1.5,0x675a41));
+      art.add(scene.add.polygon(0,0,[0,-8,7,0,0,8,-7,0],0xcb604b).setStrokeStyle(1,0xeac58a));
+      target.add(art);
       break;
     }
     case 'holyMonk': {
@@ -1591,6 +1610,7 @@ function createTargetAppearance(scene, target, type) {
         const face=CastArt.head(scene.add.image(0,-64,'castHeads','0'),'head1');
         const crown = scene.add.polygon(0,-90,[0,0,8,7,14,-3,20,7,28,0,24,17,4,17],0xe2bd6b).setStrokeStyle(2,0x715448);
         target.add([robe,face,crown]);
+        for(const x of[-7,0,7])target.add(scene.add.circle(x,-87,2.2,x?0x6b9d96:0xc06c59).setStrokeStyle(1,0x715448));
         break;
       }
       case 'bird': {
@@ -1601,13 +1621,15 @@ function createTargetAppearance(scene, target, type) {
       }
       default: {
         const isYorkTallWaverTarget = target.isYorkTallWaver === true;
-        const outerRadius = isYorkTallWaverTarget ? 30 : 20;
-        const innerRadius = isYorkTallWaverTarget ? 14 : 8;
-        const outerColor = isYorkTallWaverTarget ? 0x8bd1b2 : 0xec805d;
+        const outerRadius = target.targetRadius || (isYorkTallWaverTarget ? 30 : 20);
+        const innerRadius = outerRadius * .4;
+        const outerColor = target.targetColor ?? (target.greenTarget ? 0x8bd1b2 : 0xec805d);
         const outer = scene.add.circle(0, 0, outerRadius, outerColor).setStrokeStyle(3, 0x152b31);
         const inner = scene.add.circle(0, 0, innerRadius + 3, 0xf4e9d1);
         const bullseye = scene.add.circle(0, 0, Math.max(4, innerRadius / 2), 0x152b31);
-        target.add([outer, inner, bullseye]);
+        const finish=scene.add.graphics();finish.fillStyle(0xffffff,.14).fillTriangle(-outerRadius+4,-4,-3,-outerRadius+3,1,-innerRadius-4);finish.lineStyle(1,0x152b31,.25).lineBetween(-outerRadius+5,7,-innerRadius-5,10);
+        target.add([outer,finish,inner,bullseye]);
+        for(const a of[0,Math.PI/2,Math.PI,Math.PI*1.5]){const bolt=scene.add.circle(Math.cos(a)*(outerRadius-5),Math.sin(a)*(outerRadius-5),1.7,0xe2b668);target.add(bolt);}
       }
   }
 }
@@ -1658,7 +1680,7 @@ function applyRandomWeather(scene) {
     }
   } else if (currentWeather === 'fog') {
     letter = 'F';
-    if (fogEmitter) fogEmitter.start();
+    if (fogEmitter && !(scene.trickClearFogUntil>scene.time.now)) { fogEmitter.start();fogEmitter.emitParticle(10); }
   } else if (currentWeather === 'rain') {
     letter = 'R';
     if (rainEmitter) rainEmitter.start();
@@ -1863,6 +1885,8 @@ function releaseQueuedCoins(scene) {
 }
 
 function addGold(scene, amount) {
+  if (!Number.isFinite(amount)) return;
+  amount=Math.round(amount);
   if (amount <= 0) return;
   player.gold += amount;
   goldText.setText(formatGold(player.gold));
@@ -1881,10 +1905,12 @@ function spawnCoin(scene) {
     pendingCoins = Math.min(pendingCoins + 1, MAX_COIN_ANIMS);
     return;
   }
-  const coin = scene.add.circle(chest.x, -20, 8, 0xffd700).setDepth(101);
+  const coin = CastArt.coin(scene,0,-(scene.remainsFloor || GROUND_Y)+11);
+  chest.add(coin);
   scene.tweens.add({
     targets: coin,
-    y: chest.y - chest.height / 2,
+    y: -17,
+    scaleX:.7,
     duration: 800,
     ease: 'Cubic.easeIn',
     onComplete: () => {
@@ -1895,10 +1921,12 @@ function spawnCoin(scene) {
 }
 
 function spawnFameCoin(scene) {
-  const coin = scene.add.circle(chest.x, -20, 8, 0x88ffff).setDepth(101);
+  const coin = CastArt.coin(scene,0,-(scene.remainsFloor || GROUND_Y)+11,true);
+  chest.add(coin);
   scene.tweens.add({
     targets: coin,
-    y: chest.y - chest.height / 2,
+    y: -17,
+    scaleX:.7,
     duration: 800,
     ease: 'Cubic.easeIn',
     onComplete: () => {
@@ -1909,8 +1937,13 @@ function spawnFameCoin(scene) {
 }
 
 function openChest(scene) {
-  chest.setTexture('chestOpen');
-  scene.time.delayedCall(300, () => chest.setTexture('chestClosed'));
+  if(!chest?.active)return;
+  chest.closeEvent?.remove(false);chest.biteTween?.stop();
+  chest.biteTween=scene.tweens.add({targets:chest.lid,y:-24,angle:-12,duration:70,ease:'Back.easeOut'});
+  chest.closeEvent=scene.time.delayedCall(85,()=>{
+    if(!chest?.active)return;
+    chest.biteTween=scene.tweens.add({targets:chest.lid,y:-8,angle:0,duration:65,ease:'Cubic.easeIn'});
+  });
 }
 
 function pickClass() {
@@ -1935,10 +1968,13 @@ function preload() {
     this.load.image(`intro${i}`, `intro${i}.png`);
   }
   if (!window.MobileGame) this.load.image('shop', 'shop.png');
-  this.load.image('platform', 'platform.png');
+  this.load.image('platform', 'assets/platform-angular.png');
+  this.load.atlas('specialTargets','assets/special-targets.png','assets/special-targets.json');
+  this.load.atlas('stageUpgrades','assets/stage-upgrades.png','assets/stage-upgrades.json');
   this.load.image('executionerHead', 'executionerhead.png');
   this.load.image('executionerFigure', 'assets/executioner-angular.png');
   this.load.image('angularRoad','assets/road-angular.png');
+  for(const route of ['farmland','woodland','coast','estuary','uplands'])this.load.image('road-'+route,'assets/road-'+route+'-angular.png');
   this.load.atlas('castHeads','assets/cast-heads-angular.png','assets/cast-heads-angular.json');
   this.load.atlas('castBodies','assets/cast-bodies-angular.png','assets/cast-bodies-angular.json');
   this.load.atlas('castJesters','assets/cast-jesters-angular.png','assets/cast-jesters-angular.json');
@@ -2016,6 +2052,8 @@ function ensureCityBackground(scene, name) {
 
 function create() {
   const scene = this;
+  // World bounds use the world's flags, rather than Body.checkCollision.up.
+  scene.physics.world.checkCollision.up=false;
   if (scene.assetLoadFailed) { scene.scene.pause(); return; }
 
   // Background and stage art
@@ -2023,7 +2061,7 @@ function create() {
     ? scene.add.rectangle(CENTER_X, CENTER_Y, GAME_WIDTH, GAME_HEIGHT, 0x79bac1)
     : scene.add.image(CENTER_X, CENTER_Y, 'backgroundSky').setDisplaySize(GAME_WIDTH, GAME_HEIGHT);
   // Render sky behind celestial bodies
-  skyRect.setDepth(-5);
+  skyRect.setDepth(-5).setDisplaySize(GAME_WIDTH * 3, GAME_HEIGHT * 3);
 
   backgroundRect = scene.add.image(CENTER_X, CENTER_Y, window.MobileGame ? `background-${currentCity.toLowerCase()}` : 'background');
   setBackdropCover(backgroundRect, GAME_WIDTH, GAME_HEIGHT, true);
@@ -2038,10 +2076,10 @@ function create() {
     cloudLayerFar = scene.add.group();
     cloudLayerNear = scene.add.group();
 
-    for (let i = 0; i < 4; i++) {
+    for (let i = 0; i < 16; i++) {
       const cloud = scene.add.image(
-        Phaser.Math.Between(0, config.width),
-        Phaser.Math.Between(CLOUD_MIN_Y, CLOUD_MAX_Y),
+        Phaser.Math.Between(-800, config.width+800),
+        Phaser.Math.Between(-1500, CLOUD_MAX_Y),
         'cloud-small'
       );
       cloud.setDepth(-3);
@@ -2051,10 +2089,10 @@ function create() {
       cloudLayerFar.add(cloud);
     }
 
-    for (let i = 0; i < 2; i++) {
+    for (let i = 0; i < 10; i++) {
       const cloud = scene.add.image(
-        Phaser.Math.Between(0, config.width),
-        Phaser.Math.Between(CLOUD_MIN_Y + 20, CLOUD_MAX_Y),
+        Phaser.Math.Between(-800, config.width+800),
+        Phaser.Math.Between(-1500, CLOUD_MAX_Y),
         'cloud-big'
       );
       cloud.setDepth(-1);
@@ -2082,7 +2120,7 @@ function create() {
     }
   });
 
-  stage = scene.add.image(CENTER_X, STAGE_Y, 'platform').setDepth(0).setAlpha(currentCity in cityBackdropOffsets ? 0 : 1);
+  stage = scene.add.image(CENTER_X, STAGE_Y, 'stageUpgrades',String((player.platformLevel || 1)-1)).setOrigin(.5,0).setDepth(0);
   stageBlood = scene.add.rectangle(CENTER_X, STAGE_Y, 1, 10, 0x770000)
     .setOrigin(0.5, 1)
     .setVisible(false)
@@ -2160,11 +2198,7 @@ function create() {
   rightEscort.setVisible(false);
 
   // Gold chest and counters
-  chest = scene.add.image(config.width - 60, config.height - 40, 'chestClosed')
-    .setOrigin(0.5, 1)
-    .setDisplaySize(80, 80)
-    .setDepth(100)
-    .setVisible(false);
+  chest = CastArt.treasureChest(scene,GAME_WIDTH-60,GROUND_Y-35).setDepth(100).setVisible(false);
   goldText = scene.add.text(chest.x, chest.y - 2, formatGold(player.gold), { font: '20px monospace', fill: '#ffff88' })
     .setOrigin(0.5, 1)
     .setDepth(101)
@@ -2296,10 +2330,11 @@ function create() {
     .setScrollFactor(0)
     .setVisible(false);
   updateXPUI();
-  streakMultiplierText = scene.add.text(CENTER_X + 60, STAGE_Y, 'x0', { font: '48px monospace', fill: '#f9c66b' })
+  streakMultiplierText = scene.add.text(0, -55, '1×', { font: 'bold 28px Trebuchet MS', fill: '#f9c66b' })
     .setOrigin(0.5, 1)
     .setDepth(2)
-    .setStroke('#000000', 4);
+    .setStroke('#25373d', 4);
+  chest.add(streakMultiplierText);
   versionText = scene.add.text(RIGHT_MARGIN, HUD_BOTTOM_Y, VERSION, { font: '14px monospace', fill: '#ffffff' })
     .setOrigin(1, 1)
     .setDepth(11);
@@ -2481,7 +2516,7 @@ function create() {
   cursor = scene.add.rectangle(250, meterY, 10, 20, 0xffffff).setVisible(false);
 
   // Blood pool
-  bloodPool = scene.add.rectangle(CENTER_X, GROUND_Y, GAME_WIDTH, 1, 0x770000)
+  bloodPool = scene.add.rectangle(CENTER_X, GROUND_Y, GAME_WIDTH * 3, 1, 0x770000)
     .setOrigin(0.5, 1)
     .setVisible(false)
     // Render in front of heads so they appear to sink into the pool
@@ -2601,8 +2636,8 @@ function create() {
     const ctx = mist.context;
     ctx.scale(2, 1);
     const gradient = ctx.createRadialGradient(64, 64, 0, 64, 64, 64);
-    gradient.addColorStop(0, 'rgba(210,230,224,0.7)');
-    gradient.addColorStop(0.45, 'rgba(210,230,224,0.3)');
+    gradient.addColorStop(0, 'rgba(210,230,224,0.96)');
+    gradient.addColorStop(0.45, 'rgba(210,230,224,0.75)');
     gradient.addColorStop(1, 'rgba(210,230,224,0)');
     ctx.fillStyle = gradient;
     ctx.fillRect(0, 0, 128, 128);
@@ -2611,25 +2646,27 @@ function create() {
   // Place weather effects behind UI overlays so menus appear on top
   rainParts = scene.add.particles('raindrop').setDepth(28);
   rainEmitter = rainParts.createEmitter({
-    x: { min: 0, max: GAME_WIDTH },
-    y: { min: WEATHER_MIN_Y, max: WEATHER_MAX_Y },
+    x: { min: -800, max: GAME_WIDTH + 800 },
+    y: { min: -1600, max: WEATHER_MAX_Y },
     lifespan: 800,
     speedY: { min: 400, max: 600 },
-    quantity: 6,
+    quantity: 18,
+    maxParticles: 300,
     frequency: 80,
     on: false
   });
   fogParts = scene.add.particles('mist-soft').setDepth(28);
   fogEmitter = fogParts.createEmitter({
-    x: { min: -50, max: GAME_WIDTH + 50 },
-    y: { min: FOG_MIN_Y, max: FOG_MAX_Y },
-    lifespan: 11000,
-    speedX: { min: 45, max: 80 },
-    speedY: { min: -5, max: 5 },
+    x: -750,
+    y: { min: -1400, max: FOG_MAX_Y },
+    lifespan: 22000,
+    speedX: { min: 110, max: 145 },
+    speedY: { min: -8, max: 8 },
     quantity: 1,
-    frequency: 950,
-    scale: { start: 1.8, end: 3 },
-    alpha: { start: 0.34, end: 0 },
+    frequency: 450,
+    maxParticles: 36,
+    scale: { start: 2.4, end: 3.6 },
+    alpha: { start: 0.88, end: 0, ease: 'Sine.easeIn' },
     on: false
   });
 
@@ -2657,7 +2694,7 @@ function create() {
   snowArt.lineBetween(7,0,7,14).lineBetween(0,7,14,7).lineBetween(2,2,12,12).lineBetween(2,12,12,2);
   snowArt.generateTexture('snowflake',14,14);snowArt.destroy();
   snowParts=scene.add.particles('snowflake').setDepth(27);
-  snowEmitter=snowParts.createEmitter({x:{min:0,max:GAME_WIDTH},y:-20,lifespan:14000,speedY:{min:80,max:130},speedX:{min:-30,max:30},frequency:120,quantity:2,rotate:{min:0,max:360},scale:{start:.65,end:.9},alpha:{start:.8,end:0},on:false});
+  snowEmitter=snowParts.createEmitter({x:{min:-800,max:GAME_WIDTH+800},y:{min:-1600,max:-20},lifespan:22000,speedY:{min:80,max:130},speedX:{min:-30,max:30},frequency:120,quantity:2,rotate:{min:0,max:360},scale:{start:.65,end:.9},alpha:{start:.8,end:0},on:false});
   // Physics group to accumulate fallen bodies
   bodyGroup = scene.physics.add.group();
   // Targets should remain stationary until hit
@@ -2670,7 +2707,7 @@ function create() {
   });
   yorkRingPlatformEvent = null;
   // Enable collisions between bodies so they pile up
-  scene.headPileCounts=Array(20).fill(0);
+  scene.headPileCounts=Array(60).fill(0);
   // Stop corpses completely after two bounces
   scene.physics.world.on('worldbounds', (body, up, down) => {
     const obj = body.gameObject;
@@ -2678,7 +2715,7 @@ function create() {
     if (down) {
       if (obj.jester && !obj.jester.running) {
         obj.jester.running = true;
-        const offX = obj.jester.startFromRight ? 900 : -100;
+        const offX = obj.jester.startFromRight ? GAME_WIDTH+450 : -450;
         obj.scene.tweens.add({
           targets: obj.jester,
           x: offX,
@@ -2689,7 +2726,8 @@ function create() {
       }
       obj.bounceCount = (obj.bounceCount || 0) + 1;
       if (obj.bounceCount >= (obj.isHead ? 2 : 1)) {
-        if (obj.isHead) settleHead(scene,obj);
+        if (obj.isFallingBird) settleFallenBird(scene,obj);
+        else if (obj.isHead) settleHead(scene,obj);
         else settleCorpse(scene,obj);
         // Lay the corpse on its side most of the time
         if (!obj.isHead && !obj.hasSettled && Math.random() < 0.9) {
@@ -3287,8 +3325,8 @@ function updateTravelUI(scene) {
       c.ui.btn.setText('[Here]');
       c.ui.btn.setFill('#777777');
     } else if (locked) {
-      const affordable = fame >= nextCityKeyCost;
-      c.ui.btn.setText(`[Buy Key: ${nextCityKeyCost} Fame]`);
+      const affordable = level>=Math.max(1,c.fameReq) && player.gold>=ChopCore.cityKeyCost(c);
+      c.ui.btn.setText(`[Buy Key: ${ChopCore.cityKeyCost(c)} Gold · Rank ${Math.max(1,c.fameReq)}]`);
       c.ui.btn.setFill(affordable ? '#00ff00' : '#777777');
     } else {
       c.ui.btn.setText('[Go]');
@@ -3339,11 +3377,9 @@ function showTravelMenu(scene, region = travelRegion) {
       .setInteractive()
       .on('pointerdown', () => {
         if (!city.unlocked) {
-          if (fame >= nextCityKeyCost) {
-            fame -= nextCityKeyCost;
-            fameText.setText(formatGold(Math.floor(fame)));
-            city.unlocked = true;
-            nextCityKeyCost += 10;
+          if (ChopCore.buyCityKey(city,player,level)) {
+            goldText.setText(formatGold(player.gold));
+            SaveManager.save();
             updateTravelUI(scene);
           }
           return;
@@ -3641,7 +3677,7 @@ function showTradeMenu(scene, index, mode = 'buy') {
     rainParts.setVisible(false);
   } else if (currentWeather === 'snow' && snowEmitter && snowParts) {
     snowEmitter.stop();snowEmitter.killAll();snowParts.setVisible(false);
-  } else if (currentWeather === 'fog' && fogEmitter && fogParts) {
+  } else if (currentWeather === 'fog' && fogEmitter && fogParts && !(scene.trickClearFogUntil>scene.time.now)) {
     fogEmitter.stop();
     fogEmitter.killAll();
     fogParts.setVisible(false);
@@ -3697,15 +3733,20 @@ function hideTradeMenu(scene) {
 // }
 
 function resetForNewCity(scene) {
+  scene.trickBuffUntil=0;scene.trickClearFogUntil=0;
+  window.Arcade?.newShow();
+  scene.perfectRun=0;scene.feverChops=0;
   cleanupYorkRingPlatformEvent(scene);
   cleanupYorkFlyingIslandEvent(scene);
   killStreak = 0;
-  streakMultiplierText.setText(`x${killStreak}`);
+  streakMultiplierText.setText(`${Math.max(1,killStreak)}×`);
   missStreak = 0;
   missText.setText(`Misses: ${missStreak}`);
   bodyGroup.clear(true, true);
   scene.basketCarrier?.destroy(true);scene.basketCarrier=null;
-  scene.headPileCounts=Array(20).fill(0);
+  for(const carrier of scene.departingCarriers || []){carrier.exitTween?.stop();if(carrier.active)carrier.destroy(true);}scene.departingCarriers=new Set();
+  (scene.parkedTargets || []).forEach(t=>{t.jester?.destroy(true);if(t.active)t.destroy();});scene.parkedTargets=[];
+  scene.headPileCounts=Array(60).fill(0);
   targetGroup.getChildren().forEach(t => {
     if (t.yorkWaveTween) { t.yorkWaveTween.stop(); t.yorkWaveTween = null; }
     if (t.jester) t.jester.destroy();
@@ -3736,7 +3777,12 @@ function updateBackground(scene) {
   }
   setBackdropCover(backgroundRect, GAME_WIDTH, GAME_HEIGHT, true);
   backgroundRect.y -= cityBackdropOffsets[currentCity] || 0;
-  if (stage) stage.setAlpha(currentCity in cityBackdropOffsets ? 0 : 1);
+  // Panoramic artwork has one central landmark and ordinary outskirts on both sides.
+  scene.comboScenery?.destroy();
+  scene.comboScenery=scene.add.container(0,0).setDepth(-2.01);
+
+  scene.comboScenery.add(scene.add.rectangle(CENTER_X,GAME_HEIGHT+400,GAME_WIDTH*3,800,0x716e60));
+  if (stage) stage.setTexture('stageUpgrades',String((player.platformLevel || 1)-1)).setAlpha(1);
   CastArt.townLife(scene,currentCity);
 }
 
@@ -3770,13 +3816,14 @@ function selectCity(scene, city) {
 }
 
 function savePrisoner(scene) {
+  if(!prisoner.escapeRecorded){window.Arcade?.miss(prisonerHeadSprite.castFaceIndex || 0);prisoner.escapeRecorded=true;}
   prisonerHeadSprite.personaTween?.stop();
   CastArt.expression(prisonerHeadSprite,'happy');
   CastArt.walk(scene,prisoner,1200,true);
   window.MobileGame?.feedback('Three misses! Free at last!',true);
   scene.tweens.add({
     targets: prisoner,
-    x: 850,
+    x: GAME_WIDTH + 450,
     y: CHARACTER_BASE_Y,
     duration: 1200,
     ease: 'Sine.easeIn'
@@ -3922,8 +3969,8 @@ function beheadPrisoner(scene, bloodAmount, angleDeg, power = 1) {
 function settleHead(scene,head) {
   if(head.active===false || head.hasSettled)return;head.hasSettled=true;
   CastArt.expression(head,'dazed');head.setAlpha(1);head.setScale(58/128);head.setAngle(Phaser.Math.Between(-18,18));
-  const column=Math.max(0,Math.min(19,Math.floor(head.x/40)));
-  head.pileOffset=Math.min(240,scene.headPileCounts[column]++*12);
+  const column=Math.max(0,Math.min(59,Math.floor((head.x+800)/40)));
+  head.pileOffset=Math.min(240,(scene.headPileCounts[column] || 0)*12);scene.headPileCounts[column]=(scene.headPileCounts[column] || 0)+1;
   head.y=(scene.remainsFloor || GROUND_Y)-head.displayHeight/2-head.pileOffset;
   head.setDepth(31);
   if(head.body){head.body.stop();head.body.setAllowGravity(false);head.body.enable=false;}
@@ -3931,11 +3978,37 @@ function settleHead(scene,head) {
 
 function settleCorpse(scene,corpse) {
   if(corpse.hasSettled)return;corpse.hasSettled=true;
-  const column=Math.max(0,Math.min(19,Math.floor(corpse.x/40)));
-  corpse.pileOffset=Math.min(240,scene.headPileCounts[column]++*12);
+  const column=Math.max(0,Math.min(59,Math.floor((corpse.x+800)/40)));
+  corpse.pileOffset=Math.min(240,(scene.headPileCounts[column] || 0)*12);scene.headPileCounts[column]=(scene.headPileCounts[column] || 0)+1;
   corpse.setOrigin(.5).setAngle(Math.random()<.5?-90:90).setAlpha(1).setDepth(30);
   corpse.y=(scene.remainsFloor || GROUND_Y)-corpse.displayWidth/2-corpse.pileOffset;
   if(corpse.body){corpse.body.stop();corpse.body.setAllowGravity(false);corpse.body.enable=false;}
+}
+
+function offscreenActorX(scene, fromRight, margin=160) {
+  const camera=scene.cameras.main;
+  // Reserve the widest combo view too, so changing zoom cannot reveal a spawn.
+  const halfWidth=GAME_WIDTH/(2*Math.min(camera.zoom,.55));
+  return (camera.scrollX || 0)+CENTER_X+(fromRight?halfWidth+margin:-halfWidth-margin);
+}
+
+function anchorCoinChest(scene) {
+  if(!chest?.active)return;
+  const camera=scene.cameras.main,zoom=camera.zoom;
+  const screenY=(scene.remainsFloor || GROUND_Y)-35;
+  chest.setPosition((camera.scrollX || 0)+CENTER_X+(GAME_WIDTH-60-CENTER_X)/zoom,
+    camera.scrollY+CENTER_Y+(screenY-CENTER_Y)/zoom).setScale(1/zoom);
+}
+
+function updateComboCamera(scene, delta) {
+  if(!window.MobileGame)return;
+  const camera=scene.cameras.main;
+  const target=1-Math.min(.45,Math.max(0,killStreak-2)*.12);
+  const blend=1-Math.exp(-Math.max(0,Math.min(100,delta || 16))/180);
+  const zoom=camera.zoom+(target-camera.zoom)*blend;
+  camera.setZoom(Math.abs(target-zoom)<.0001?target:zoom);
+  // Phaser zooms around its centre; anchor the floor above the controls.
+  camera.setScroll(0,((scene.remainsFloor || GROUND_Y)-CENTER_Y)*(1-1/camera.zoom));
 }
 
 function updateRemainsFloor(scene) {
@@ -3952,20 +4025,24 @@ function updateRemainsFloor(scene) {
     }
   }
   if(scene.remainsFloor===floor)return;
-  scene.remainsFloor=floor;scene.physics.world.setBounds(0,0,GAME_WIDTH,floor);
+  scene.remainsFloor=floor;if(chest)chest.setY(floor-35);scene.physics.world.setBounds(-400,-1600,GAME_WIDTH+800,floor+1600,true,true,false,true);
   bloodPool?.setY(floor).setDepth(29);
   bodyGroup?.getChildren().forEach(remains=>{
-    if(remains.hasSettled)remains.y=floor-(remains.isHead?remains.displayHeight:remains.displayWidth)/2-remains.pileOffset;
+    if(remains.hasSettled)remains.y=floor-(remains.isHead || remains.isFallingBird?remains.displayHeight:remains.displayWidth)/2-remains.pileOffset;
   });
 }
 
 function spawnBasketCarrier(scene) {
-  scene.basketCarrier?.destroy(true);scene.basketCarrier=null;
-  const multiplier=ChopCore.basketMultiplier(currentCity,level);
+  if(scene.basketCarrier?.active)return;
+  const multiplier=window.TargetShop?.basket(currentCity) || 0;
+  const option=window.TargetShop?.lastBasket;
   if(!multiplier || Phaser.Math.Between(1,100)>55)return;
   const floor=scene.remainsFloor || GROUND_Y;
-  const carrier=scene.add.container(-70,floor-90).setDepth(25);
-  carrier.halfWidth=43;carrier.multiplier=multiplier;carrier.previousX=carrier.x;scene.basketCarrier=carrier;
+  const fromRight=Phaser.Math.Between(0,1)===1;
+  const size=(multiplier===4? .68:multiplier===3? .84:1)*(option?.width || 1);
+  const carrier=scene.add.container(fromRight?GAME_WIDTH+500:-500,floor-90).setDepth(25);
+  carrier.halfWidth=43*size;carrier.multiplier=multiplier;carrier.previousX=carrier.x;scene.basketCarrier=carrier;
+  carrier.exitX=fromRight?-510:GAME_WIDTH+510;
   const coat=CastArt.body(scene.add.image(0,90,'castBodies','0').setOrigin(.5,1),'prisonerBody5');
   const face=CastArt.head(scene.add.image(0,-38,'castHeads','0'),'head5');
   CastArt.expression(face,'happy');
@@ -3974,23 +4051,46 @@ function spawnBasketCarrier(scene) {
   for(let x=-30;x<=30;x+=12)weave.lineBetween(x,5,x*.85,39);
   for(let y=10;y<40;y+=9)weave.lineBetween(-38+y*.2,y,38-y*.2,y);
   const rim=scene.add.rectangle(0,0,86,8,0xe3c086);
+  weave.lineStyle(1,0xdac18a,.9);
+  for(let y=7;y<40;y+=6)weave.lineBetween(-37+y*.2,y,37-y*.2,y);
+  weave.lineStyle(2,0x574b39,1).lineBetween(-39,4,-30,-19).lineBetween(-30,-19,30,-19).lineBetween(30,-19,39,4);
   const label=scene.add.text(0,23,multiplier+'×',{font:'bold 23px Georgia',color:'#fff0ca',stroke:'#554639',strokeThickness:3}).setOrigin(.5);
-  carrier.add([coat,face,basket,weave,rim,label,scene.add.circle(-43,7,6,0xc68d65),scene.add.circle(43,7,6,0xc68d65)]);
-  carrier.moveTween=scene.tweens.add({targets:carrier,x:GAME_WIDTH+70,duration:11000,yoyo:true,repeat:-1,ease:'Linear'});
-  carrier.once('destroy',()=>carrier.moveTween?.stop());
+  const basketArt=scene.add.container(0,0,[basket,weave,rim,label,scene.add.circle(-43,7,6,0xc68d65),scene.add.circle(43,7,6,0xc68d65)]).setScale(size);
+  carrier.add([coat,face,basketArt]);
+  carrier.basketArt=basketArt;
+  const stops=[Phaser.Math.Between(150,300),Phaser.Math.Between(440,650)];if(fromRight)stops.reverse();
+  const route=[...stops];
+  const advance=()=>{
+    if(!carrier.active)return;
+    if(!route.length)route.push(...(carrier.x===stops[0]?[stops[1],stops[0]]:[stops[0],stops[1]]));
+    const next=route.shift();
+    CastArt.walk(scene,carrier,2200);
+    carrier.moveTween=scene.tweens.add({targets:carrier,x:next,duration:Phaser.Math.Between(1500,2200)/(option?.pace || 1),ease:'Linear',onComplete:()=>{
+      carrier.walkTween?.stop();carrier.stepTween?.stop();carrier.setAngle(0).setY(floor-90);
+      carrier.waitEvent=scene.time.delayedCall(!option?.continuous?(option?.pause || Phaser.Math.Between(600,2200)):0,advance);
+    }});
+  };advance();
+  carrier.once('destroy',()=>{carrier.moveTween?.stop();carrier.waitEvent?.remove(false);});
 }
 
 function checkBasketCatch(scene) {
   const basket=scene.basketCarrier;if(!basket?.active)return;
   basket.y=(scene.remainsFloor || GROUND_Y)-90;
   if(!basket.used)bodyGroup.getChildren().forEach(head=>{
-    if(basket.used || !head.isHead || head.hasSettled || head.basketCaught || !head.body?.enable || head.body.velocity.y<=0)return;
+    if(basket.used || (!head.isHead && !head.isFallingBird) || head.hasSettled || head.basketCaught || !head.body?.enable || head.body.velocity.y<=0)return;
     if(!ChopCore.basketCatch({x:head.prevX??head.x,y:head.prevY??head.y},{x:head.x,y:head.y},basket,head.displayHeight/2))return;
     basket.used=true;head.basketCaught=true;
-    const bonus=Math.max(0,Math.floor(head.chopGold || 0))*(basket.multiplier-1);
-    if(bonus>0){addGold(scene,bonus);SaveManager.save();window.MobileGame?.combo(basket.multiplier,bonus,'basket');}
+    const bonus=Math.max(0,Math.floor((head.chopGold || 0)+(head.targetGold || 0)))*(basket.multiplier-1);
+    if(bonus>0)addGold(scene,bonus);
+    window.Arcade?.catchHead(basket.multiplier,head.targetCombo || 0);
+    SaveManager.save();window.MobileGame?.combo(basket.multiplier,bonus,'basket');
     head.body.stop();head.body.setAllowGravity(false);head.body.enable=false;
-    scene.tweens.add({targets:head,x:basket.x,y:basket.y+20,duration:240,onComplete:()=>settleHead(scene,head)});
+    bodyGroup.remove(head);
+    head.setPosition(head.x-basket.x,head.y-basket.y);basket.add(head);
+    basket.bringToTop(basket.basketArt);
+    const catchTween=scene.tweens.add({targets:head,x:0,y:-8,angle:0,duration:200,onComplete:()=>{head.hasSettled=true;}});
+    head.once('destroy',()=>catchTween.stop());
+    basket.caughtHead=head;
   });
   basket.previousX=basket.x;
 }
@@ -4050,16 +4150,24 @@ function choosePower(scene) {
 
 function slashExecutioner(scene, angle, onComplete) {
   if (slashTween) slashTween.stop();
-  slashTween = scene.tweens.add({
-    targets: executionerWeapon,
-    angle: -45,
-    duration: 180,
-    ease: 'Sine.easeOut',
-    onComplete: () => {
-      slashTween = scene.tweens.add({targets:executionerWeapon,angle:70,duration:130,ease:'Cubic.easeIn',onComplete:()=>{
-        if(onComplete)onComplete();
-        slashTween=scene.tweens.add({targets:executionerWeapon,angle:25,duration:260,ease:'Sine.easeInOut',onComplete:()=>{slashTween=null;}});
-      }});
+  // Tween a continuous angle rather than Phaser's wrapped sprite angle:
+  // left shoulder -> down around the body -> upward cut -> follow-through.
+  const swing={degrees:executionerWeapon.angle ?? 25,x:executionerWeapon.x ?? 28,y:executionerWeapon.y ?? -12};
+  const pose=()=>{executionerWeapon.angle=swing.degrees;executionerWeapon.x=swing.x;executionerWeapon.y=swing.y;};
+  slashTween=scene.tweens.add({
+    targets:swing,degrees:-45,x:-12,y:-45,duration:180,ease:'Sine.easeOut',onUpdate:pose,
+    onComplete:()=>{
+      slashTween=scene.tweens.add({
+        targets:swing,degrees:-290,x:18,y:-28,duration:300,ease:'Cubic.easeInOut',onUpdate:pose,
+        onComplete:()=>{
+          // Release the head on the rising stroke, before the blade settles.
+          if(onComplete)onComplete();
+          slashTween=scene.tweens.add({
+            targets:swing,degrees:-335,x:28,y:-12,duration:180,ease:'Cubic.easeOut',onUpdate:pose,
+            onComplete:()=>{executionerWeapon.angle=25;executionerWeapon.x=28;executionerWeapon.y=-12;slashTween=null;}
+          });
+        }
+      });
     }
   });
 }
@@ -4069,7 +4177,7 @@ function introExecutioner(scene, onComplete) {
   // scene.tweens.killTweensOf(backOverlay);
   // Darken the scene as the executioner arrives for dramatic effect
   fadeBackgroundOverlay(scene, 0.6, 800);
-  executioner.setPosition(850, CHARACTER_BASE_Y);
+  executioner.setPosition(offscreenActorX(scene,true), CHARACTER_BASE_Y);
   executioner.setAlpha(0);
   executioner.setVisible(true);
   CastArt.walk(scene,executioner,1500);
@@ -4126,11 +4234,17 @@ function resetHead(scene) {
 
 
 
+function dismissBasketCarrier(scene) {
+  const basket=scene.basketCarrier;if(!basket?.active || basket.leaving)return;
+  basket.leaving=true;basket.used=true;basket.moveTween?.stop();basket.waitEvent?.remove(false);
+  basket.moveTween=scene.tweens.add({targets:basket,x:basket.exitX,duration:1200,onComplete:()=>{basket.destroy(true);if(scene.basketCarrier===basket)scene.basketCarrier=null;}});
+}
+
 function retirePreviousRoundTargets(scene) {
   if (!targetGroup) return;
-  // Each set of pole targets belongs to one customer. Let unhit jesters leave
-  // before the next set arrives, so a long streak does not bury the stage.
-  targetGroup.getChildren().filter(target => target.jester && !target.collected).forEach(target => {
+  // A missed chop clears the resident carriers, including caught targets.
+  [...targetGroup.getChildren(),...(scene.parkedTargets || [])].filter(target => target.jester && !target.leaving).forEach(target => {
+    target.leaving=true;
     const jester = target.jester;
     if (target.moveTween) target.moveTween.stop();
     if (target.yorkWaveTween) target.yorkWaveTween.stop();
@@ -4140,21 +4254,23 @@ function retirePreviousRoundTargets(scene) {
     scene.tweens.killTweensOf(jester);
     target.collected = true;
     if (target.body) target.body.enable = false;
+    for(const part of target.specialParts || []){targetGroup.remove(part);if(part.active)part.destroy();}
     targetGroup.remove(target);
-    const exitX = jester.startFromRight ? GAME_WIDTH + 100 : -100;
+    const exitX = jester.startFromRight ? GAME_WIDTH+450 : -450;
     scene.tweens.add({
       targets: [jester, target],
       x: exitX,
       alpha: 0,
       duration: 650,
       ease: 'Sine.easeIn',
-      onComplete: () => { jester.destroy(); target.destroy(); }
+      onComplete: () => { jester.destroy(); if(target.active)target.destroy(); }
     });
   });
+  scene.parkedTargets=[];
 }
 
 function spawnPrisoner(scene, fromRight, withTarget = true) {
-  retirePreviousRoundTargets(scene);
+  if(scene.basketCarrier?.active&&!scene.basketCarrier.leaving){scene.basketCarrier.caughtHead?.destroy();scene.basketCarrier.caughtHead=null;scene.basketCarrier.used=false;}
   spawnBasketCarrier(scene);
   const city = cities.find(c => c.name === currentCity);
   roundCount++;
@@ -4177,7 +4293,7 @@ function spawnPrisoner(scene, fromRight, withTarget = true) {
   //     ease: 'Linear'
   //   });
   // }
-  prisoner.setVisible(true);
+  prisoner.setVisible(true);prisoner.escapeRecorded=false;
   // Birds now fly in once the jester has reached the stage
   resetHead(scene);
   prisonerClass = pickClass();
@@ -4186,8 +4302,9 @@ function spawnPrisoner(scene, fromRight, withTarget = true) {
     prisonerHeadKey = `priestHead${headVariant}`;
     prisonerBodyKey = 'priestBody';
   } else {
-    const headVariant = Phaser.Math.Between(1, 87);
-    const bodyVariant = Phaser.Math.Between(1, 9);
+    const unlocked=ChopCore.castUnlocked(level);
+    const headVariant = Phaser.Math.Between(1, unlocked.faces);
+    const bodyVariant = Phaser.Math.Between(1, unlocked.bodies);
     prisonerHeadKey = `prisonerHead${headVariant}`;
     prisonerBodyKey = `prisonerBody${bodyVariant}`;
   }
@@ -4197,9 +4314,10 @@ function spawnPrisoner(scene, fromRight, withTarget = true) {
   // Spawn up to 3 targets (jesters, barrels, etc.) each time a prisoner appears
   // The number of targets is chosen at random to keep gameplay varied
   if (withTarget) {
-    const targetCount = Phaser.Math.Between(1, 3);
-    const usedTargetXs = [];
-    for (let i = 0; i < targetCount; i++) {
+    const targetCount = Phaser.Math.Between(2,player.weaponLevel>=4?5:3);
+    const residents=targetGroup.getChildren().filter(t=>t.jester&&!t.collected);
+    const usedTargetXs = residents.map(t=>t.jester.x);
+    for (let i = residents.length; i < targetCount; i++) {
       spawnTarget(scene, usedTargetXs);
     }
   }
@@ -4214,7 +4332,7 @@ function spawnPrisoner(scene, fromRight, withTarget = true) {
   // Keep body aligned under the head when resetting for a new prisoner
   prisonerBody.y = 64;
   
-  const startX = -100;
+  const startX = offscreenActorX(scene,fromRight);
   prisoner.setPosition(startX, CHARACTER_BASE_Y);
   leftEscort.setPosition(startX - 50, CHARACTER_BASE_Y);
   rightEscort.setPosition(startX + 50, CHARACTER_BASE_Y);
@@ -4237,14 +4355,14 @@ function spawnPrisoner(scene, fromRight, withTarget = true) {
       // screen to the left instead of simply disappearing.
       scene.tweens.add({
         targets: leftEscort,
-        x: -100,
+        x: offscreenActorX(scene,fromRight),
         duration: 800,
         ease: 'Linear',
         onComplete: () => leftEscort.setVisible(false)
       });
       scene.tweens.add({
         targets: rightEscort,
-        x: -100,
+        x: offscreenActorX(scene,fromRight),
         duration: 800,
         ease: 'Linear',
         onComplete: () => rightEscort.setVisible(false)
@@ -4338,6 +4456,8 @@ function endSwing(scene) {
   bloodAmount *= 1.5;
 
   if (missed) {
+    retirePreviousRoundTargets(scene);
+    dismissBasketCarrier(scene);
     missStreak++;
     let strikeMsg = `Strike ${missStreak}`;
     if (missStreak >= 3) {
@@ -4351,19 +4471,23 @@ function endSwing(scene) {
     }
     message = `Missed!\n${strikeMsg}`;
     killStreak = 0;
+    scene.perfectRun=0;scene.feverChops=0;
     speedMultiplier = 1;
     swingSpeed = baseSwingSpeed * speedMultiplier;
-    streakMultiplierText.setText(`x${killStreak}`);
+    streakMultiplierText.setText(`${Math.max(1,killStreak)}×`);
   } else {
     missStreak = 0;
     killCount++;
     killStreak++;
+    window.Arcade?.chop(prisonerHeadSprite.castFaceIndex || 0,killStreak,message==='Perfect!');
+    scene.perfectRun=message==='Perfect!'?(scene.perfectRun || 0)+1:0;
+    if(scene.perfectRun>=3){scene.feverChops=3;scene.perfectRun=0;}
     if (killStreak > 1) {
       speedMultiplier = Math.min(1.65, speedMultiplier * 1.035);
     }
     swingSpeed = baseSwingSpeed * speedMultiplier;
     killText.setText(`Kills: ${killCount}`);
-    streakMultiplierText.setText(`x${killStreak}`);
+    streakMultiplierText.setText(`${Math.max(1,killStreak)}×`);
     addXP(scene, 1);
     showAimArrow(scene, bloodAmount, 'left');
     spawnSide = null;
@@ -4371,7 +4495,9 @@ function endSwing(scene) {
   }
   missText.setText(`Misses: ${missStreak}`);
 
-  const goldGain = missed ? payout : payout * killStreak;
+  const frenzy=!missed && (scene.feverChops || 0)>0;
+  const goldGain = Math.round(missed ? payout : payout * killStreak*(frenzy?2:1));
+  if(frenzy){scene.feverChops--;window.Arcade?.points(100*killStreak);}
   if(!missed)scene.currentChopGold=goldGain;
   addGold(scene, goldGain);
   if (!missed && goldGain > 0) {
@@ -4393,7 +4519,7 @@ function endSwing(scene) {
   scene.popupText.setVisible(true);
   window.MobileGame?.feedback(!missed ? `${message} · +${goldGain} gold · ${killStreak} in a row` : `${message} · streak reset`, !missed);
 
-  if (!missed) window.MobileGame?.combo(killStreak,goldGain);
+  if (!missed) window.MobileGame?.combo(frenzy?3:killStreak,goldGain,frenzy?'frenzy':undefined);
   SaveManager.save();
 
   // Leave the meter visible briefly so players can see the result
@@ -4415,23 +4541,22 @@ function endSwing(scene) {
   });
 }
 
-function gainFame(scene, npc, amount = 1) {
+function gainFame(scene, npc, amount = 1, goldReward = 0) {
   const previousFame = fame;
-  fame = Math.max(0, fame + amount * (amount > 0 ? fameMultiplier : 1));
+  fame = Math.max(0, Math.round(fame) + Math.round(amount * (amount > 0 ? fameMultiplier : 1)));
   const fameGain = fame - previousFame;
   fameText.setText(formatGold(Math.floor(fame)));
   if (amount > 0) addXP(scene, 5 * amount);
   SaveManager.save();
-  const coinsToSpawn = Math.max(0, Math.floor(fameGain));
+  const coinsToSpawn = Math.min(MAX_COIN_ANIMS, Math.max(0, Math.floor(fameGain)));
   for (let i = 0; i < coinsToSpawn; i++) {
     scene.time.delayedCall(i * 100, () => spawnFameCoin(scene));
   }
-  const fameLabel = `${fameGain > 0 ? '+' : ''}${Number(fameGain.toFixed(1))} fame`;
-  const labels = {woodenShield:'Shield broken',explodingBarrel:'Barrel lit',royal:'Royal target',holyMonk:'Avoid the monks',bird:'Crow hit'};
-  if (amount !== 0) window.MobileGame?.feedback(`${labels[npc.targetType] || (npc.isYorkTallWaver ? 'High target' : 'Target hit')} · ${fameLabel}${npc.targetType === 'bird' ? ' · +1 gold' : ''}`, amount > 0);
+  const fameLabel = `${fameGain < 0 ? '-' : ''}${Math.abs(fameGain)}`;
+  if (amount !== 0) window.MobileGame?.reward(goldReward, fameGain);
   const popup = scene.add.text(npc.x, npc.y - 40, fameLabel, {
-    font: '20px monospace',
-    fill: '#ffff00'
+    font: 'bold 28px Trebuchet MS',
+    fill: '#dce6ed', stroke: '#25373d', strokeThickness: 4
   }).setOrigin(0.5);
   scene.tweens.add({
     targets: popup,
@@ -4440,13 +4565,19 @@ function gainFame(scene, npc, amount = 1) {
     duration: 800,
     onComplete: () => popup.destroy()
   });
-  // Jester will run off when the target hits the ground
+  if(goldReward>0) {
+    const goldPopup=scene.add.text(npc.x,npc.y-76,formatGold(goldReward),{
+      font:'bold 28px Trebuchet MS',fill:'#ffd36b',stroke:'#493524',strokeThickness:4
+    }).setOrigin(.5);
+    scene.tweens.add({targets:goldPopup,y:goldPopup.y-20,alpha:0,duration:800,onComplete:()=>goldPopup.destroy()});
+  }
+  // Unhit holders stay; hit holders catch their target and leave.
 }
 
 function showGoldGain(scene, amount) {
-  const popup = scene.add.text(prisoner.x, prisoner.y - 40, `+${formatGold(amount)} Gold`, {
-    font: '20px monospace',
-    fill: '#ffff88'
+  const popup = scene.add.text(prisoner.x, prisoner.y - 40, formatGold(amount), {
+    font: 'bold 28px Trebuchet MS',
+    fill: '#ffd36b', stroke: '#493524', strokeThickness: 4
   }).setOrigin(0.5);
   scene.tweens.add({
     targets: popup,
@@ -4457,9 +4588,35 @@ function showGoldGain(scene, amount) {
   });
 }
 
-function handleTargetHit(scene, target, head) {
-  if (target.collected) return;
-  if (target.targetType === 'woodenShield' && head && head.power < 1.5) {
+function dropHitBird(scene,bird,source) {
+  bird.birdSprite?.flapTween?.stop();
+  bird.isFallingBird=true;bird.isCorpse=true;bird.bounceCount=0;bird.prevX=bird.x;bird.prevY=bird.y;
+  bird.comboSource=source?.comboSource || source || null;bird.power=source?.power || 1;
+  bird.setSize(80,50);bodyGroup.add(bird);
+  bird.body.enable=true;bird.body.moves=true;bird.body.onWorldBounds=true;
+  bird.body.setImmovable(false);bird.body.setAllowGravity(true);bird.body.setCollideWorldBounds(true);
+  bird.body.checkCollision.up=false;bird.body.setCircle(24).setOffset(-24,-24);
+  bird.body.setBounce(.25).setDrag(35,0).setGravityY(0);
+  bird.body.setVelocity((source?.body?.velocity?.x || 0)*.25,80);
+  bird.body.setAngularVelocity(bird.fromRight?-140:140);
+  scene.physics.add.overlap(bird,targetGroup,(fallen,target)=>handleTargetHit(scene,target,fallen));
+}
+
+function settleFallenBird(scene,bird) {
+  if(bird.hasSettled)return;bird.hasSettled=true;
+  const column=Math.max(0,Math.min(59,Math.floor((bird.x+800)/40)));
+  bird.pileOffset=Math.min(240,(scene.headPileCounts[column] || 0)*12);scene.headPileCounts[column]=(scene.headPileCounts[column] || 0)+1;
+  bird.y=(scene.remainsFloor || GROUND_Y)-bird.displayHeight/2-bird.pileOffset;
+  bird.setAngle(bird.fromRight?-18:18).setDepth(31);
+  bird.body.stop();bird.body.setAllowGravity(false);bird.body.enable=false;
+}
+
+function handleTargetHit(scene, target, head, blast=false) {
+  if (target.collected || target.leaving || !target.active) return;
+  const physicalProjectile=head;
+  if(target.targetOption?.effect && !SpecialTargets.before(scene,target,physicalProjectile,blast,specialTargetAPI(scene)))return;
+  if (target.targetType === 'woodenShield' && head && head.power < 1.5 && !blast) {
+    if(!head.body?.enable)return;
     head.body.setVelocityX(-head.body.velocity.x * 0.5);
     if (!target.shieldFeedbackAt || scene.time.now - target.shieldFeedbackAt > 700) {
       target.shieldFeedbackAt = scene.time.now;
@@ -4467,12 +4624,16 @@ function handleTargetHit(scene, target, head) {
     }
     return;
   }
+  head=head?.comboSource || head;
   target.collected = true;
-  if(head && target.targetType!=='holyMonk' && !(target.targetType==='bird' && target.birdKind==='dove')) {
+  let targetGoldReward=target.specialGold || target.fragmentGold || 0;
+  if(targetGoldReward>0){addGold(scene,targetGoldReward);if(head)head.targetGold=(head.targetGold || 0)+targetGoldReward;}
+  if(head && target.targetType!=='holyMonk') {
     head.targetCombo=(head.targetCombo || 0)+1;
-    if(head.targetCombo>1){const bonus=Math.min(5,head.targetCombo-1);addGold(scene,bonus);window.MobileGame?.combo(head.targetCombo,bonus,'targets');}
+    window.Arcade?.target(head.targetCombo,target.targetType,currentWeather);
+    if(head.targetCombo>1){const bonus=5*head.targetCombo*head.targetCombo;targetGoldReward+=bonus;head.targetGold=(head.targetGold || 0)+bonus;addGold(scene,bonus);window.MobileGame?.combo(head.targetCombo,bonus,'targets');}
   }
-  if (target.targetType !== 'holyMonk' && !(target.targetType === 'bird' && target.birdKind === 'dove')) Campaign.state.targets++;
+  if (target.targetType !== 'holyMonk') Campaign.state.targets++;
   if (target.moveTween) { target.moveTween.stop(); target.moveTween = null; }
   if (target.yorkWaveTween) { target.yorkWaveTween.stop(); target.yorkWaveTween = null; }
   const jester = target.jester;
@@ -4481,41 +4642,32 @@ function handleTargetHit(scene, target, head) {
   if (target.targetType === 'royal') fameGain *= 5;
   if (target.targetType === 'holyMonk') fameGain = -2;
   fameGain *= target.fameMultiplier || 1;
+  if(fameGain>0){if(target.mustardPaint)fameGain*=3;if(scene.trickBuffUntil && scene.trickBuffUntil>scene.time.now)fameGain*=2;}
   if (target.targetType === 'bird') {
     bloodFireworkEmitter.explode(25, target.x, target.y);
-    if (target.birdKind === 'dove') {
-      const lostFame = Math.min(1, fame);
-      fame = Math.max(0, fame - 1);
-      window.MobileGame?.feedback(`Avoid the doves · ${lostFame > 0 ? `-${lostFame} fame` : 'no fame left to lose'}`, false);
-      fameText.setText(formatGold(Math.floor(fame)));
-      fameGain = 0;
-    } else {
-      gainFame(scene, target, 1);
-      addGold(scene, 1);
-      fameGain = 0;
-    }
+    const birdGold=target.birdKind==='dove'?1000:100;
+    gainFame(scene,target,fameGain,targetGoldReward+birdGold);
+    addGold(scene,birdGold);
+    if(head)head.targetGold=(head.targetGold || 0)+birdGold;
     SaveManager.save();
     targetGroup.remove(target);
-    target.body.setVelocity(0, 0);
-    target.body.setAllowGravity(false);
-    target.body.setImmovable(true);
-    target.body.setCollideWorldBounds(false);
-    target.body.enable = false;
-    scene.tweens.add({
-      targets: target,
-      y: 560,
-      duration: 600,
-      ease: 'Linear',
-      onComplete: () => target.destroy()
-    });
+    target.targetGold=birdGold+targetGoldReward;
+    dropHitBird(scene,target,head);
+    if(window.SpecialTargets)SpecialTargets.notifyHit(scene,target,specialTargetAPI(scene));
     return;
   }
-  gainFame(scene, target, fameGain);
+  gainFame(scene, target, fameGain, targetGoldReward);
+  if(target.targetOption?.effect){SpecialTargets.after(scene,target,physicalProjectile,specialTargetAPI(scene));SpecialTargets.notifyHit(scene,target,specialTargetAPI(scene));}
+  else if(window.SpecialTargets)SpecialTargets.notifyHit(scene,target,specialTargetAPI(scene));
+  if(target.partParent?.active&&!target.partParent.collected){
+    target.partParent.specialPartsRemaining--;if(target.partParent.specialPartsRemaining<=0)handleTargetHit(scene,target.partParent,physicalProjectile,true);
+  }
   if (target.targetType === 'explodingBarrel') {
     armExplodingBarrel(scene, target, head);
     return;
   }
   targetGroup.remove(target);
+  if(jester?.poleHands)CastArt.holdPole(jester.poleHands,0);
   // blood spray at impact
   splatEmitter.explode(15, target.x, target.y);
   target.body.setVelocity(0, 0);
@@ -4527,24 +4679,21 @@ function handleTargetHit(scene, target, head) {
   scene.tweens.add({
     targets: target,
     // Drop the target down near the jester's feet
-    y: dropY,
+    x:jester?jester.x+23:target.x,
+    y:jester?jester.y-38:dropY,
     duration: 300,
     ease: 'Linear',
     onComplete: () => {
-      if (jester && !jester.running) {
-        jester.running = true;
-        const offX = jester.startFromRight ? 900 : -100;
-        scene.tweens.add({
-          targets: [jester, target],
-          x: offX,
-          duration: 1500,
-          ease: 'Linear',
-          onComplete: () => {
-            jester.destroy();
-            target.destroy();
-          }
-        });
-      }
+      if(!target.active)return;
+      if (jester?.active && !jester.running) {
+        jester.running = true;jester.carrying=true;
+        target.setPosition(23,-38);jester.add(target);jester.jesterPole?.setVisible(false);
+        CastArt.walk(scene,jester,1500,true);
+        (scene.departingCarriers ||= new Set()).add(jester);
+        jester.exitTween=scene.tweens.add({targets:jester,x:jester.startFromRight?GAME_WIDTH+450:-450,duration:1500,ease:'Linear',onComplete:()=>{
+          scene.departingCarriers.delete(jester);jester.destroy(true);if(target.active)target.destroy();
+        }});
+      }else if(!jester)target.destroy();
     }
   });
 }
@@ -4584,11 +4733,11 @@ function armExplodingBarrel(scene, target, head) {
       }
     }
   });
-  scene.time.delayedCall(700, () => detonateExplodingBarrel(scene, target, head));
+  scene.time.delayedCall(target.barrelFuseMs || 700, () => detonateExplodingBarrel(scene, target, head));
 }
 
 function detonateExplodingBarrel(scene, target, head) {
-  if (!target || !target.active || target.barrelExploded) return;
+  if (!target || !target.active || target.leaving || target.barrelExploded) return;
   target.barrelExploded = true;
   if (target.barrelBlinkEvent) {
     target.barrelBlinkEvent.remove(false);
@@ -4599,25 +4748,28 @@ function detonateExplodingBarrel(scene, target, head) {
     target.barrelPulseTween = null;
   }
   target.setScale(1);
-  targetGroup.getChildren().forEach(t => {
-    if (!t.collected && Phaser.Math.Distance.Between(t.x, t.y, target.x, target.y) < 300) {
-      handleTargetHit(scene, t, head);
+  const radius=[0,220,300,390][target.barrelSize || 2];
+  const shock=scene.add.circle(target.x,target.y,12,0xf9c66b,.15).setStrokeStyle(6,0xffe6a3).setDepth(24);
+  scene.tweens.add({targets:shock,scale:radius/12,alpha:0,duration:450,onComplete:()=>shock.destroy()});
+  const bang=scene.add.text(target.x,target.y-55,['','POP!','BOOM!','KABOOM!'][target.barrelSize || 2],{font:'bold 36px Georgia',color:'#ffe6a3',stroke:'#813f36',strokeThickness:5}).setOrigin(.5).setDepth(26);
+  scene.tweens.add({targets:bang,y:bang.y-60,scale:1.3,alpha:0,duration:800,onComplete:()=>bang.destroy()});
+  scene.cameras.main.shake(140,.003*(target.barrelSize || 1));
+  targetGroup.getChildren().slice().forEach(t => {
+    if (!t.collected && Phaser.Math.Distance.Between(t.x,t.y,target.x,target.y)<radius) {
+      const spark=scene.add.polygon(target.x,target.y,[0,8,8,0,16,8,8,16],0xffc66d).setDepth(25);
+      scene.tweens.add({targets:spark,x:t.x,y:t.y,angle:360,duration:240,onComplete:()=>{spark.destroy();if(t.active&&!t.collected)handleTargetHit(scene,t,head,true);}});
     }
   });
   targetGroup.remove(target);
   fireworkEmitter.explode(25, target.x, target.y);
   fireworkCloseEmitter.explode(40, target.x, target.y);
   const jester = target.jester;
-  if (jester && !jester.running) {
-    jester.running = true;
-    const offX = jester.startFromRight ? 900 : -100;
-    scene.tweens.add({
-      targets: jester,
-      x: offX,
-      duration: 1500,
-      ease: 'Linear',
-      onComplete: () => jester.destroy()
-    });
+  if(jester?.active&&!jester.running){
+    jester.running=true;jester.jesterPole?.setVisible(false);CastArt.walk(scene,jester,1500,true);
+    (scene.departingCarriers ||= new Set()).add(jester);
+    jester.exitTween=scene.tweens.add({targets:jester,x:jester.startFromRight?GAME_WIDTH+450:-450,duration:1500,ease:'Linear',onComplete:()=>{
+      scene.departingCarriers.delete(jester);jester.destroy(true);
+    }});
   }
   target.destroy();
 }
@@ -4626,7 +4778,7 @@ const YORK_RING_EVENT_TEST_CHANCE = 45;
 const YORK_ISLAND_EVENT_TEST_CHANCE = 35;
 
 function shouldSpawnYorkFlyingIslandEvent() {
-  if (currentCity !== 'Norwich' || player.weaponLevel < 8) return false;
+  if (!window.TargetShop?.enabled('island',currentCity) || player.weaponLevel < 8) return false;
   if (yorkFlyingIslandEvent && yorkFlyingIslandEvent.active) return false;
   if (yorkRingPlatformEvent && yorkRingPlatformEvent.active) return false;
   return Phaser.Math.Between(1, 100) <= YORK_ISLAND_EVENT_TEST_CHANCE;
@@ -4765,7 +4917,7 @@ function spawnYorkFlyingIslandEvent(scene) {
 
 function updateFlyingIslandEvent(scene, islandEvent) {
   if (!islandEvent || !islandEvent.active) return;
-  if (currentCity !== 'York') {
+  if (!window.TargetShop?.enabled('island',currentCity)) {
     cleanupYorkFlyingIslandEvent(scene);
     return;
   }
@@ -4884,7 +5036,7 @@ function completeFlyingIslandHoleSuccess(scene, islandEvent, head) {
   });
   gainFame(scene, islandEvent.container, 5);
   addGold(scene, 5);
-  const successPopup = scene.add.text(metrics.x, metrics.y - 90, 'Norwich Hole in One! +5 Fame +5 Gold', {
+  const successPopup = scene.add.text(metrics.x, metrics.y - 90, 'Gloucester Sky Green! +5 Fame +5 Gold', {
     font: '24px monospace',
     fill: '#fff08a',
     stroke: '#000000',
@@ -4926,8 +5078,9 @@ function completeFlyingIslandHoleSuccess(scene, islandEvent, head) {
 }
 
 function shouldSpawnYorkRingPlatformEvent() {
-  if (currentCity !== 'Winchester') return false;
+  if (!window.TargetShop?.enabled('rings',currentCity)) return false;
   if (player.weaponLevel < 8) return false;
+  if (yorkFlyingIslandEvent && yorkFlyingIslandEvent.active) return false;
   if (yorkRingPlatformEvent && yorkRingPlatformEvent.active) return false;
   return Phaser.Math.Between(1, 100) <= YORK_RING_EVENT_TEST_CHANCE;
 }
@@ -5215,7 +5368,7 @@ function spawnYorkRingPlatformEvent(scene) {
 
 function updateYorkRingPlatformEvent(scene) {
   if (!yorkRingPlatformEvent || !yorkRingPlatformEvent.active) return;
-  if (currentCity !== 'York') {
+  if (!window.TargetShop?.enabled('rings',currentCity)) {
     cleanupYorkRingPlatformEvent(scene);
     return;
   }
@@ -5299,7 +5452,7 @@ function checkFastHeadTargetCrossings(scene) {
   if (!bodyGroup || !targetGroup) return;
   const targets = targetGroup.getChildren();
   bodyGroup.getChildren().forEach(head => {
-    if (!head.isHead || !head.active || !head.body || !head.body.enable) return;
+    if ((!head.isHead && !head.isFallingBird) || !head.active || !head.body || !head.body.enable) return;
     const prevX = head.prevX ?? head.x;
     const prevY = head.prevY ?? head.y;
     const movedFarEnough = Phaser.Math.Distance.Between(prevX, prevY, head.x, head.y) > 4;
@@ -5345,7 +5498,7 @@ function checkFastHeadTargetCrossings(scene) {
 
 function spawnHolyMonk(scene) {
   const fromRight = Phaser.Math.Between(0, 1) === 1;
-  const startX = fromRight ? 850 : -50;
+  const startX = fromRight ? GAME_WIDTH+450 : -450;
   const monk = scene.add.container(startX, CHARACTER_BASE_Y).setDepth(20);
   monk.targetType = 'holyMonk';
   createTargetAppearance(scene, monk, 'holyMonk');
@@ -5375,7 +5528,7 @@ function spawnHolyMonk(scene) {
     changeEvent.remove();
     scene.tweens.add({
       targets: monk,
-      x: fromRight ? 850 : -50,
+      x: fromRight ? GAME_WIDTH+450 : -450,
       duration: 1500,
       ease: 'Linear',
       onComplete: () => {
@@ -5385,12 +5538,13 @@ function spawnHolyMonk(scene) {
   });
 }
 
-function spawnRoyal(scene) {
+function spawnRoyal(scene, option = {}) {
   const fromRight = Phaser.Math.Between(0, 1) === 1;
-  const startX = fromRight ? 850 : -50;
-  const stopX = fromRight ? 500 : 300;
+  const startX = fromRight ? GAME_WIDTH+450 : -450;
+  const stopX = option.courier ? (fromRight ? -450 : GAME_WIDTH+450) : (fromRight ? 500 : 300);
   const royal = scene.add.container(startX, CHARACTER_BASE_Y).setDepth(20);
   royal.targetType = 'royal';
+  royal.fameMultiplier=option.reward || 1;
   createTargetAppearance(scene, royal, 'royal');
   scene.physics.world.enable(royal);
   royal.body.setSize(46,157).setOffset(-23,-93);
@@ -5405,14 +5559,17 @@ function spawnRoyal(scene) {
   scene.tweens.add({
     targets: royal,
     x: stopX,
-    duration: 1500,
+    duration: option.courier ? 3200 : 1500,
     ease: 'Linear',
     onComplete: () => {
+      if(!royal.active)return;
       royal.body.setVelocityX(0);
+      if(option.courier){royal.destroy();return;}
       scene.time.delayedCall(Phaser.Math.Between(2000, 5000), () => {
+        if(!royal.active)return;
         scene.tweens.add({
           targets: royal,
-          x: fromRight ? 850 : -50,
+          x: fromRight ? GAME_WIDTH+450 : -450,
           duration: 1500,
           ease: 'Linear',
           onComplete: () => royal.destroy()
@@ -5438,8 +5595,8 @@ function spawnBird(scene) {
   const fullPowerRise = Math.pow(Math.max(0, 500 * weaponMultiplier - windY), 2) / 800;
   if (launchY - fullPowerRise > laneY) return;
   const fromRight = Phaser.Math.Between(0, 1) === 1;
-  const startX = fromRight ? 850 : -50;
-  const endX = fromRight ? -50 : 850;
+  const startX = fromRight ? GAME_WIDTH+450 : -450;
+  const endX = fromRight ? -450 : GAME_WIDTH+450;
   // Teach the bonus first. Reputation-costing doves join after a few upgrades.
   const kind = player.weaponLevel < 4 ? 'crow' : (Phaser.Math.Between(0, 1) ? 'dove' : 'crow');
   const bird = scene.add.container(startX, laneY).setDepth(20);
@@ -5472,9 +5629,10 @@ function spawnBird(scene) {
   bird.once('destroy',()=>bird.moveTween?.stop());
 }
 
-function pickSpacedTargetX(existingTargetXs = []) {
-  const minX = 100;
-  const maxX = 700;
+function pickSpacedTargetX(existingTargetXs = [], zoom = 1) {
+  const extra=GAME_WIDTH*.5*(1/Math.max(.55,zoom)-1);
+  const minX = Math.ceil(100-extra);
+  const maxX = Math.floor(700+extra);
   const minSpacing = 90;
   const maxAttempts = 12;
   let candidate = Phaser.Math.Between(minX, maxX);
@@ -5488,29 +5646,41 @@ function pickSpacedTargetX(existingTargetXs = []) {
   return candidate;
 }
 
+function updateTargetMotion(target, time) {
+  if(!target.active || target.collected || !target.jester?.active || target.motionStartedAt===null || !target.targetOption?.motion)return;
+  const pose=window.TargetShop.motion(target.targetOption,time-target.motionStartedAt,target.basePoleHeight);
+  target.poleHeight=pose.height;
+  target.jesterPole.setDisplaySize(6,pose.height).setRotation(pose.angle);
+}
+
 function spawnTarget(scene, existingTargetXs = []) {
   const type = chooseTargetType();
+  const option=FEATURES.specialTargets?window.TargetShop?.lastChoice:null;
   if (type === 'holyMonk') {
     spawnHolyMonk(scene);
     return;
   }
   if (type === 'royal') {
-    spawnRoyal(scene);
+    spawnRoyal(scene,option);
     return;
   }
   const fromRight = Phaser.Math.Between(0, 1) === 1;
-  const startX = fromRight ? 850 : -50;
-  const targetX = pickSpacedTargetX(existingTargetXs);
+  const startX = fromRight ? GAME_WIDTH+450 : -450;
+  const targetX = pickSpacedTargetX(existingTargetXs,scene.cameras.main.zoom);
   existingTargetXs.push(targetX);
   const profile=ChopCore.targetProfile(currentCity,level,player.weaponLevel,Phaser.Math.Between(1,100));
-  const isYorkTallWaver = profile.high && type === 'standard';
+  profile.high=!!option?.high;
+  profile.moving=!!option?.motion;
+  const isYorkTallWaver = profile.high && (type === 'standard' || type === 'special');
   // Reserve the upper quarter for the mobile HUD and the target's radius.
-  const maxVisiblePoleHeight = Math.max(540, CHARACTER_BASE_Y - 20 - GAME_HEIGHT * .25);
+  const camera=scene.cameras.main;
+  const visibleSkyTop=(camera.worldView?.y ?? 0)+GAME_HEIGHT*.25/camera.zoom;
+  const maxVisiblePoleHeight = Math.max(540, CHARACTER_BASE_Y - 20 - visibleSkyTop);
   const reach=Math.max(180,Math.floor(Math.pow(Math.max(0,500*getWeaponPowerMultiplier()-100),2)/800-60));
   const tallPoleMax = Math.min(reach, maxVisiblePoleHeight);
   const poleHeight = isYorkTallWaver
     ? Phaser.Math.Between(Math.min(360,tallPoleMax), tallPoleMax)
-    : Phaser.Math.Between(80, 180);
+    : Phaser.Math.Between(Math.min(reach,60+Math.min(100,(level-1)*12)),Math.min(reach,100+Math.min(180,(level-1)*20)));
 
   // Ensure jesters render above the lighting overlay and other background elements.
   const jester = scene.add.container(startX, CHARACTER_BASE_Y).setDepth(20);
@@ -5522,22 +5692,21 @@ function spawnTarget(scene, existingTargetXs = []) {
 
   const target = scene.add.container(startX+23, CHARACTER_BASE_Y - 20 - poleHeight).setDepth(20);
   target.targetType = type;
+  target.greenTarget=!!option?.green;
+  target.targetOption=option || {};
+  target.targetRadius=option?.radius || (type==='special'?34:undefined);target.targetColor=option?.color;
+  target.basePoleHeight=poleHeight;target.motionStartedAt=null;
+  target.isMoving=!!option?.motion;
   target.isYorkTallWaver = isYorkTallWaver;
-  target.fameMultiplier = isYorkTallWaver ? profile.reward : 1;
+  target.fameMultiplier = option?.reward || (isYorkTallWaver ? profile.reward : 1);
   target.yorkWaveTween = null;
-  target.jesterPole = pole;
+  target.jesterPole = pole;jester.jesterPole=pole;
   target.poleHeight = poleHeight;
-  createTargetAppearance(scene, target, type);
-
-  const isEligibleForStandardMove = !isYorkTallWaver;
-  const shouldMoveWoodenShield = type === 'woodenShield' && killStreak >= 3;
-  const shouldMoveStandard = type !== 'woodenShield' && isEligibleForStandardMove && FEATURES.movingTargets && profile.moving;
-  const shouldStartMoveTweenAfterEntrance = shouldMoveWoodenShield || shouldMoveStandard;
-  const moveTweenDuration = shouldMoveWoodenShield && killStreak >= 10 ? 400 : 800;
-
-  if (shouldStartMoveTweenAfterEntrance) {
-    target.isMoving = true;
+  if(type==='explodingBarrel'){
+    target.barrelSize=option?.size || 1;target.barrelFuseMs=option?.fuse || 700;
+    target.barrelScale=[0,.8,1.15,1.5][target.barrelSize];
   }
+  createTargetAppearance(scene, target, type);
 
   let jBodyKey = 'jesterBody1';
   if (type === 'woodenShield') {
@@ -5550,6 +5719,7 @@ function spawnTarget(scene, existingTargetXs = []) {
   }
   CastArt.jester(body,jBodyKey);
   jester.poleHands=scene.add.graphics();jester.add(jester.poleHands);
+  CastArt.strain(scene,jester,body,poleHeight,type==='explodingBarrel'?target.barrelSize:1);
 
   target.collected = false;
   target.jester = jester;
@@ -5570,12 +5740,12 @@ function spawnTarget(scene, existingTargetXs = []) {
       if (type === 'explodingBarrel') {
         // Include the fuse above the barrel in the hitbox and widen it slightly
         // so the barrels are a bit easier to hit.
-        target.body.setSize(40, 56);
-        target.body.setOffset(-20, -30);
+        target.body.setSize(40*target.barrelScale,56*target.barrelScale);
+        target.body.setOffset(-20*target.barrelScale,-30*target.barrelScale);
         target.body.x = target.x + target.body.offset.x;
         target.body.y = target.y + target.body.offset.y;
       } else {
-        const targetRadius = target.isYorkTallWaver ? 30 : 20;
+        const targetRadius = target.targetRadius || (target.isYorkTallWaver ? 30 : 20);
         target.body.setCircle(targetRadius);
         target.body.setOffset(-targetRadius, -targetRadius);
         target.body.x = target.x - target.body.halfWidth;
@@ -5583,52 +5753,14 @@ function spawnTarget(scene, existingTargetXs = []) {
       }
       target.body.setAllowGravity(false);
       target.body.setImmovable(true);
-      if (target.isYorkTallWaver || shouldStartMoveTweenAfterEntrance) {
-        const arcAngle = Math.asin(Math.min(0.5, profile.amplitude / target.poleHeight));
-        const waveState = { angle: -arcAngle };
-        target.yorkWaveTween = scene.tweens.add({
-          targets: waveState,
-          angle: arcAngle,
-          duration: type==='woodenShield'?moveTweenDuration:profile.duration,
-          yoyo: true,
-          repeat: -1,
-          ease: 'Sine.easeInOut',
-          onUpdate: () => {
-            if (!target.active || !jester.active) return;
-            const pivotX = jester.x+23;
-            const pivotY = jester.y - 20;
-            const s = Math.sin(waveState.angle);
-            const c = Math.cos(waveState.angle);
-            target.x = pivotX + s * target.poleHeight;
-            target.y = pivotY - c * target.poleHeight;
-            target.jesterPole.setRotation(waveState.angle);
-            if (target.body) {
-              if (type === 'explodingBarrel') {
-                target.body.x = target.x + target.body.offset.x;
-                target.body.y = target.y + target.body.offset.y;
-              } else {
-                target.body.x = target.x - target.body.halfWidth;
-                target.body.y = target.y - target.body.halfHeight;
-              }
-            }
-          }
-        });
-      }
+      target.motionStartedAt=scene.time.now;
+      if(type==='special')initializeSpecialTarget(scene,target);
       if (FEATURES.birds && Phaser.Math.Between(1, 6) === 1) {
         scene.time.delayedCall(2000, () => spawnBird(scene));
       }
     },
     onUpdate: () => {
-      target.x=jester.x+23;
-      if (target.body) {
-        if (type === 'explodingBarrel') {
-          target.body.x = target.x + target.body.offset.x;
-          target.body.y = target.y + target.body.offset.y;
-        } else {
-          target.body.x = target.x - target.body.halfWidth;
-          target.body.y = target.y - target.body.halfHeight;
-        }
-      }
+      CastArt.syncPoleTarget(target);
     }
   });
 }
@@ -5717,8 +5849,12 @@ function update(time, delta) {
   updateRemainsFloor(this);
   CastArt.poseExecutioner(this.executionerHands,executionerWeapon);
   if (!gameStarted || menuOpen) return;
+  updateComboCamera(this,delta);
+  anchorCoinChest(this);
   CastArt.crowd(this,killStreak);
-  targetGroup?.getChildren().forEach(target=>{if(target.jester?.poleHands)CastArt.holdPole(target.jester.poleHands,target.jesterPole.rotation);});
+  targetGroup?.getChildren().forEach(target=>{updateTargetMotion(target,this.time.now);CastArt.syncPoleTarget(target);if(target.targetOption?.effect)updateSpecialTarget(this,target);if(target.jester?.poleHands)CastArt.holdPole(target.jester.poleHands,target.jesterPole.rotation);});
+  if(chest)chest.setVisible(true);
+  streakMultiplierText?.setText(`${Math.max(1,killStreak)*((this.feverChops || 0)>0?2:1)}×`).setVisible(true);
   checkBasketCatch(this);
   aimArrow.list?.[0]?.setVisible(awaitingAngle);
   if (this.launchGuide) {
@@ -5747,9 +5883,9 @@ function update(time, delta) {
     const cloudTint=(cloudChannel(100,255)<<16)|(cloudChannel(132,255)<<8)|cloudChannel(153,255);
     cloudLayerFar.getChildren().forEach(cloud => {
       cloud.x -= 12 * delta / 1000;
-      if (cloud.x < -cloud.width / 2) {
-        cloud.x = config.width + cloud.width / 2;
-        cloud.y = Phaser.Math.Between(CLOUD_MIN_Y, CLOUD_MAX_Y);
+      if (cloud.x < -800-cloud.width / 2) {
+        cloud.x = config.width + 800 + cloud.width / 2;
+        cloud.y = Phaser.Math.Between(-1500, CLOUD_MAX_Y);
         cloud.setAlpha(Phaser.Math.FloatBetween(0.4, 0.6));
         cloud.setScale(Phaser.Math.FloatBetween(0.8, 1.2));
       }
@@ -5758,8 +5894,8 @@ function update(time, delta) {
       cloud.setTint(cloudTint);
       cloud.x -= 24 * delta / 1000;
       if (cloud.x < -cloud.width / 2) {
-        cloud.x = config.width + cloud.width / 2;
-        cloud.y = Phaser.Math.Between(CLOUD_MIN_Y + 20, CLOUD_MAX_Y);
+        cloud.x = config.width + 800 + cloud.width / 2;
+        cloud.y = Phaser.Math.Between(-1500, CLOUD_MAX_Y);
         cloud.setAlpha(Phaser.Math.FloatBetween(0.4, 0.6));
         cloud.setScale(Phaser.Math.FloatBetween(0.8, 1.2));
       }
@@ -5776,7 +5912,7 @@ function update(time, delta) {
   // Apply extra gravity once heads start falling in the rain
   if (FEATURES.weather && (currentWeather === 'rain' || currentWeather === 'snow') && bodyGroup) {
     bodyGroup.getChildren().forEach(obj => {
-      if (obj.isHead && !obj.rainGravityApplied && obj.body.velocity.y > 0) {
+      if ((obj.isHead || obj.isFallingBird) && !obj.rainGravityApplied && obj.body.velocity.y > 0) {
         obj.body.setGravityY(currentWeather==='snow'?120:300);
         obj.rainGravityApplied = true;
       }
@@ -5813,9 +5949,10 @@ class TravelScene extends Phaser.Scene {
   create() {
     this.duration=Math.max(2500,this.days*1100);
     this.add.rectangle(CENTER_X,CENTER_Y,GAME_WIDTH,GAME_HEIGHT,0x89afa8).setDepth(-5);
-    this.road=this.add.image(CENTER_X,CENTER_Y,'angularRoad').setDepth(-2);
+    this.route=this.city.name==='Hull'?'estuary':['Dover','Southampton'].includes(this.city.name)?'coast':['Durham','Newcastle','Lincoln'].includes(this.city.name)?'uplands':['Canterbury','Gloucester','Oxford'].includes(this.city.name)?'woodland':'farmland';
+    this.road=this.add.image(CENTER_X,CENTER_Y,'road-'+this.route).setDepth(-2);
     this.waymarks=Array.from({length:7},(_,i)=>this.add.rectangle(i*160,1240+(i%2)*30,34,4,0x8f7960).setDepth(8));
-    this.landmarks=Array.from({length:8},(_,i)=>this.add.polygon(i*140,900+(i%3)*45,i%3===0?[0,0,35,50,22,50,48,90,20,90,20,145,12,145,12,90,0,90,-26,90,-4,50,-16,50]:[0,0,36,-18,64,8,58,35,35,52,31,120,22,120,24,51,-8,40,-20,14],i%2?0x466f68:0x799b81).setDepth(-1).setScale(.65+(i%4)*.22));
+    this.landmarks=CastArt.roadScenery(this,this.route);
     createCloudTextures(this);
     this.clouds=[];
     for(let i=0;i<7;i++)this.clouds.push(this.add.image(i*135,330+(i%3)*90,i%2?'cloud-big':'cloud-small').setDepth(i%2?-1:-3).setScale(.7+(i%3)*.3).setAlpha(.65));
@@ -5826,10 +5963,10 @@ class TravelScene extends Phaser.Scene {
     this.dayNight=new DayNightCycle({dayLengthSeconds:this.duration/this.days/1000});
     this.dayNight.init(this,{overlayDepth:5,celestialDepth:-4});this.dayNight.timeOfDay=this.mainScene.dayNight.timeOfDay;
     this.caravan=CastArt.caravan(this,player.storageLevel,410,1170).setDepth(10);
-    this.exec=this.add.image(570,1254,'executionerFigure').setOrigin(.5,1).setDisplaySize(115,175).setDepth(11);
-    this.tweens.add({targets:this.exec,y:1248,angle:{from:-2,to:2},duration:210,yoyo:true,repeat:-1});
-    CastArt.roadLife(this);
-    const labels=player.storageLevel<2?'You and your dog':player.storageLevel<3?'Your pack horse':'Your trading cart';
+    this.exec=this.add.image(570,1289,'executionerFigure').setOrigin(.5,1).setDisplaySize(115,175).setDepth(11);
+    this.tweens.add({targets:this.exec,y:1286,angle:{from:-2,to:2},duration:210,yoyo:true,repeat:-1});
+    CastArt.roadLife(this,this.route);
+    const labels=CastArt.caravanName(player.storageLevel);
     this.label.setText(labels+' · '+this.days+' days on the road');
     window.MobileGame?.journeyStart(this);
   }
@@ -5841,7 +5978,7 @@ class TravelScene extends Phaser.Scene {
     this.date.setText((calendarDay%30+1)+' '+months[Math.floor(calendarDay/30)]+' · '+travelled+' / '+this.days+' days');
     this.progress.displayWidth=600*Math.min(1,this.elapsed/this.duration);
     this.waymarks?.forEach(mark=>{mark.x-=delta*.23;if(mark.x < -50)mark.x=GAME_WIDTH+50;});
-    this.landmarks?.forEach((tree,i)=>{tree.x-=delta*(i%2?.1:.04);if(tree.x < -80)tree.x=GAME_WIDTH+80;});
+    this.landmarks?.forEach(prop=>{prop.x-=delta*prop.roadSpeed;if(prop.x < -180)prop.x=GAME_WIDTH+180+Math.random()*180;});
     this.clouds.forEach((cloud,i)=>{cloud.x-=delta/1000*(i%2?90:35);if(cloud.x < -cloud.displayWidth)cloud.x=GAME_WIDTH+cloud.displayWidth;});
     if(this.elapsed>=this.duration)this.finish();
   }
@@ -5918,7 +6055,7 @@ window.addEventListener('load', () => {
 <script src="offline.js"></script>
 <script>
 // This fallback also works when the engine failed before game setup could run.
-if (!window.Phaser || !window.ChopCore || !window.Campaign || !window.DayNightCycle || !window.CastArt || !window.MobileGame) {
+if (!window.Phaser || !window.ChopCore || !window.Campaign || !window.Arcade || !window.DayNightCycle || !window.CaravanArt || !window.CastArt || !window.MobileGame) {
   const gate = document.getElementById('start-overlay');
   if (gate) {
     gate.querySelector('.tap').textContent = 'Download interrupted · tap to retry';
