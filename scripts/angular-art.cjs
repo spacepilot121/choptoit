@@ -140,25 +140,35 @@ function tower(x,y,w,h,c,spire=false){let s=rect(x,y,w,h,c)+poly(`${x+w*.68},${y
  if(!spire)for(let j=0;j<4;j++)s+=rect(x+j*w/4,y-25,w/7,20,c);
  for(let k=0;k<Math.floor(h/70);k++){const wy=y+22+k*65;s+=rect(x+w*.22,wy,w*.18,30,'#455c60')+rect(x+w*.59,wy,w*.13,30,'#455c60')+poly(`${x+w*.22},${wy} ${x+w*.31},${wy-9} ${x+w*.4},${wy}`,'#455c60')+line(`M${x+w*.2} ${wy+33}h${w*.23} M${x+w*.56} ${wy+33}h${w*.2}`,'#e4d5b9',2)+rect(x+3,wy-8,7,18,'#ffffff20')+line(`M${x+12} ${wy+44}h${w-22}`,'#00000016',2);}return s;}
 function town(i, outskirts=0){const stone=['#c4bea5','#d0c0a0','#b8bdad','#c6b39b','#b9b69c','#c5b995','#c6bba8','#b2846e','#c6bca1','#b4a889','#b69a7d','#d2c3a2','#b9b89c','#c3b29b','#c9b99b'][i];let s='';
- s+=i===8?poly('0,875 130,856 300,870 490,852 660,870 800,858 800,1080 0,1080','#9aafa0'):poly('0,850 120,740 230,810 400,720 570,810 710,760 800,830 800,1080 0,1080','#9bafa0');
  if(!outskirts)s+='<g data-city-landmarks="'+i+'">'+require('./town-landmarks.cjs').draw(i)+'</g>';
  else {for(let j=0;j<9;j++){const x=j*105-28,h=38+(j*31+i*19+outskirts*17)%70;s+=house(x,955-h,96,h,j+i+outskirts*13,i===7);}}
  if([3,8,9,13].includes(i)){const waterY=i===8?984:950;s+=rect(0,waterY,800,1000-waterY,'#5b929a');for(let j=0;j<36;j++)s+=line(`M${(j*79)%800} ${waterY+3+j%3*4}h${13+j%5*8}`,'#bfd0bd',1.5);}
 
  for(let j=0;j<12;j++){if([2,3,8,9,13].includes(i)&&j>=2&&j<=8)continue;const h=65+(j*47+i*31)%105;s+=house(j*78-40,1000-h,74,h,j+i+outskirts*13,i===7);}
- s+=house(-75,760+(i%3)*35,225,240-(i%3)*35,i+outskirts*13,i===7)+house(650,795-(i%4)*20,240,205+(i%4)*20,i+2+outskirts*13,i===7);
- if(i===7){for(let j=0;j<6;j++){const x=162+j*79;s+=house(x,867+(j%2)*12,76,133-(j%2)*12,j+1,true)+rect(x,939,76,7,'#5c5148')+rect(x+5,944,5,56,'#5c5148')+rect(x+65,944,5,56,'#5c5148')+rect(x,958,76,4,'#5c5148');for(let k=0;k<4;k++)s+=rect(x+8+k*15,944,3,14,'#5c5148');}}
- if(i===0){for(let j=0;j<5;j++){const x=188+j*81;s+=house(x,855+(j%3)*14,79,145-(j%3)*14,j+2)+poly(`${x-5},927 ${x+84},927 ${x+76},937 ${x},937`,'#dcc4a5')+line(`M${x+3} 937l8 14m56-14l-8 14`,'#695647',3);}}
+ if(i===7&&!outskirts){for(let j=0;j<6;j++){const x=162+j*79;s+=house(x,867+(j%2)*12,76,133-(j%2)*12,j+1,true)+rect(x,939,76,7,'#5c5148')+rect(x+5,944,5,56,'#5c5148')+rect(x+65,944,5,56,'#5c5148')+rect(x,958,76,4,'#5c5148');for(let k=0;k<4;k++)s+=rect(x+8+k*15,944,3,14,'#5c5148');}}
+ if(i===0&&!outskirts){for(let j=0;j<5;j++){const x=188+j*81;s+=house(x,855+(j%3)*14,79,145-(j%3)*14,j+2)+poly(`${x-5},927 ${x+84},927 ${x+76},937 ${x},937`,'#dcc4a5')+line(`M${x+3} 937l8 14m56-14l-8 14`,'#695647',3);}}
+ return s;
+}
+function townStreet(i,width){let s='';
  // Residents' shoes touch this street at y=1050, behind the stage.
- s+=rect(0,1000,800,80,'#a9a591');for(let row=0;row<4;row++)for(let col=0;col<19;col++){const x=col*45-(row%2)*22,y=1004+row*18;s+=poly(`${x},${y} ${x+38},${y-2} ${x+43},${y+12} ${x+3},${y+14}`,['#b8b29b','#979d8d','#c6baa0','#929487'][(col+row+i)%4])+line(`M${x+5} ${y+2}h27`,'#e0d7bd66',1);}for(let j=0;j<22;j++)s+=line(`M${j*41} 1020l27 -2 M${j*41+14} 1052l28 -1`,'#868f7e',2);
- s+=rect(0,1080,800,22,'#ddbb85')+rect(0,1102,800,26,'#98735a')+rect(0,1128,800,72,'#665248');for(let j=0;j<12;j++)s+=rect(j*72,1110,3,84,'#423d39')+poly(`${j*72},1110 ${j*72+64},1110 ${j*72+59},1115 ${j*72+4},1115`,'#aa8865');
- for(let j=0;j<16;j++){const x=j*52;s+=line(`M${x+3} 1085h44m-38 7h31`,'#f0d7ac',2)+rect(x+6,1107,4,4,'#273d43')+rect(x+41,1117,4,4,'#273d43')+line(`M${x+8} 1141l32 2m-29 12l24 1m-22 15l27-2`,'#c29a7166',2);}
- for(const x of[80,680])s+=rect(x-23,1120,46,14,'#41545a')+rect(x-18,1124,36,3,'#95a6a4')+rect(x-16,1136,5,23,'#41545a')+rect(x+11,1136,5,23,'#41545a');
- s+=rect(0,1200,800,400,'#697b72');for(let j=0;j<60;j++){const x=(j*127+i*11)%800,y=1210+Math.floor(j/10)*63;s+=poly(`${x},${y} ${x+58},${y-3} ${x+68},${y+16} ${x+7},${y+20}`,'#7e8d80');}return s;
+ s+=rect(0,1000,width,80,'#a9a591');for(let row=0;row<4;row++)for(let col=0;col<Math.ceil(width/45)+1;col++){const x=col*45-(row%2)*22,y=1004+row*18;s+=poly(`${x},${y} ${x+38},${y-2} ${x+43},${y+12} ${x+3},${y+14}`,['#b8b29b','#979d8d','#c6baa0','#929487'][(col+row+i)%4])+line(`M${x+5} ${y+2}h27`,'#e0d7bd66',1);}for(let j=0;j<Math.ceil(width/41);j++)s+=line(`M${j*41} 1020l27 -2 M${j*41+14} 1052l28 -1`,'#868f7e',2);
+ s+=rect(0,1080,width,22,'#ddbb85')+rect(0,1102,width,26,'#98735a')+rect(0,1128,width,72,'#665248');for(let j=0;j<Math.ceil(width/72);j++)s+=rect(j*72,1110,3,84,'#423d39')+poly(`${j*72},1110 ${j*72+64},1110 ${j*72+59},1115 ${j*72+4},1115`,'#aa8865');
+ for(let j=0;j<Math.ceil(width/52);j++){const x=j*52;s+=line(`M${x+3} 1085h44m-38 7h31`,'#f0d7ac',2)+rect(x+6,1107,4,4,'#273d43')+rect(x+41,1117,4,4,'#273d43')+line(`M${x+8} 1141l32 2m-29 12l24 1m-22 15l27-2`,'#c29a7166',2);}
+ for(const x of[280,width-280])s+=rect(x-23,1120,46,14,'#41545a')+rect(x-18,1124,36,3,'#95a6a4')+rect(x-16,1136,5,23,'#41545a')+rect(x+11,1136,5,23,'#41545a');
+ s+=rect(0,1200,width,400,'#697b72');for(let j=0;j<Math.ceil(width/127)*6;j++){const x=(j*127+i*11)%width,y=1210+Math.floor(j/Math.ceil(width/127))*63;s+=poly(`${x},${y} ${x+58},${y-3} ${x+68},${y+16} ${x+7},${y+20}`,'#7e8d80');}return s;
 }
 function panoramicTown(i){
- const clip='<defs><clipPath id="town-panel"><rect width="800" height="1600"/></clipPath></defs>';
- return clip+[1,0,2].map((outskirts,column)=>'<g transform="translate('+column*800+' 0)"><g clip-path="url(#town-panel)" data-town-panel="'+(outskirts?'outskirts':'landmark')+'">'+town(i,outskirts)+'</g></g>').join('');
+ // A single skyline and street span the panorama. Building layers overlap
+ // naturally across former panel boundaries instead of clipping their roofs.
+ let s='<g data-continuous-skyline="true">'+(i===8?
+  poly('0,875 260,856 610,870 960,852 1240,870 1560,858 1910,872 2200,851 2400,865 2400,1080 0,1080','#9aafa0'):
+  poly('0,850 120,740 370,810 600,760 880,850 1030,740 1230,810 1400,720 1570,810 1710,760 1910,850 2110,770 2260,805 2400,840 2400,1080 0,1080','#9bafa0'))+'</g>';
+ s += [1,0,2].map((outskirts,column)=>'<g transform="translate('+column*800+' 0)" data-town-panel="'+(outskirts?'outskirts':'landmark')+'">'+town(i,outskirts)+'</g>').join('');
+ // These are complete, distinct buildings, each straddling a scenery join.
+ s+='<g data-seam-building="left">'+house(635,760+(i%3)*35,225,240-(i%3)*35,i+3,i===7)+'</g>';
+ s+='<g data-seam-building="right">'+house(1490,795-(i%4)*20,240,205+(i%4)*20,i+6,i===7)+'</g>';
+ s+=house(340,840+(i%2)*20,160,160-(i%2)*20,i+8,i===7)+house(1925,825+(i%3)*15,175,175-(i%3)*15,i+10,i===7);
+ return s+'<g data-continuous-street="true">'+townStreet(i,2400)+'</g>';
 }
 async function main(){
  if(process.argv.includes('--roads-only')){for(const style of ['farmland','woodland','coast','estuary','uplands'])await image('road-'+style+'-angular',800,1600,require('./road-art.cjs').draw(style));return;}

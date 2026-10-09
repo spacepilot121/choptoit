@@ -164,12 +164,20 @@ for(const town of ['york','canterbury','london','dover','durham','norwich','winc
  assert.equal((svg.match(/data-city-landmarks=/g)||[]).length,1,'Major city landmarks appear once: '+town);
  assert.equal((svg.match(/data-town-panel="outskirts"/g)||[]).length,2);
  assert.equal((svg.match(/data-town-panel="landmark"/g)||[]).length,1);
+ assert.ok(!svg.includes('clip-path="url(#town-panel)"'),'Scenery joins must not cut buildings in half: '+town);
+ assert.equal((svg.match(/data-continuous-skyline=/g)||[]).length,1,'One skyline spans every join: '+town);
+ assert.equal((svg.match(/data-continuous-street=/g)||[]).length,1,'Street and quay patterns do not restart at joins: '+town);
+ for(const [side,seam] of [['left',800],['right',1600]]){
+  const building=svg.match(new RegExp('<g data-seam-building="'+side+'">([\\s\\S]*?)</g>'))?.[1];
+  const wall=building?.match(/<rect x="([\d.]+)" y="[\d.]+" width="([\d.]+)"/);
+  assert.ok(wall&&Number(wall[1])<seam&&Number(wall[1])+Number(wall[2])>seam,'A complete building crosses the '+side+' join: '+town);
+ }
 }
 const coverStart=html.indexOf('function setBackdropCover(');
 vm.runInContext(html.slice(coverStart,html.indexOf('\n}',coverStart)+2),context);
 const panorama={texture:{getSourceImage:()=>({width:2400,height:1600})},setScale(s){this.scale=s;return this;},setOrigin(){return this;},setPosition(x,y){this.x=x;this.y=y;return this;}};
 context.setBackdropCover(panorama,800,1600,true);assert.equal(panorama.scale,1);assert.equal(panorama.x,400);assert.equal(panorama.y,1600);
-console.log('All fifteen city panoramas retain one landmark panel and two ordinary outskirts; portrait framing preserves landmark size.');
+console.log('All fifteen panoramas retain unique landmarks, complete buildings across scenery joins and one continuous skyline and street.');
 
 vm.runInContext(html.slice(html.indexOf('function offscreenActorX('),html.indexOf('function updateComboCamera(')),context);
 const anchoredChest={active:true,setPosition(x,y){this.x=x;this.y=y;return this;},setScale(s){this.scale=s;return this;}};
