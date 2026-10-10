@@ -10,13 +10,18 @@ await page.evaluate(()=>{window.qaScene=game.scene.scenes[0];xpThreshold=1000000
 const heights=[];
 for(const streak of [0,10,24]){
  await page.evaluate(s=>{killStreak=s;qaScene.dayNight.timeOfDay=.5;},streak);await page.waitForTimeout(1300);
- await page.evaluate(()=>{retirePreviousRoundTargets(qaScene);for(let i=0;i<7;i++){spawnTarget(qaScene,[],TargetShop.catalog.find(o=>o.id==='red'));targetGroup.getChildren().at(-1).heightSeed=i/6;}spawnTarget(qaScene,[],SpecialTargets.catalog.find(o=>o.art==='line'));});await page.waitForTimeout(2200);
+ await page.evaluate(()=>{retirePreviousRoundTargets(qaScene);for(let i=0;i<7;i++){spawnTarget(qaScene,[],TargetShop.catalog.find(o=>o.id==='red'));}spawnTarget(qaScene,[],SpecialTargets.catalog.find(o=>o.art==='line'));});await page.waitForTimeout(2200);
  const h=await page.evaluate(()=>{const targets=targetGroup.getChildren().filter(t=>t.jester&&!t.collected),line=targets.find(t=>t.washingLine);window.heightLine=line;return{zoom:qaScene.cameras.main.zoom,normal:targets.filter(t=>!t.washingLine).map(t=>t.poleHeight),line:line.poleHeight,attached:Math.abs(line.linePartner.jesterPole.displayHeight-line.poleHeight)<.01,parts:line.specialParts.every(p=>p.body.enable&&Math.abs(p.x-(line.x+p.partOffset))<.1),reach:Math.pow(500*getWeaponPowerMultiplier()-100,2)/800};});
  assert.ok(h.attached&&h.parts);assert.ok(h.normal.some(n=>n<200),'Low targets remain available at every zoom');heights.push(h);
  await page.screenshot({path:path.join(out,'height-'+streak+'.png')});
 }
 assert.ok(heights[2].line>heights[0].line*3,'Zoomed-out washing line uses the upper sky');assert.ok(Math.max(...heights[2].normal)-Math.min(...heights[2].normal)>500,'Wide view has a genuinely mixed vertical target field');
-// Existing carriers adapt smoothly while the combo changes, with both poles attached.
-await page.evaluate(()=>killStreak=0);await page.waitForTimeout(2200);assert.ok(await page.evaluate(()=>heightLine.poleHeight<800));await page.evaluate(()=>killStreak=24);await page.waitForTimeout(2200);assert.ok(await page.evaluate(()=>heightLine.poleHeight>1000&&Math.abs(heightLine.poleHeight-heightLine.linePartner.jesterPole.displayHeight)<.01));
-await page.evaluate(()=>resetForNewCity(qaScene));await page.waitForTimeout(400);assert.deepEqual(errors,[]);console.log(JSON.stringify(heights));console.log('Phone browser: varied low and aspirational heights, taller two-carrier lines, smooth live height changes and safe city cleanup pass.');await context.close();
+// Existing target bases stay exactly fixed through camera changes in both directions.
+const before=await page.evaluate(()=>targetGroup.getChildren().filter(t=>t.jester&&!t.collected).map(t=>t.basePoleHeight));
+for(const streak of [0,24]){
+ await page.evaluate(s=>killStreak=s,streak);await page.waitForTimeout(2200);
+ assert.deepEqual(await page.evaluate(()=>targetGroup.getChildren().filter(t=>t.jester&&!t.collected).map(t=>t.basePoleHeight)),before,'Zoom must never resize a resident pole');
+ assert.ok(await page.evaluate(()=>Math.abs(heightLine.poleHeight-heightLine.linePartner.jesterPole.displayHeight)<.01));
+}
+await page.evaluate(()=>resetForNewCity(qaScene));await page.waitForTimeout(400);assert.deepEqual(errors,[]);console.log(JSON.stringify(heights));console.log('Phone browser: varied low and aspirational heights, taller two-carrier lines, fixed resident heights during zoom and safe city cleanup pass.');await context.close();
 }finally{await browser.close();await new Promise(r=>server.close(r));}})().catch(e=>{console.error(e);process.exitCode=1;});

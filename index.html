@@ -5723,12 +5723,6 @@ function pickSpacedTargetX(existingTargetXs = [], zoom = 1) {
 
 function updateTargetMotion(target, time) {
   if(!target.active || target.collected || !target.jester?.active || target.motionStartedAt===null)return;
-  if(target.scene?.cameras && target.naturalPoleHeight!==undefined){
-    const height=desiredTargetPoleHeight(target.scene,target);
-    const dt=Math.min(100,Math.max(0,time-(target.heightUpdatedAt ?? time-16)));
-    target.heightUpdatedAt=time;
-    target.basePoleHeight+=(height-target.basePoleHeight)*(1-Math.exp(-dt/420));
-  }
   const pose=target.targetOption?.motion?window.TargetShop.motion(target.targetOption,time-target.motionStartedAt,target.basePoleHeight):{height:target.basePoleHeight,angle:0};
   target.poleHeight=pose.height;
   target.jesterPole.setDisplaySize(6,pose.height).setRotation(pose.angle);

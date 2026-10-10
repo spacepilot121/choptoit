@@ -1,16 +1,21 @@
-// Stable per-target height variation opens the usable sky as the camera widens.
+// Choose a fixed height on arrival; camera zoom never stretches existing poles.
 function desiredTargetPoleHeight(scene,target){
   const camera=scene.cameras.main,zoom=Math.max(.35,camera.zoom);
-  const opened=Math.min(1,Math.max(0,(1/zoom-1)/(1/.35-1)));
   const top=camera.worldView.y+GAME_HEIGHT*.22/zoom;
   const ceiling=Math.max(140,CHARACTER_BASE_Y-20-top-85);
-  const initial=Math.min(ceiling,target.naturalPoleHeight ?? target.basePoleHeight);
   const seed=target.heightSeed ?? .5;
   const high=target.washingLine || target.targetOption?.art==='line' || target.isYorkTallWaver;
-  // Low targets remain low; bonus prizes inhabit separate middle and upper bands.
-  const fraction=high ? .66+seed*.22 : seed<.4 ? .04+seed*.2 : seed<.75 ? .25+(seed-.4)*.7 : .65+(seed-.75);
-  const starting=high || seed>=.8 ? Math.max(initial,ceiling*fraction) : initial;
-  return starting+Math.max(0,ceiling*fraction-starting)*opened;
+  const counts=[0,0,0];
+  for(const other of targetGroup.getChildren()){
+    if(other===target || !other.jester || !other.active || other.collected || other.leaving)continue;
+    const fraction=(other.basePoleHeight ?? other.poleHeight)/ceiling;
+    counts[fraction<.28?0:fraction<.6?1:2]++;
+  }
+  const least=Math.min(...counts),available=counts.map((n,i)=>n===least?i:-1).filter(i=>i>=0);
+  const band=high?2:available[Math.min(available.length-1,Math.floor(seed*available.length))];
+  target.heightBand=band;
+  if(band===0)return Math.min(ceiling*.22,70+seed*100);
+  return ceiling*(band===1?.34+seed*.18:.66+seed*.23);
 }
 
 // Runtime adapters keep target rules separate from the Phaser scene lifecycle.
