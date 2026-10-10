@@ -1,8 +1,17 @@
+// Highest roof/pinnacle in each 1600px city panorama (town-landmarks.cjs).
+const citySkylineTops={York:440,Canterbury:410,London:505,Dover:465,Durham:498,Norwich:390,Winchester:535,Chester:608,Hull:543,Newcastle:527,Colchester:637,Lincoln:334,Oxford:402,Southampton:631,Gloucester:384};
+function poleSkylineCeiling(target){
+  const artY=citySkylineTops[currentCity] ?? 440;
+  const backdrop=typeof backgroundRect!=='undefined'?backgroundRect:null;
+  const roofY=backdrop ? backdrop.y-backdrop.displayHeight*(backdrop.originY ?? 1)+artY*backdrop.scaleY : artY;
+  const moving=['vertical','orbit'].includes(target.targetOption?.motion)?45:0;
+  return Math.max(100,CHARACTER_BASE_Y-20-roofY-(target.targetRadius || 34)-moving-16);
+}
 // Choose a fixed height on arrival; camera zoom never stretches existing poles.
 function desiredTargetPoleHeight(scene,target){
   const camera=scene.cameras.main,zoom=Math.max(.35,camera.zoom);
   const top=camera.worldView.y+GAME_HEIGHT*.22/zoom;
-  const ceiling=Math.max(140,CHARACTER_BASE_Y-20-top-85);
+  const ceiling=Math.max(100,Math.min(CHARACTER_BASE_Y-20-top-85,poleSkylineCeiling(target)));
   const seed=target.heightSeed ?? .5;
   const high=target.washingLine || target.targetOption?.art==='line' || target.isYorkTallWaver;
   const counts=[0,0,0];

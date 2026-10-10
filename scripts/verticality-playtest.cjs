@@ -15,7 +15,7 @@ for(const streak of [0,10,24]){
  assert.ok(h.attached&&h.parts);assert.ok(h.normal.some(n=>n<200),'Low targets remain available at every zoom');heights.push(h);
  await page.screenshot({path:path.join(out,'height-'+streak+'.png')});
 }
-assert.ok(heights[2].line>heights[0].line*3,'Zoomed-out washing line uses the upper sky');assert.ok(Math.max(...heights[2].normal)-Math.min(...heights[2].normal)>500,'Wide view has a genuinely mixed vertical target field');
+assert.ok(Math.max(...heights[2].normal)-Math.min(...heights[2].normal)>250,'Wide view has mixed heights beneath the skyline');
 // Existing target bases stay exactly fixed through camera changes in both directions.
 const before=await page.evaluate(()=>targetGroup.getChildren().filter(t=>t.jester&&!t.collected).map(t=>t.basePoleHeight));
 for(const streak of [0,24]){
@@ -23,5 +23,5 @@ for(const streak of [0,24]){
  assert.deepEqual(await page.evaluate(()=>targetGroup.getChildren().filter(t=>t.jester&&!t.collected).map(t=>t.basePoleHeight)),before,'Zoom must never resize a resident pole');
  assert.ok(await page.evaluate(()=>Math.abs(heightLine.poleHeight-heightLine.linePartner.jesterPole.displayHeight)<.01));
 }
-await page.evaluate(()=>resetForNewCity(qaScene));await page.waitForTimeout(400);assert.deepEqual(errors,[]);console.log(JSON.stringify(heights));console.log('Phone browser: varied low and aspirational heights, taller two-carrier lines, fixed resident heights during zoom and safe city cleanup pass.');await context.close();
+await page.evaluate(()=>resetForNewCity(qaScene));await page.waitForTimeout(400);assert.deepEqual(errors,[]);console.log(JSON.stringify(heights));console.log('Phone browser: varied low and aspirational heights, skyline-capped two-carrier lines, fixed resident heights during zoom and safe city cleanup pass.');await context.close();
 }finally{await browser.close();await new Promise(r=>server.close(r));}})().catch(e=>{console.error(e);process.exitCode=1;});
