@@ -10,6 +10,9 @@ const {createPreview}=require('./serve.cjs');
    const context=await browser.newContext({viewport:reduced?{width:320,height:568}:{width:390,height:844},hasTouch:true,isMobile:true,serviceWorkers:'block',reducedMotion:reduced?'reduce':'no-preference'});
    const page=await context.newPage(),errors=[];page.on('pageerror',e=>errors.push(e.message));
    await page.goto('http://127.0.0.1:'+server.address().port);const button=page.locator('#wake-button');await button.waitFor({state:'visible'});
+   assert.equal(await page.locator('.wake-hint').count(),0);assert.equal(await page.locator('.wake-york text').count(),0);
+   assert.equal(await page.locator('.wake-york').evaluate(n=>getComputedStyle(n).opacity),'1','City is present before the tree is cut');
+   assert.equal(await page.locator('.wake-sleep i').count(),3);assert.equal(await page.locator('.wake-dream').count(),1);
    if(!reduced)await page.screenshot({path:path.join(out,'01-sleep.png')});
    for(let i=0;i<5;i++){await page.waitForFunction(()=>!document.querySelector('#wake-button').disabled);await button.tap();}
    await page.waitForFunction(()=>ChopOpening.phase==='reach'&&!document.querySelector('#wake-button').disabled);
@@ -26,8 +29,12 @@ const {createPreview}=require('./serve.cjs');
    await page.waitForFunction(()=>!document.querySelector('#wake-button').disabled);
    if(!reduced)await page.screenshot({path:path.join(out,'03-meter.png')});
    await page.waitForFunction(()=>{if(Math.abs(ChopOpening.meterPosition-50)<3){document.querySelector('#wake-button').click();return true;}return false;});
-   await page.waitForFunction(()=>ChopOpening.phase==='aim'&&!document.querySelector('#wake-button').disabled);await button.press('Enter');
-   await page.waitForFunction(()=>ChopOpening.phase==='power'&&!document.querySelector('#wake-button').disabled);await button.tap();
+   await page.waitForFunction(()=>ChopOpening.phase==='aim'&&!document.querySelector('#wake-button').disabled);
+   await page.waitForFunction(target=>Math.abs(ChopOpening.meterPosition-target)<2,reduced?75:25);await button.press('Enter');
+   await page.waitForFunction(()=>ChopOpening.phase==='power'&&!document.querySelector('#wake-button').disabled);
+   await page.waitForFunction(target=>{if(Math.abs(ChopOpening.meterPosition-target)<2){document.querySelector('#wake-button').click();return true;}return false;},reduced?15:85);
+   const shot=await page.evaluate(()=>({shot:ChopOpening.shot,expected:ChopCore.launchVelocity(ChopOpening.shot.angle,ChopOpening.shot.power)}));
+   assert.deepEqual(shot.shot.velocity,shot.expected);assert.ok(reduced?shot.shot.velocity.x>0:shot.shot.velocity.x<0);assert.ok(reduced?shot.shot.power<.8:shot.shot.power>1.7);
    assert.equal(await page.evaluate(()=>!!game&&!ChopOpening.completed&&!!document.querySelector('#start-overlay')),true,'Game preloads beneath the tree scene');
    if(!reduced){await page.waitForTimeout(1900);await page.screenshot({path:path.join(out,'04-reveal.png')});await page.waitForFunction(()=>ChopOpening.phase==='walk');await page.waitForTimeout(750);await page.screenshot({path:path.join(out,'05-road.png')});}
    await page.waitForFunction(()=>ChopOpening.completed&&!document.querySelector('#start-overlay'));

@@ -4,22 +4,22 @@
   if (!window.MobileGame || !window.Phaser) return;
   try { if (localStorage.getItem('choptoit-intro-read') === 'yes') return; } catch (_) {}
   const gate=document.getElementById('start-overlay');if(!gate)return;
-  let selectedAim=0;
+  let selectedAim=0,flight=null,lastShot=null;
   let presses=0,finished=false,phase='wake',meterPosition=0,meterDirection=1,lastFrame=0,frame=0,readyScene=null,journeyDone=false;
   const reduced=matchMedia('(prefers-reduced-motion: reduce)').matches;
-  window.ChopOpening={get presses(){return presses;},get completed(){return finished;},get active(){return !finished;},get phase(){return phase;},get meterPosition(){return meterPosition;},onReady(scene){readyScene=scene;handoff();},loadFailed(){cancelAnimationFrame(frame);gate.hidden=true;gate.style.display='none';}};
+  window.ChopOpening={get shot(){return lastShot;},get presses(){return presses;},get completed(){return finished;},get active(){return !finished;},get phase(){return phase;},get meterPosition(){return meterPosition;},onReady(scene){readyScene=scene;handoff();},loadFailed(){cancelAnimationFrame(frame);gate.hidden=true;gate.style.display='none';}};
   gate.classList.add('awakening');gate.setAttribute('role','region');gate.setAttribute('aria-label','A sleeping executioner beneath a tree');gate.removeAttribute('tabindex');
   gate.innerHTML=`<div class="wake-stage">
     <div class="wake-dawn"></div>
     <svg class="wake-world" viewBox="0 0 800 1600" aria-hidden="true">
-      <defs><clipPath id="wake-town-window"><path d="M440 820H720V1050H440Z"/></clipPath><linearGradient id="wake-town-haze" x1="0" y1="820" x2="0" y2="1050" gradientUnits="userSpaceOnUse"><stop offset=".72" stop-color="white"/><stop offset="1" stop-color="black"/></linearGradient><mask id="wake-town-mask" maskUnits="userSpaceOnUse" x="440" y="820" width="280" height="230"><path d="M440 820H720V1050H440Z" fill="url(#wake-town-haze)"/></mask><clipPath id="wake-stump"><path d="M0 1068H800V1600H0Z"/></clipPath><clipPath id="wake-upper"><path d="M0 0H800V1068H0Z"/></clipPath></defs><g class="wake-stars" fill="#d6e7de"><circle cx="140" cy="290" r="3"/><circle cx="590" cy="370" r="4"/><circle cx="350" cy="180" r="3"/><circle cx="650" cy="180" r="2"/><circle cx="70" cy="550" r="3"/><circle cx="480" cy="540" r="2"/><circle cx="720" cy="670" r="3"/><circle cx="220" cy="670" r="2"/></g>
+      <defs><clipPath id="wake-town-window"><path d="M300 620H580V850H300Z"/></clipPath><linearGradient id="wake-town-haze" x1="0" y1="620" x2="0" y2="850" gradientUnits="userSpaceOnUse"><stop offset=".72" stop-color="white"/><stop offset="1" stop-color="black"/></linearGradient><mask id="wake-town-mask" maskUnits="userSpaceOnUse" x="300" y="620" width="280" height="230"><path d="M300 620H580V850H300Z" fill="url(#wake-town-haze)"/></mask><clipPath id="wake-stump"><path d="M0 1068H800V1600H0Z"/></clipPath><clipPath id="wake-upper"><path d="M0 0H800V1068H0Z"/></clipPath></defs><g class="wake-stars" fill="#d6e7de"><circle cx="140" cy="290" r="3"/><circle cx="590" cy="370" r="4"/><circle cx="350" cy="180" r="3"/><circle cx="650" cy="180" r="2"/><circle cx="70" cy="550" r="3"/><circle cx="480" cy="540" r="2"/><circle cx="720" cy="670" r="3"/><circle cx="220" cy="670" r="2"/></g>
       <path class="wake-moon" d="M205 390a40 40 0 1 1-45-55 32 32 0 0 0 45 55" fill="#d6e7de"/>
       <circle class="wake-sun" cx="115" cy="730" r="43" fill="#ffe5a0"/>
-      <path d="M-100 1090L90 985 280 1050 530 925 900 1030V1900H-100Z" fill="#526b63"/>
+      <path d="M-100 1090L90 985 280 960 300 850 580 850 670 950 900 1030V1900H-100Z" fill="#526b63"/>
       <path d="M-100 1230L150 1150 400 1200 670 1130 900 1200V1900H-100Z" fill="#799078"/>
       <path d="M-100 1280L220 1235 650 1280 900 1250V1900H-100Z" fill="#a38e68"/>
       <path d="M240 1300l100-12 42 9-105 14M490 1350l90-8 30 11-91 7M80 1430l160-16 50 13-170 13" fill="#c6af7c" opacity=".35"/>
-      <g class="wake-york"><g clip-path="url(#wake-town-window)" mask="url(#wake-town-mask)"><svg class="wake-town-art" x="440" y="820" width="280" height="230" viewBox="800 420 800 650"><image href="assets/york-angular.png" width="2400" height="1600"/></svg></g><path d="M510 1110q-50 65-75 120" fill="none" stroke="#d0b285" stroke-width="24"/><text x="580" y="1150" text-anchor="middle" fill="#f0dfb8" font-family="Georgia" font-size="24">York</text></g>
+      <g class="wake-york"><g clip-path="url(#wake-town-window)" mask="url(#wake-town-mask)"><svg class="wake-town-art" x="300" y="620" width="280" height="230" viewBox="800 420 800 650"><image href="assets/york-angular.png" width="2400" height="1600"/></svg></g><path d="M440 850q105 100-5 380" fill="none" stroke="#d0b285" stroke-width="24"/></g>
       <ellipse cx="435" cy="1214" rx="150" ry="25" fill="#233d3a" opacity=".45"/>
       <path class="wake-trunk" d="M330 1205L347 825 306 689 335 680 387 805 425 703 451 712 390 871 397 1205Z" fill="#755b49"/>
       <path class="wake-trunk" d="M376 854l21 351h-30l-8-340 12-110 12 15z" fill="#a37d53"/>
@@ -29,6 +29,7 @@
       <path d="M326 679L413 599 496 568 603 672 489 736 397 842 243 777Z" fill="#6f906a"/>
       <path d="M243 777l83-98 71 163-54 29-153-26zM489 736l114-64-10 113-104 58-92-1z" fill="#436a54"/>
       <path d="M214 652l57-32 29 20-57 27M433 650l59-23 37 29-74 21M189 782l43-16 16 19-48 13" fill="#91a97c" opacity=".4"/>
+      <path d="M397 842L489 800 593 785 610 850 570 900 430 885 343 871Z" fill="#436a54"/>
       </g>
       <path class="wake-cut" d="M342 1068l16-7 29 7-15 8z" fill="#e7bd7b"/>
       <g class="wake-chips" fill="#d7ac72"><path d="M340 1065l12-7 9 13-13 6z"/><path d="M363 1074l16-6 5 10-12 8z"/><path d="M347 1091l10-3 7 10-12 6z"/></g>
@@ -48,16 +49,18 @@
         </g>
       </g>
       <g class="wake-ground-axe"><path d="M542 1210l-35-145" stroke="#4d3e32" stroke-width="12"/><path d="M478 1070l27-27 31 12-7 29-32 9z" fill="#adc2b6" stroke="#253b43" stroke-width="4"/><path d="M478 1070l27-27 6 5-26 29z" fill="#ebdfb5"/></g>
+      <g class="wake-dream" transform="translate(-70 -160)"><circle cx="510" cy="1090" r="9"/><circle cx="540" cy="1030" r="16"/><g class="dream-cloud"><path d="M482 778Q450 741 482 710Q470 670 516 659Q538 618 581 638Q620 615 650 653Q700 649 704 695Q743 731 703 764Q680 805 636 786Q591 810 562 785Q514 801 482 778Z" fill="#e1eee3"/><g opacity=".78"><circle cx="644" cy="679" r="24" fill="#ffe8a0"/><path d="M489 763L535 722 576 747 632 719 698 761V780H489Z" fill="#9bb18b"/><path d="M542 706H613V766H542Z" fill="#e8c391"/><path d="M530 710L575 672 626 710Z" fill="#c77e68"/><path d="M572 735h18v31M550 722h14v15M596 722h12v15" fill="#739da5"/><path d="M576 767l-12 22h43l-18-22" fill="#eedbb5"/></g><path d="M491 728Q560 698 704 727M489 749Q582 724 704 748" fill="none" stroke="#fff9e9" stroke-width="16" opacity=".28"/></g></g>
+      <g class="wake-aim" transform="translate(365 1068)" fill="none" stroke="#ffe6a5" stroke-width="5" stroke-linecap="round"><path class="wake-trajectory"/><path class="wake-direction" d="M0 0V-100m-12 17 12-17 12 17"/></g>
     </svg>
     <div class="wake-shade"></div>
-    <span class="wake-sleep" aria-hidden="true">z <small>z</small></span>
+    <span class="wake-sleep" aria-hidden="true"><i>Z</i><i>Z</i><i>Z</i></span>
     <button id="wake-button" type="button" aria-label="Wake the executioner" hidden><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M6 21L16 5M12 5L17 2 22 5 20 11 15 12 11 9"/></svg></button>
-    <div class="wake-controls" hidden><div class="shot-steps" aria-hidden="true"><span data-step="timing">⚒</span><span data-step="aim">⌖</span><span data-step="power">↑</span></div><div class="shot-meter" role="meter" aria-label="Chopping timing" aria-valuemin="0" aria-valuemax="100" aria-valuenow="0"><span class="zone outer" style="width:32%"></span><span class="zone middle" style="width:21%"></span><span class="zone inner" style="width:12%"></span><span class="needle"></span></div><p class="wake-hint">Tap as the marker reaches the glowing centre.</p></div>
+    <div class="wake-controls" hidden><div class="shot-steps" aria-hidden="true"><span data-step="timing">⚒</span><span data-step="aim">⌖</span><span data-step="power">↑</span></div><div class="shot-meter" role="meter" aria-label="Chopping timing" aria-valuemin="0" aria-valuemax="100" aria-valuenow="0"><span class="zone outer" style="width:32%"></span><span class="zone middle" style="width:21%"></span><span class="zone inner" style="width:12%"></span><span class="needle"></span></div></div>
     <span id="wake-status" class="visually-hidden" role="status">The executioner is asleep. Tap the glowing axe to wake him.</span>
   </div>`;
   const button=gate.querySelector('#wake-button');
   setTimeout(()=>{if(gate.isConnected){button.hidden=false;button.focus({preventScroll:true});}},2200);
-  const controls=gate.querySelector('.wake-controls'),meter=controls.querySelector('.shot-meter'),needle=meter.querySelector('.needle'),hint=controls.querySelector('.wake-hint'),status=gate.querySelector('#wake-status');
+  const controls=gate.querySelector('.wake-controls'),meter=controls.querySelector('.shot-meter'),needle=meter.querySelector('.needle'),status=gate.querySelector('#wake-status');
   const icons={timing:'<path d="M6 21L16 5M12 5L17 2 22 5 20 11 15 12 11 9"/>',aim:'<circle cx="12" cy="12" r="6"/><path d="M12 2v6m0 8v6M2 12h6m8 0h6"/>',power:'<path d="M12 21V3m-6 6l6-6 6 6"/>'};
   function setPhase(next,message){
     phase=next;gate.dataset.phase=next;status.textContent=message;
@@ -66,26 +69,37 @@
       controls.querySelectorAll('[data-step]').forEach(n=>n.classList.toggle('active',n.dataset.step===next));
       button.setAttribute('aria-label',next==='timing'?'Time the tree chop':next==='aim'?'Aim at the treetop':'Choose chopping power');
       meter.setAttribute('aria-label',next==='timing'?'Chopping timing':next==='aim'?'Chopping aim':'Chopping power');
-      hint.textContent=message;
+
     }
   }
   function tick(now){
     if(finished||!gate.isConnected)return;
     const dt=lastFrame?Math.min(.05,(now-lastFrame)/1000):0;lastFrame=now;
     if(['timing','aim','power'].includes(phase)&&!button.disabled){
-      const step=ChopCore.advanceMeter(meterPosition,meterDirection,phase==='timing'?65:phase==='aim'?42:55,dt,0,100);
+      const step=ChopCore.advanceMeter(meterPosition,meterDirection,phase==='timing'?65:125,dt,0,100);
       meterPosition=step.position;meterDirection=step.direction;needle.style.left=meterPosition+'%';meter.setAttribute('aria-valuenow',Math.round(meterPosition));
-      if(phase==='aim')gate.style.setProperty('--tree-aim',(meterPosition-50)*.35+'deg');
+      if(phase==='aim'||phase==='power'){
+        const angle=phase==='aim'?(meterPosition-50)*1.8:selectedAim,power=phase==='power'?.5+meterPosition/100*1.5:1;
+        gate.style.setProperty('--tree-aim',angle+'deg');
+        gate.querySelector('.wake-direction').setAttribute('transform','rotate('+angle+') scale(1 '+power+')');
+        const points=ChopCore.launchPreview(angle,power);gate.querySelector('.wake-trajectory').setAttribute('d','M0 0'+points.map(p=>'L'+p.x.toFixed(1)+' '+p.y.toFixed(1)).join(''));
+      }
+    }
+    if(flight){
+      flight.vx=Math.sign(flight.vx)*Math.max(0,Math.abs(flight.vx)-50*dt);flight.vy+=400*dt;
+      flight.x+=flight.vx*dt;flight.y+=flight.vy*dt;flight.rotation+=flight.spin*dt;
+      gate.querySelector('.wake-crown').style.transform='translate('+flight.x+'px,'+flight.y+'px) rotate('+flight.rotation+'deg)';
     }
     frame=requestAnimationFrame(tick);
   }
   frame=requestAnimationFrame(tick);
   function unlock(delay=500){setTimeout(()=>{if(gate.isConnected&&!finished)button.disabled=false;},delay);}
   function beginCut(){
-    const force=.6+meterPosition/100*.8;gate.style.setProperty('--tree-pop-x',(220+force*100+selectedAim*2)+'px');gate.style.setProperty('--tree-pop-y',(-190-force*140)+'px');gate.style.setProperty('--tree-spin',(35+force*15)+'deg');
+    const power=.5+meterPosition/100*1.5,velocity=ChopCore.launchVelocity(selectedAim,power);
+    lastShot={angle:selectedAim,power,velocity};
     button.disabled=true;controls.hidden=true;button.hidden=true;setPhase('chop','Your first chop.');gate.classList.add('tree-swing');window.ChopAudio?.play('launch');
     restoredTimeOfDay=.30;startGame({keepOpening:true});
-    setTimeout(()=>{gate.classList.add('tree-cut');window.ChopAudio?.play('chop');setPhase('reveal','York. Your first town.');},reduced?200:650);
+    setTimeout(()=>{gate.classList.add('tree-cut');flight={vx:velocity.x,vy:velocity.y,x:0,y:0,rotation:0,spin:selectedAim<0?-65:65};window.ChopAudio?.play('chop');setPhase('reveal','York. Your first town.');},reduced?200:650);
     setTimeout(()=>{gate.classList.add('road-walk');setPhase('walk','Follow the road into York.');},reduced?600:2500);
     setTimeout(()=>{gate.classList.add('town-approach');},reduced?1000:4300);
     setTimeout(()=>{journeyDone=true;handoff();},reduced?1500:5900);
@@ -109,10 +123,10 @@
     }else if(phase==='lift'){
       gate.classList.add('axe-equipped');gate.classList.remove('picking-axe');setPhase('timing','Tap as the marker reaches the glowing centre.');unlock(750);
     }else if(phase==='timing'){
-      if(Math.abs(meterPosition-50)>18){hint.textContent='Try the glowing centre.';status.textContent=hint.textContent;unlock(250);return;}
+      if(Math.abs(meterPosition-50)>18){status.textContent='Try the glowing centre.';unlock(250);return;}
       setPhase('aim','Aim towards the treetop.');meterPosition=50;unlock(250);
     }else if(phase==='aim'){
-      selectedAim=(meterPosition-50)*.35;
+      selectedAim=(meterPosition-50)*1.8;
       setPhase('power','Choose the power of your first chop.');meterPosition=0;unlock(250);
     }else if(phase==='power')beginCut();
   }
