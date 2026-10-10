@@ -35,19 +35,20 @@ for(const direction of [0,1]) {
   assert.equal(active.size,2);
   bird.destroy();
   assert.equal(active.size,0,'Hit or departing birds release wing and flight animations');
-  assert.equal(context.birdFlightLane(1,956),724,'A starting blade gets a reachable lower flight lane');
+  assert.equal(context.birdFlightLane(1,956),560,'Birds no longer descend to accommodate a starter blade');
   let previousLane=Infinity;
   for(let level=1;level<=30;level++) {
     const multiplier=1+(level-1)*.06, lane=context.birdFlightLane(multiplier,956);
-    assert.ok(lane>=420 && lane<=760,'Birds remain below the HUD and above the stage');
+    assert.ok(lane>=420 && lane<=560,'Birds remain below the HUD and above the stage');
     assert.ok(lane<=previousLane,'Upgrades only raise the bird lane');
-    assert.ok(956-(500*multiplier)**2/800<=lane,'Every blade can reach its bird lane at full power');
+    // spawnBird skips flights that this blade cannot reach.
     previousLane=lane;
   }
   context.player.weaponLevel=1;context.getWeaponPowerMultiplier=()=>1;
-  context.spawnBird(scene);
+  const starterCount=objects.length;context.spawnBird(scene);assert.equal(objects.length,starterCount,'Starter blades do not pull birds down beside the characters');
+  context.getWeaponPowerMultiplier=()=>1.2;context.spawnBird(scene);
   const lowBird=objects.at(-1);
-  assert.equal(lowBird.y,724);
+  assert.equal(lowBird.y,560);
   assert.equal(lowBird.birdKind,'crow','Early birds teach a positive target before doves appear');
   Object.assign(lowBird.body,{enable:true,left:350,top:lowBird.y-20,right:450,bottom:lowBird.y+30});
   assert.equal(context.didHeadSegmentHitTarget({displayWidth:36},lowBird,400,lowBird.y+90,400,lowBird.y-90),true,'A full-power head crossing the starter bird lane registers');

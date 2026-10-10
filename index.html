@@ -5644,7 +5644,7 @@ function birdFlightLane(weaponMultiplier, launchY) {
   // A full-power vertical shot should climb past the bird with room to aim.
   // Stronger blades bring later flocks higher, but never into the mobile HUD.
   const maximumRise = Math.pow(500 * weaponMultiplier, 2) / 800;
-  return Math.max(420, Math.min(760, Math.round(launchY - maximumRise + 80)));
+  return Math.max(420, Math.min(560, Math.round(launchY - maximumRise + 80)));
 }
 
 function spreadBirdFlightLane(top,bottom,birds,bandCount){
@@ -5669,7 +5669,8 @@ function spawnBird(scene) {
   const fullPowerRise = Math.pow(Math.max(0, 500 * weaponMultiplier - windY), 2) / 800;
   if(zoom<.7){
     const top=Math.max(scene.cameras.main.worldView.y+GAME_HEIGHT*.2/zoom+80,launchY-fullPowerRise+100);
-    const bottom=launchY-160;
+    // Flights belong in the upper sky, not beside the platform as it shrinks.
+    const bottom=Math.min(launchY-300,scene.cameras.main.worldView.y+GAME_HEIGHT*.48/zoom);
     if(top>=bottom)return;
     const flock=targetGroup.getChildren().filter(t=>t.targetType==='bird'&&t.active&&!t.collected);
     laneY=spreadBirdFlightLane(top,bottom,flock,birdLimit);
