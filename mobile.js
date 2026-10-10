@@ -467,7 +467,7 @@
       if (percent===100) el('loading-copy').textContent='Opening the town square…';
     },
     loadFailed(files = [], retry = () => location.reload()) {
-      clearTimeout(loadingTimer); loadingFailed=true;
+      clearTimeout(loadingTimer); loadingFailed=true;window.ChopOpening?.loadFailed();
       const loading=el('game-loading'); if (!loading) return;
       loading.setAttribute('role','alert');
       loading.querySelector('h2').textContent='The gates are stuck';
@@ -479,7 +479,17 @@
       el('loading-retry').replaceWith(el('loading-retry').cloneNode(true));
       el('loading-retry').addEventListener('click', () => { el('loading-retry').disabled=true; retry(); });
     },
-    ready(s) { clearTimeout(loadingTimer); el('game-loading')?.remove(); scene = s; ui.hidden = false; update(); if (SaveManager.unreadable) show('recovery'); else if (!introRead) { tutorialActive=true;ui.classList.add('is-tutorial'); } if (document.hidden) suspendGame(); if (SaveManager.recovered) toast('Recovered your progress from the last backup.'); else showPendingHint(); },
+    ready(s) { clearTimeout(loadingTimer); el('game-loading')?.remove(); scene = s; if(window.ChopOpening?.active && !SaveManager.unreadable){ui.hidden=true;scene.scene.pause();window.ChopOpening.onReady(scene);return;} ui.hidden = false; update(); if (SaveManager.unreadable) show('recovery'); else if (!introRead) { tutorialActive=true;ui.classList.add('is-tutorial'); } if (document.hidden) suspendGame(); if (SaveManager.recovered) toast('Recovered your progress from the last backup.'); else showPendingHint(); },
+    finishOpening(){
+      introRead=true;tutorialActive=false;ui.classList.remove('is-tutorial');
+      try{localStorage.setItem('choptoit-intro-read','yes');}catch(_){}
+      ui.hidden=false;scene.scene.resume();update();
+      const controls=ui.querySelector('.mobile-controls');controls.inert=true;
+      executioner.setPosition(offscreenActorX(scene,false),CHARACTER_BASE_Y).setAlpha(1).setVisible(true);
+      CastArt.walk(scene,executioner,1400);
+      scene.tweens.add({targets:executioner,x:CENTER_X-100,duration:1400,ease:'Linear',onComplete:()=>{controls.inert=false;}});
+      if(document.hidden)suspendGame();
+    },
     journeyStart(travel) { travel.firstVisit=!Campaign.state.visited.includes(travel.city.name);activeTravel=travel;screen='journey';ui.hidden=true; },
     journeyFinish(city) { const discovered=activeTravel?.firstVisit;activeTravel=null;screen=null;el('game-dialog').hidden=true;ui.hidden=false;ui.querySelectorAll('.mobile-hud,.mobile-controls,.mobile-nav').forEach(n=>{n.inert=false;});const specialities=window.TargetShop.catalog.filter(p=>p.city===city&&!p.free&&!window.TargetShop.owns(p.id));if(discovered&&specialities.length)flashUnlock('market'); },
     combo(count,gold,kind) {

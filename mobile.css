@@ -170,3 +170,53 @@ body #start-overlay.awakening{display:block;padding:0;background:#07141d;--wake-
 @keyframes unlock-beacon{50%{background:#f9c66b35;box-shadow:inset 0 0 22px #f9c66b77;filter:brightness(1.5)}}
 @keyframes rank-beacon{50%{color:#fff6d6;text-shadow:0 0 12px #ffd777;opacity:.5}}
 @media(prefers-reduced-motion:reduce){#mobile-ui .mobile-nav button.unlock-flash,#hud-rank.rank-flash{animation:none;background:#f9c66b25;box-shadow:inset 0 0 14px #f9c66b66}#hud-rank.rank-flash{color:#fff6d6;text-shadow:0 0 8px #ffd777}}
+
+/* The first chop opens a continuous road into York. */
+.wake-york{opacity:0;transition:opacity 1.5s ease .3s}
+.wake-ground-axe{transform:translate(90px,35px);transform-origin:507px 1140px;transition:transform .7s,opacity .4s}
+.picking-axe .wake-ground-axe{transform:translate(-45px,-100px) rotate(-25deg)}
+.picking-axe .wake-pose{transform:translate(45px,0) rotate(17deg)}
+.axe-equipped .wake-ground-axe{opacity:0}
+.wake-grip,.wake-held-axe{opacity:0;transition:opacity .4s}
+.axe-equipped .wake-grip,.axe-equipped .wake-held-axe{opacity:1}
+.wake-held-axe{transform:translate(42px,-35px) rotate(25deg);transform-origin:0 0}
+.wake-cut,.wake-chips{opacity:0}
+.tree-cut .wake-cut{opacity:1}
+.tree-cut .wake-trunk{clip-path:url(#wake-stump)}
+.tree-cut .wake-crown{animation:treetop-flight 2.5s ease-in forwards;transform-origin:365px 1068px}
+.tree-cut .wake-chips{animation:wood-chips .9s ease-out forwards;transform-origin:365px 1068px}
+.tree-cut .wake-york{opacity:1}
+.tree-swing .wake-held-axe{animation:first-tree-swing 1.1s ease-in-out forwards}
+.tree-swing .wake-grip{animation:first-grip-swing 1.1s ease-in-out}
+.wake-person{transform:translate(446px,1154px);transition:transform 1.8s linear}
+.road-walk .wake-person{transform:translate(610px,1065px) scale(.62)}
+.road-walk .wake-pose{animation:opening-walk .28s ease-in-out infinite alternate}
+.town-approach .wake-world{transform:scale(2.8);transform-origin:72% 65%;transition:transform 2s ease-in-out}
+.opening-handoff{opacity:0;pointer-events:none;transition:opacity 1.2s ease}
+.wake-controls{position:absolute;left:16px;right:16px;bottom:239px;color:#f6e3bd}
+.wake-controls[hidden]{display:none}
+.wake-controls .shot-steps{font-size:20px}
+.wake-hint{font:12px/1.4 'Trebuchet MS',sans-serif;color:#f6e3bd!important;text-align:center;margin:9px 0 0;min-height:34px}
+#wake-button.wake-chop-button{bottom:139px;width:calc(100% - 32px);height:56px;border-radius:4px;background:linear-gradient(#f2d095,#dfac5c);box-shadow:0 3px 0 #907149,inset 0 1px 0 #fff2c899}
+#wake-button[data-phase="aim"],body [data-phase="aim"] #wake-button{background:#b0d1bf}
+body [data-phase="power"] #wake-button{background:#e9ac79}
+[data-phase="aim"] .wake-held-axe{transform:translate(42px,-35px) rotate(calc(25deg + var(--tree-aim,0deg)))}
+@keyframes first-tree-swing{0%{transform:translate(42px,-35px) rotate(25deg)}25%{transform:translate(36px,-48px) rotate(95deg)}62%{transform:translate(0,-48px) rotate(-45deg)}83%{transform:translate(32px,-42px) rotate(10deg)}100%{transform:translate(42px,-35px) rotate(25deg)}}
+@keyframes first-grip-swing{25%{transform:translate(-3px,-10px) rotate(-12deg)}62%{transform:translate(-12px,-5px) rotate(-26deg)}100%{transform:none}}
+@keyframes treetop-flight{0%{transform:translate(0,0) rotate(0)}35%{transform:translate(var(--tree-pop-x,260px),var(--tree-pop-y,-290px)) rotate(var(--tree-spin,48deg))}100%{transform:translate(1050px,1500px) rotate(185deg)}}
+@keyframes wood-chips{0%{opacity:1;transform:translate(0,0)}100%{opacity:0;transform:translate(-120px,220px) rotate(-45deg)}}
+@keyframes opening-walk{from{transform:translateY(-3px) rotate(-2deg)}to{transform:translateY(3px) rotate(2deg)}}
+@media(max-height:690px){.wake-controls{bottom:189px}#wake-button.wake-chop-button{bottom:89px}}
+@media(max-height:560px){.wake-controls{bottom:159px}#wake-button.wake-chop-button{bottom:69px}}
+@media(prefers-reduced-motion:reduce){.wake-person,.wake-ground-axe,.wake-york,.town-approach .wake-world,.opening-handoff{transition:opacity .15s}.tree-cut .wake-crown{animation:none;opacity:0}.tree-swing .wake-held-axe,.tree-swing .wake-grip,.road-walk .wake-pose{animation:none}.tree-cut .wake-chips{display:none}}
+
+/* Match the live control shelf and keep the foreground clear on short phones. */
+.wake-world{overflow:visible}
+.axe-equipped:not(.town-approach) .wake-world{transform:translateY(-8%) scale(1)}
+.wake-town-art{overflow:hidden}
+[data-wake="3"] .wake-sleep,[data-wake="4"] .wake-sleep,[data-wake="5"] .wake-sleep{display:none}
+.wake-controls{bottom:124px}
+.wake-hint{position:absolute;bottom:100%;left:0;width:100%;min-height:0;margin:0 0 8px}
+#wake-button.wake-chop-button{bottom:65px}
+
+.picking-axe .wake-grip{opacity:1}
