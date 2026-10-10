@@ -102,13 +102,13 @@
     const life=scene.add.container(0,0).setDepth(-1.9);scene.townLife=life;
     const animate=(object,config)=>{const tween=scene.tweens.add({targets:object,...config});object.once('destroy',()=>tween.stop());return object;};
     scene.crowdMembers=[];scene.crowdLevel=-1;
-    for(let i=0;i<24;i++){
-      const x=55+(i*71)%690,y=1016.5;
-      const figure=scene.add.container(x,y);const coat=scene.add.polygon(0,0,[4,0,20,0,24,25,0,25],[0xa46c5d,0x799688,0xc1a16a,0x7b8098][i%4]).setOrigin(.5,0);
+    for(let i=0;i<72;i++){
+      const x=24+(i*71)%752,y=1008.5-(i%3)*17;
+      const figure=scene.add.container(x,y).setScale(1.15);figure.crowdBaseY=y;const coat=scene.add.polygon(0,0,[4,0,20,0,24,25,0,25],[0xa46c5d,0x799688,0xc1a16a,0x7b8098][i%4]).setOrigin(.5,0);
       const face=scene.add.image(0,-9,'castHeads',String((city.length+i*3)%16)).setDisplaySize(20,20);
       face.castFaceIndex=(city.length+i*3)%16;figure.crowdFace=face;
       figure.add([coat,face,scene.add.rectangle(-5,29,5,9,0x3d4d51),scene.add.rectangle(5,29,5,9,0x3d4d51)]);life.add(figure);
-      figure.setAlpha(i<4?1:0);scene.crowdMembers.push(figure);
+      figure.setAlpha(i<4?1:0);figure.crowdVisible=i<4;scene.crowdMembers.push(figure);
       animate(figure,{x:x+(i%2?-12:12),duration:4000+i*100,yoyo:true,repeat:-1,ease:'Sine.easeInOut'});animate(coat,{angle:{from:-3,to:3},duration:250+i*7,yoyo:true,repeat:-1});
     }
     const townIndex=['york','canterbury','london','dover','durham','norwich','winchester','chester','hull','newcastle','colchester','lincoln','oxford','southampton','gloucester'].indexOf(city.toLowerCase());
@@ -148,12 +148,16 @@
     const birdTimer=scene.time.addEvent({delay:17000,loop:true,callback:flyBy});life.once('destroy',()=>birdTimer.remove(false));
     return life;
   }
-  function crowd(scene,streak) {
-    const count=Math.min(24,4+Math.max(0,streak)*2);if(scene.crowdLevel===count)return;
+  function crowd(scene,streak,score=0) {
+    const scoreAudience=Math.min(20,Math.floor(Math.sqrt(Math.max(0,score))/8));
+    const count=Math.min(72,4+Math.max(0,streak)*8+scoreAudience);if(scene.crowdLevel===count)return;
     scene.crowdLevel=count;
     scene.crowdMembers?.forEach((actor,i)=>{
-      expression(actor.crowdFace,streak>=3?'happy':'worried');
-      actor.crowdTween?.stop();actor.crowdTween=scene.tweens.add({targets:actor,alpha:i<count?1:0,duration:i<count?400+i*15:700});
+      expression(actor.crowdFace,streak>=2?'happy':'worried');
+      const visible=i<count;if(actor.crowdVisible===visible)return;
+      actor.crowdVisible=visible;actor.crowdTween?.stop();
+      if(visible && actor.alpha<.1)actor.y=actor.crowdBaseY+10;
+      actor.crowdTween=scene.tweens.add({targets:actor,alpha:visible?1:0,y:actor.crowdBaseY,duration:visible?280:900,delay:visible?(i%8)*28:0,ease:'Sine.easeOut'});
       if(!actor.crowdCleanup){actor.crowdCleanup=true;actor.once('destroy',()=>actor.crowdTween?.stop());}
     });
   }

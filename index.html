@@ -5949,7 +5949,7 @@ function update(time, delta) {
   anchorCoinChest(this);
   updateSkyEncounters(this);
   updateWideWeather(this);
-  CastArt.crowd(this,killStreak);
+  CastArt.crowd(this,killStreak,window.Arcade?.state.score || 0);
   targetGroup?.getChildren().forEach(target=>{updateTargetMotion(target,this.time.now);CastArt.syncPoleTarget(target);if(target.targetOption?.effect)updateSpecialTarget(this,target);if(target.jester?.poleHands)CastArt.holdPole(target.jester.poleHands,target.jesterPole.rotation);});
   if(chest)chest.setVisible(true);
   streakMultiplierText?.setText(`${Math.max(1,killStreak)*((this.feverChops || 0)>0?2:1)}×`).setVisible(true);
