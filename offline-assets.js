@@ -1,6 +1,6 @@
 self.CHOP_RELEASE = {
-  "version": "875a4415bf8010c8",
-  "bytes": 10783287,
+  "version": "fedad776a0311c6f",
+  "bytes": 10787119,
   "files": [
     "./arcade.js",
     "./assets/agnes-angular.png",
@@ -78,6 +78,8 @@ self.CHOP_RELEASE = {
     "./special-runtime.js",
     "./special-targets.js",
     "./target-shop.js",
+    "./update.html",
+    "./update.js",
     "./vendor/phaser-3.55.2.min.js"
   ]
 };

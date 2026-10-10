@@ -1,5 +1,5 @@
 /* Cache a complete release atomically. A failed download never replaces a
-   working offline release. Updates wait until old game tabs are closed. */
+   working offline release. Updates activate after tabs close or an explicit update. */
 importScripts('./offline-assets.js');
 const CACHE = 'choptoit-release-' + self.CHOP_RELEASE.version;
 self.addEventListener('install', event => {
@@ -9,7 +9,7 @@ self.addEventListener('install', event => {
       // Small groups avoid saturating mobile connections with hundreds of requests.
       const files = self.CHOP_RELEASE.files;
       for (let i = 0; i < files.length; i += 8) {
-        await cache.addAll(files.slice(i, i + 8));
+        await cache.addAll(files.slice(i, i + 8).map(file=>new Request(new URL(file,self.location.href),{cache:'reload'})));
         // Progress is informational; a closed tab must not fail installation.
         try {
           const clients = await self.clients.matchAll({type:'window',includeUncontrolled:true});
@@ -19,6 +19,9 @@ self.addEventListener('install', event => {
       }
     } catch (error) { await caches.delete(CACHE); throw error; }
   })());
+});
+self.addEventListener('message',event=>{
+  if(event.data?.type==='choptoit-activate-update')event.waitUntil(self.skipWaiting());
 });
 self.addEventListener('activate', event => {
   event.waitUntil((async () => {

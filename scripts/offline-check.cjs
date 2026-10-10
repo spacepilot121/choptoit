@@ -27,9 +27,9 @@ function fixture(fail=false) {
   const caches={keys:async()=>[...stores.keys()],delete:async key=>stores.delete(key),open:async key=>{
     if(!stores.has(key)) stores.set(key,new Map());
     const data=stores.get(key);
-    return {addAll:async files=>{if(fail)throw new Error('Network failed');files.forEach(file=>data.set(file,{file}));},match:async request=>{const name=typeof request==='string'?request:'./'+new URL(request.url).pathname.split('/').pop();return data.get(name);}};
+    return {addAll:async files=>{if(fail)throw new Error('Network failed');files.forEach(file=>{assert.equal(file.cache,'reload','Updates bypass stale HTTP cache');const name='./'+new URL(file.url).pathname.replace('/choptoit/','');data.set(name,{file:name});});},match:async request=>{const name=typeof request==='string'?request:'./'+new URL(request.url).pathname.split('/').pop();return data.get(name);}};
   }};
-  vm.runInNewContext(fs.readFileSync(path.join(root,'sw.js'),'utf8'),{self,caches,URL,importScripts:()=>{},fetch:async()=>{throw new Error('Offline');}});
+  vm.runInNewContext(fs.readFileSync(path.join(root,'sw.js'),'utf8'),{self,caches,URL,Request,importScripts:()=>{},fetch:async()=>{throw new Error('Offline');}});
   return {handlers,messages,stores};
 }
 async function dispatch(fixture,name) {let work;fixture.handlers[name]({waitUntil:p=>{work=p;}});await work;}

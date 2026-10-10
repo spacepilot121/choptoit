@@ -191,7 +191,7 @@
       body.insertAdjacentHTML('beforeend',window.ChopNative ? '<p>Installed on this device.</p>' : window.ChopInstall?.installed ? '<p>Playing from your home screen.</p>' : window.ChopInstall?.available ? '<button class="wide" data-action="install">Add game to home screen</button>' : '<p>Keep the game with your apps: on iPhone or iPad, open it in Safari and choose Share → Add to Home Screen. On Android, look in your browser menu for Install app or Add to Home Screen.</p>');
       el('offline-status').textContent=window.ChopOffline?.status || 'Offline support is starting…';
       body.insertAdjacentHTML('beforeend','<button class="wide secondary" data-action="cast">People on the road</button>');
-      body.insertAdjacentHTML('beforeend','<button class="wide secondary" data-action="runtime-reload">Reload game · keep saved progress</button><button class="wide secondary" data-action="guide">Targets & tricks</button><article class="item-card"><small>PLAYTEST DEBUG</small><p>Add one million gold and unlock every city in this save. Your weapon, caravan and rank stay as they are.</p><button data-action="debug-grant">+1,000,000 gold & unlock all cities</button></article>');
+      body.insertAdjacentHTML('beforeend','<button class="wide secondary" data-action="game-update">Update game · keep saved progress</button><button class="wide secondary" data-action="runtime-reload">Reload game · keep saved progress</button><button class="wide secondary" data-action="guide">Targets & tricks</button><article class="item-card"><small>PLAYTEST DEBUG</small><p>Add one million gold and unlock every city in this save. Your weapon, caravan and rank stay as they are.</p><button data-action="debug-grant">+1,000,000 gold & unlock all cities</button></article>');
       if(runtimeError){
         const diagnostic=document.createElement('article');diagnostic.className='item-card';
         const title=document.createElement('h3');title.textContent='Last recorded game error';
@@ -275,6 +275,7 @@
   ui.addEventListener('click', event => {
     const button = event.target.closest('button');
     if (!button || button.disabled) return;
+    if(button.dataset.action==='game-update'){SaveManager.save();navigating=true;location.assign(new URL('update.html',location.href).href);return;}
     if (button.dataset.action === 'reload-save' || button.dataset.action === 'runtime-reload') { navigating=true; location.reload(); return; }
     if (SaveManager.conflict && button.dataset.action !== 'export') return;
     if(button.dataset.challenge){const reward=window.Arcade.claim(button.dataset.challenge,level);if(reward){addGold(scene,reward);save();ChopAudio.play('reward');toast('Challenge complete · +'+reward+' gold');}show('journal');return;}

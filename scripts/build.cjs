@@ -1,6 +1,6 @@
 const fs=require('node:fs'), path=require('node:path'), crypto=require('node:crypto');
 const root=path.resolve(__dirname,'..');
-const required=new Set(['index.html','mobile.css','mobile.js','opening.js','special-targets.js','special-runtime.js','platform-art.js','caravan-art.js','cast-art.js','audio.js','campaign.js','dayNightCycle.js','game-core.js','offline.js','manifest.webmanifest','favicon256.png','vendor/phaser-3.55.2.min.js',...require('./collect-assets.cjs')(root)]);
+const required=new Set(['index.html','update.html','update.js','mobile.css','mobile.js','opening.js','special-targets.js','special-runtime.js','platform-art.js','caravan-art.js','cast-art.js','audio.js','campaign.js','dayNightCycle.js','game-core.js','offline.js','manifest.webmanifest','favicon256.png','vendor/phaser-3.55.2.min.js',...require('./collect-assets.cjs')(root)]);
 // Story portraits and title scenery are DOM images, outside the Phaser loader.
 // Keep editable PNG masters in Git, but ship their smaller opaque JPEG exports.
 for(const name of ['oswin-angular.png','merrin-angular.png','agnes-angular.png','cart-angular.png']) required.add('assets/'+name);

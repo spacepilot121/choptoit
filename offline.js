@@ -43,7 +43,7 @@
   });
   window.addEventListener('load', async () => {
     try {
-      const registration = await navigator.serviceWorker.register('./sw.js');
+      const registration = await navigator.serviceWorker.register('./sw.js',{updateViaCache:'none'});
       const ready = () => { offlineReady = true; setOfflineStatus('Ready to play offline'); };
       if (registration.active) ready();
       else navigator.serviceWorker.ready.then(ready);
