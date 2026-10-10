@@ -2,13 +2,15 @@
 function desiredTargetPoleHeight(scene,target){
   const camera=scene.cameras.main,zoom=Math.max(.35,camera.zoom);
   const opened=Math.min(1,Math.max(0,(1/zoom-1)/(1/.35-1)));
-  const rise=Math.pow(Math.max(0,500*getWeaponPowerMultiplier()-100),2)/800;
   const top=camera.worldView.y+GAME_HEIGHT*.22/zoom;
-  const ceiling=Math.max(140,Math.min(rise-60,CHARACTER_BASE_Y-20-top-85));
+  const ceiling=Math.max(140,CHARACTER_BASE_Y-20-top-85);
   const initial=Math.min(ceiling,target.naturalPoleHeight ?? target.basePoleHeight);
   const seed=target.heightSeed ?? .5;
-  const fraction=(target.washingLine || target.targetOption?.art==='line') ? .66+seed*.22 : target.isYorkTallWaver ? .5+seed*.4 : .1+seed*.8;
-  return initial+Math.max(0,ceiling*fraction-initial)*opened;
+  const high=target.washingLine || target.targetOption?.art==='line' || target.isYorkTallWaver;
+  // Low targets remain low; bonus prizes inhabit separate middle and upper bands.
+  const fraction=high ? .66+seed*.22 : seed<.4 ? .04+seed*.2 : seed<.75 ? .25+(seed-.4)*.7 : .65+(seed-.75);
+  const starting=high || seed>=.8 ? Math.max(initial,ceiling*fraction) : initial;
+  return starting+Math.max(0,ceiling*fraction-starting)*opened;
 }
 
 // Runtime adapters keep target rules separate from the Phaser scene lifecycle.
@@ -206,10 +208,8 @@ function updateSkyEncounters(scene){
 function spawnSkyCraft(scene,type){
   const zoom=scene.cameras.main.zoom;if(zoom>(type==='ufo'?.37:.5))return;
   if(targetGroup.getChildren().some(t=>t.skyCraft===type&&t.active&&!t.collected))return;
-  const launchY=CHARACTER_BASE_Y-64,rise=Math.pow(500*getWeaponPowerMultiplier()-100,2)/800;
-  const skyTop=scene.cameras.main.worldView.y+GAME_HEIGHT*.14/zoom;
-  const y=Math.max(skyTop+130,launchY-rise*(type==='ufo'?.96:.86));
-  if(y>CHARACTER_BASE_Y-400)return;
+  // Distant prizes belong to the sky, independent of the player's current blade.
+  const y=scene.cameras.main.worldView.y+GAME_HEIGHT*(type==='ufo'?.2:.3)/zoom+100;
   const fromRight=Math.random()<.5,craft=scene.add.container(offscreenActorX(scene,fromRight),y).setDepth(20);
   craft.targetType=type;craft.skyCraft=type;craft.fromRight=fromRight;craft.specialGold=type==='ufo'?1500:500;craft.fameMultiplier=type==='ufo'?10:5;craft.collected=false;
   const g=scene.add.graphics();craft.add(g);craft.skyArt=g;

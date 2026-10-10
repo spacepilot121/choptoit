@@ -35,20 +35,19 @@ for(const direction of [0,1]) {
   assert.equal(active.size,2);
   bird.destroy();
   assert.equal(active.size,0,'Hit or departing birds release wing and flight animations');
-  assert.equal(context.birdFlightLane(1,956),560,'Birds no longer descend to accommodate a starter blade');
+  assert.equal(context.birdFlightLane(1,956),420,'Distant birds do not descend to accommodate a starter blade');
   let previousLane=Infinity;
   for(let level=1;level<=30;level++) {
     const multiplier=1+(level-1)*.06, lane=context.birdFlightLane(multiplier,956);
-    assert.ok(lane>=420 && lane<=560,'Birds remain below the HUD and above the stage');
+    assert.equal(lane,420,'Weapon upgrades do not move the prize further away');
     assert.ok(lane<=previousLane,'Upgrades only raise the bird lane');
     // spawnBird skips flights that this blade cannot reach.
     previousLane=lane;
   }
   context.player.weaponLevel=1;context.getWeaponPowerMultiplier=()=>1;
-  const starterCount=objects.length;context.spawnBird(scene);assert.equal(objects.length,starterCount,'Starter blades do not pull birds down beside the characters');
-  context.getWeaponPowerMultiplier=()=>1.2;context.spawnBird(scene);
+  const starterCount=objects.length;context.spawnBird(scene);assert.equal(objects.length,starterCount+1,'A starter blade can see a bird it cannot yet reach');
   const lowBird=objects.at(-1);
-  assert.equal(lowBird.y,560);
+  assert.equal(lowBird.y,420);
   assert.equal(lowBird.birdKind,'crow','Early birds teach a positive target before doves appear');
   Object.assign(lowBird.body,{enable:true,left:350,top:lowBird.y-20,right:450,bottom:lowBird.y+30});
   assert.equal(context.didHeadSegmentHitTarget({displayWidth:36},lowBird,400,lowBird.y+90,400,lowBird.y-90),true,'A full-power head crossing the starter bird lane registers');
@@ -59,9 +58,9 @@ for(const direction of [0,1]) {
   context.currentWeather='wind';context.windForce.y=100;
   const count=objects.length;
   context.spawnBird(scene);
-  assert.equal(objects.length,count,'Do not spawn a bird above the best shot in adverse wind');
+  assert.equal(objects.length,count+1,'Adverse wind does not hide distant prizes');
 }
-console.log('Birds stay within the current blade’s reach, face their flight path and release flight/wing animations on destruction.');
+console.log('Birds remain visible beyond the current blade’s reach, face their flight path and release flight/wing animations on destruction.');
 
 // Six birds use six distinct parts of the reachable sky, even with adversarial random choices.
 for(const pick of ['first','last']){
@@ -75,3 +74,6 @@ for(const pick of ['first','last']){
  const survivor=birds[0];assert.ok(Number.isFinite(context.spreadBirdFlightLane(-400,900,[survivor],3)),'Older flights outside a changed camera view cannot break band selection');
 }
 console.log('Wide flocks fill separate randomized heights across the reachable sky.');
+
+// Upgrades still increase reach at a full combo instead of all blades converging.
+{const context={player:{weaponLevel:1},killStreak:25};vm.createContext(context);vm.runInContext(html.slice(html.indexOf('function getWeaponPowerMultiplier('),html.indexOf('// Refresh weapon image',html.indexOf('function getWeaponPowerMultiplier('))),context);const starter=context.getWeaponPowerMultiplier();context.player.weaponLevel=30;assert.ok(context.getWeaponPowerMultiplier()>starter+1.7);}
