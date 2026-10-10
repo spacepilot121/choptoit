@@ -4,7 +4,7 @@ const assert=require('node:assert/strict');
 const {chromium}=require('C:/Users/siu03/.cache/codex-runtimes/codex-primary-runtime/dependencies/node/node_modules/playwright');
 const {createPreview}=require('./serve.cjs');
 const saveArgument=process.argv.find(arg=>arg.startsWith('--save='));
-const output=path.resolve(__dirname,'../qa/2026-10-09',process.argv.includes('--diagnostic')?'diagnostic':saveArgument?'final-campaign':process.argv.includes('--resume')?'resumed':process.argv.includes('--colliders')?'colliders':process.argv.includes('--tour')?'tour':process.argv.includes('--transition')?'transition':process.argv.includes('--campaign')?'campaign':'smoke');fs.mkdirSync(output,{recursive:true});
+const output=path.resolve(__dirname,'../qa/2026-10-10',process.argv.includes('--diagnostic')?'diagnostic':saveArgument?'final-campaign':process.argv.includes('--resume')?'resumed':process.argv.includes('--colliders')?'colliders':process.argv.includes('--tour')?'tour':process.argv.includes('--transition')?'transition':process.argv.includes('--campaign')?'campaign':'smoke');fs.mkdirSync(output,{recursive:true});
 (async()=>{
  const server=createPreview();await new Promise(r=>server.listen(0,'127.0.0.1',r));
  const browser=await chromium.launch({executablePath:'C:/Program Files/Google/Chrome/Application/chrome.exe',headless:true});
@@ -21,7 +21,16 @@ const output=path.resolve(__dirname,'../qa/2026-10-09',process.argv.includes('--
  }
  page.on('pageerror',e=>{errors.push(e.stack);console.log('RUNTIME ERROR',e.stack);});
  try{
-  const enterGame=async()=>{if(await page.locator('#wake-button').count()){await page.locator('#wake-button').waitFor({state:'visible'});for(let i=0;i<5;i++){await page.locator('#wake-button').tap();await page.waitForTimeout(500);}}else await page.locator('#start-overlay').tap();};
+  const enterGame=async()=>{
+   if(await page.locator('#wake-button').count()){
+    const button=page.locator('#wake-button');await button.waitFor({state:'visible'});
+    for(let i=0;i<7;i++){await page.waitForFunction(()=>!document.querySelector('#wake-button').disabled);await button.tap();}
+    await page.waitForFunction(()=>ChopOpening.phase==='timing'&&!document.querySelector('#wake-button').disabled);
+    await page.waitForFunction(()=>{if(Math.abs(ChopOpening.meterPosition-50)<3){document.querySelector('#wake-button').click();return true;}return false;});
+    for(const phase of ['aim','power']){await page.waitForFunction(p=>ChopOpening.phase===p&&!document.querySelector('#wake-button').disabled,phase);await button.tap();}
+    await page.waitForFunction(()=>ChopOpening.completed&&!document.querySelector('#start-overlay'));
+   }else if(await page.locator('#start-overlay').count())await page.locator('#start-overlay').tap();
+  };
   await page.goto('http://127.0.0.1:'+server.address().port);await enterGame();
   await page.waitForFunction(()=>swingActive&&inputEnabled);
   await page.evaluate(()=>{window.qaEvents=[];for(const name of ['startSwingMeter','spawnPrisoner','endSwing','chooseAngle','choosePower','beheadPrisoner']){const original=window[name];window[name]=function(...args){window.qaEvents.push({name,time:performance.now(),sceneTime:game.scene.scenes[0].time.now,stack:new Error().stack.split('\n').slice(1,4)});return original(...args);};}});
@@ -63,12 +72,13 @@ const output=path.resolve(__dirname,'../qa/2026-10-09',process.argv.includes('--
   if(process.argv.includes('--tour')){
    // Separate debug-assisted coverage; never counted as the fresh campaign.
    for(let i=0;i<20;i++)await page.locator('[data-action="debug-grant"]').tap();await page.locator('#dialog-close').tap();
-   await page.evaluate(()=>{while(level<14)addXP(game.scene.scenes[0],xpThreshold-xp);});
+   await page.evaluate(()=>{while(level<15)addXP(game.scene.scenes[0],xpThreshold-xp);});
    await page.waitForTimeout(5000);
    await page.locator('.mobile-nav [data-screen="workshop"]').tap();
-   for(let i=0;i<7;i++)await page.locator('[data-buy="weapon"]').tap();
+   for(let i=0;i<29;i++)await page.locator('[data-buy="weapon"]').tap();
    for(let i=0;i<15;i++)await page.locator('[data-buy="storage"]').tap();
    for(let i=0;i<24;i++)await page.locator('[data-buy="platform"]').tap();
+   assert.deepEqual(await page.evaluate(()=>({weapon:player.weaponLevel,cart:player.storageLevel,platform:player.platformLevel})),{weapon:30,cart:16,platform:25},'Every workshop upgrade is purchased through its button');
    await page.screenshot({path:path.join(output,'max-workshop.png')});await page.locator('#dialog-close').tap();
    const citiesToVisit=await page.evaluate(()=>cities.map((c,index)=>({name:c.name,index})));
    const tour=[];

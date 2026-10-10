@@ -1,3 +1,58 @@
+# Chop to it! full coverage playtest — 10 October 2026
+
+Verified release: **f519469acdc0e29c**. [Play this release](https://spacepilot121.github.io/choptoit/play/f519469acdc0e29c/index.html).
+
+## Results
+
+| Requirement | Verified result | Method |
+| --- | --- | --- |
+| Start fresh and finish the story | All six contracts, freedom ending, 80 chops, 60 hits, rank 12, 17 campaign days | Fresh isolated save, automated normal meter/aim/power selections, earned money and XP. No debug grants. |
+| Hit every target | 84/84 variants | Physical projectile collisions in the shipped Phaser engine: 68 pole/royal props, 6 basket variants, 6 bird species, UFO, hot-air balloon, thrown ring and golf hole. Multi-hit, descending-only and timed props exercise their real rules. |
+| Buy every workshop upgrade | Weapon 30, caravan 16, platform 25; 68 upgrade purchases | Actual workshop buttons, starting equipment at level 1, paid using gold earned during the assisted challenge run. |
+| Unlock and shop in every town | 15/15 city keys and visits; 73/73 paid target options, plus 3 free starters | Actual travel, key and market buttons; no debug money or key grants in this purchase run. |
+| Complete all challenges | 100/100 earned, claimed, saved and reloaded | 1,000 actual chop sequences, physical target chains, barrel blasts and bank catches. Controlled timing and target arrangements are test assistance; counters and claim flags were not set directly. |
+| Inspect city graphics | All 15 cities at normal and maximum zoom | 30 rendered phone-sized screenshots inspected, alongside target attachment checks. |
+| Fresh intro and phone layout | Opening completes; 320/390/430-pixel controls fit; reduced motion and failed-download retry pass | Normally rendered browser tests. |
+
+The broad challenge/purchase run is **assisted coverage**, not a claim that a human completed all 100 challenges naturally. It uses exact timing, controlled target placements, a test sky zoom and accelerated engine frames. Its rewards come from actual gameplay events. The independent story run uses no gold, XP, city or achievement grants. The intro is tested separately before the accelerated story run skips a previously verified opening.
+
+Your existing save was never used or modified. These are Chrome phone-layout tests, not physical iPhone/Android performance or app-store installation tests.
+
+## Bugs fixed
+
+| Reproduced problem | Fix | Verification |
+| --- | --- | --- |
+| Moving targets drift away from pole tips | Reset scripted physics displacement history after attaching a target to its visible pole. Arcade physics no longer adds the same movement again. | The original engine fixture reproduced a 57-pixel gap. All moving variants now complete with attached visuals and collision bodies; rendered height/zoom checks also pass. |
+| Gentle golf drops do not register | Check golf crossings even below four pixels of movement per frame. | A physical 200-pixel/second descending head failed before the change and sinks afterward. |
+| Winchester introduces itself as a York challenge | Replace the leftover city-specific hint with “Ring troupe”. | Rendered city audit exposed the old text; source and event coverage verify the corrected hint. |
+| Ring/golf rewards use old oversized text | Compact silver/gold reward numbers plus “RING MASTER!” and “HOLE IN ONE!” arcade callouts. | Both events complete through real projectile crossings in the target audit. |
+| Closing a menu before its queued pause is processed can strand the scene | Always queue the matching resume when closing. | The accelerated fresh run reproduced a closed journal with a paused scene before the fix; the same control path now reaches the ending. |
+
+Royal visitors also retain their market-option identity, so their distinct variants remain identifiable during coverage.
+
+## Remaining playability concerns
+
+- Some persistent target arrangements take repeated attempts, especially when a timed prop obstructs a straightforward shot. Several automated runs stalled despite successful chops. The completed earned run deliberately missed after five dry launches to refresh the stage. This is a balance/readability concern, not proof that every stalled aim was a collision failure.
+- Maximum zoom makes ground characters and targets very small. The extra sky is visually continuous and landmarks remain unique, but many screens still feel sparse between aerial encounters.
+- Caravan upgrades are visually distinct but still mostly cosmetic in the current mobile economy. A travel/show benefit would make those purchases more compelling.
+- The story finished on campaign day 17 of 360. The automated driver is unusually accurate, but the deadline currently applies little pressure along this route.
+- The largest challenges demand 1,000 chops, 100 basket catches and 150 barrel hits. Completion paths work; whether that repetition is enjoyable still needs human phone playtesting.
+
+## Reproduce and inspect
+
+- `node scripts/campaign-engine-playtest.cjs` — fresh earned campaign to a verified ending; fails if the ending is not reached.
+- `node scripts/full-target-playtest.cjs --challenges` — all 84 variants, then 100 challenges, claims and reload verification.
+- `node scripts/upgrade-economy-playtest.cjs` — continue that run's earned checkpoint, purchase every upgrade/key/target and reload.
+- `node scripts/visual-audit.cjs` — all fifteen cities at two zoom levels.
+- `node scripts/verticality-playtest.cjs` and `node scripts/opening-playtest.cjs` — normally rendered mobile checks.
+- `npm run release` — required regression suite, offline package and 82-file HTTP integrity check.
+
+[Per-target checklist](TARGET-COVERAGE.csv) · [Structured completion evidence](PLAYTEST-COVERAGE.json). Detailed isolated saves and screenshots remain locally under `qa/`; they are excluded from the published game.
+
+---
+
+## Earlier playtest history
+
 # Chop to it! playtest — 9 October 2026
 
 ## Scope and current status

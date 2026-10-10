@@ -9,10 +9,12 @@ const context={
   yorkRingPlatformEvent:null,
   CENTER_X:360,
   CENTER_Y:640,
+  CHARACTER_BASE_Y:1020,
   fame:0,
   fameText:{setText(){}},
   SaveManager:{save(){saves++;}},
-  window:{MobileGame:{feedback(message,success){feedback.push([message,success]);}}},
+  gainFame(_scene,_target,amount){context.fame+=amount;},
+  window:{MobileGame:{combo(...args){feedback.push(args);}}},
   formatGold:String,
   bodyGroup:null,
   targetGroup:{getChildren:()=>[]},
@@ -51,7 +53,7 @@ assert.equal(context.didHeadPassThroughMovingRing(head(),ring(-60,60,35),0,0,0,0
   context.checkFastHeadTargetCrossings(scene);
   assert.equal(context.fame,3,'A moving-ring hit grants the actual fame reward');
   assert.equal(saves,1,'The ring bonus is saved even when no ordinary targets remain');
-  assert.deepEqual(feedback,[['Ring clear! · +3 fame · nearby targets cleared',true]],'The mobile HUD announces the reward');
+  assert.deepEqual(feedback,[[2,0,'ring']],'The mobile HUD announces the reward');
   assert.equal(r.spent,true);
   assert.equal(r.sprite.active,false);
   assert.equal(context.yorkRingPlatformEvent.activeRing,null);

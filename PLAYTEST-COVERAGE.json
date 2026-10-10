@@ -1,0 +1,1580 @@
+{
+  "date": "2026-10-10",
+  "release": "f519469acdc0e29c",
+  "phoneViewport": {
+    "width": 390,
+    "height": 844,
+    "touch": true
+  },
+  "physicalDeviceTested": false,
+  "earnedCampaign": {
+    "goldOrXpGrants": false,
+    "claimed": 6,
+    "targets": 60,
+    "sold": 0,
+    "days": 17,
+    "visited": [
+      "York",
+      "Durham",
+      "Chester",
+      "London"
+    ],
+    "ending": "freedom",
+    "epilogueSeen": true,
+    "chops": 80,
+    "rank": 12,
+    "remainingGold": 140654,
+    "errors": []
+  },
+  "targets": {
+    "engineAssisted": true,
+    "count": 84,
+    "results": [
+      {
+        "id": "red",
+        "city": "York",
+        "height": 212.5894990339723,
+        "attachmentError": 0,
+        "parts": 0,
+        "collected": true,
+        "active": true,
+        "targets": 1
+      },
+      {
+        "id": "red-bob",
+        "city": "York",
+        "height": 426.48484067913614,
+        "attachmentError": 0,
+        "parts": 0,
+        "collected": true,
+        "active": true,
+        "targets": 2
+      },
+      {
+        "id": "red-sway",
+        "city": "York",
+        "height": 93.89464896730527,
+        "attachmentError": 0,
+        "parts": 0,
+        "collected": true,
+        "active": true,
+        "targets": 3
+      },
+      {
+        "id": "trick-bell",
+        "city": "York",
+        "height": 220.02368331206614,
+        "attachmentError": 0,
+        "parts": 0,
+        "collected": true,
+        "active": true,
+        "targets": 4
+      },
+      {
+        "id": "trick-crate",
+        "city": "York",
+        "height": 98.14436217169916,
+        "attachmentError": 0,
+        "parts": 0,
+        "collected": true,
+        "active": true,
+        "targets": 5
+      },
+      {
+        "id": "trick-line",
+        "city": "York",
+        "height": 380.5810098560902,
+        "attachmentError": 0,
+        "parts": 4,
+        "collected": true,
+        "active": true,
+        "targets": 10
+      },
+      {
+        "id": "green",
+        "city": "Durham",
+        "height": 87.22788604195682,
+        "attachmentError": 0,
+        "parts": 0,
+        "collected": true,
+        "active": true,
+        "targets": 11
+      },
+      {
+        "id": "green-orbit",
+        "city": "Durham",
+        "height": 395.72084148867253,
+        "attachmentError": 0,
+        "parts": 0,
+        "collected": true,
+        "active": true,
+        "targets": 12
+      },
+      {
+        "id": "trick-chimes",
+        "city": "Durham",
+        "height": 94.5319571342817,
+        "attachmentError": 0,
+        "parts": 0,
+        "collected": true,
+        "hits": 3,
+        "active": true,
+        "targets": 13
+      },
+      {
+        "id": "trick-glass",
+        "city": "Durham",
+        "height": 380.19132328195667,
+        "attachmentError": 0,
+        "parts": 0,
+        "collected": true,
+        "active": true,
+        "targets": 14
+      },
+      {
+        "id": "trick-incense",
+        "city": "Durham",
+        "height": 190.67281312585078,
+        "attachmentError": 0,
+        "parts": 0,
+        "collected": true,
+        "active": true,
+        "targets": 15
+      },
+      {
+        "id": "barrel",
+        "city": "Newcastle",
+        "height": 76.86965346025639,
+        "attachmentError": 0,
+        "parts": 0,
+        "collected": true,
+        "active": true,
+        "targets": 16
+      },
+      {
+        "id": "barrel-medium",
+        "city": "Newcastle",
+        "height": 193.55022825704552,
+        "attachmentError": 0,
+        "parts": 0,
+        "collected": true,
+        "active": true,
+        "targets": 17
+      },
+      {
+        "id": "trick-hopper",
+        "city": "Newcastle",
+        "height": 201.2249017300345,
+        "attachmentError": 0,
+        "parts": 0,
+        "collected": true,
+        "active": true,
+        "targets": 18
+      },
+      {
+        "id": "trick-chain",
+        "city": "Newcastle",
+        "height": 80.0382382915971,
+        "attachmentError": 0,
+        "parts": 3,
+        "collected": true,
+        "active": true,
+        "targets": 24
+      },
+      {
+        "id": "trick-vent",
+        "city": "Newcastle",
+        "height": 373.40699325576225,
+        "attachmentError": 0,
+        "parts": 0,
+        "collected": true,
+        "active": true,
+        "targets": 25
+      },
+      {
+        "id": "trick-scales",
+        "city": "Chester",
+        "height": 75.24,
+        "attachmentError": 0,
+        "parts": 0,
+        "collected": true,
+        "active": true,
+        "targets": 28
+      },
+      {
+        "id": "trick-clubs",
+        "city": "Chester",
+        "height": 75.24,
+        "attachmentError": 0,
+        "parts": 0,
+        "collected": true,
+        "active": true,
+        "targets": 29
+      },
+      {
+        "id": "trick-cheese",
+        "city": "Chester",
+        "height": 84.58477820235272,
+        "attachmentError": 0,
+        "parts": 0,
+        "collected": true,
+        "active": true,
+        "targets": 30
+      },
+      {
+        "id": "shield",
+        "city": "Hull",
+        "height": 89.54,
+        "attachmentError": 0,
+        "parts": 0,
+        "collected": true,
+        "active": true,
+        "targets": 31
+      },
+      {
+        "id": "shield-sway",
+        "city": "Hull",
+        "height": 354.8165327668357,
+        "attachmentError": 0,
+        "parts": 0,
+        "collected": true,
+        "active": true,
+        "targets": 32
+      },
+      {
+        "id": "trick-net",
+        "city": "Hull",
+        "height": 341.11110523364835,
+        "attachmentError": 0,
+        "parts": 0,
+        "collected": true,
+        "active": true,
+        "targets": 33
+      },
+      {
+        "id": "trick-wheel",
+        "city": "Hull",
+        "height": 89.54,
+        "attachmentError": 0,
+        "parts": 0,
+        "collected": true,
+        "active": true,
+        "targets": 34
+      },
+      {
+        "id": "trick-buoys",
+        "city": "Hull",
+        "height": 340.1186670643431,
+        "attachmentError": 0,
+        "parts": 0,
+        "collected": true,
+        "active": true,
+        "targets": 35
+      },
+      {
+        "id": "high",
+        "city": "Lincoln",
+        "height": 400.18249472937123,
+        "attachmentError": 0,
+        "parts": 0,
+        "collected": true,
+        "active": true,
+        "targets": 36
+      },
+      {
+        "id": "high-bob",
+        "city": "Lincoln",
+        "height": 419.5149781187732,
+        "attachmentError": 0,
+        "parts": 0,
+        "collected": true,
+        "active": true,
+        "targets": 37
+      },
+      {
+        "id": "trick-cock",
+        "city": "Lincoln",
+        "height": 232.89452836098093,
+        "attachmentError": 0,
+        "parts": 0,
+        "collected": true,
+        "active": true,
+        "targets": 38
+      },
+      {
+        "id": "trick-pulley",
+        "city": "Lincoln",
+        "height": 75.48341060694187,
+        "attachmentError": 0,
+        "parts": 0,
+        "collected": true,
+        "active": true,
+        "targets": 39
+      },
+      {
+        "id": "trick-gargoyle",
+        "city": "Lincoln",
+        "height": 351.0306894097292,
+        "attachmentError": 0,
+        "parts": 0,
+        "collected": true,
+        "hits": 2,
+        "active": true,
+        "targets": 41
+      },
+      {
+        "id": "monk",
+        "city": "Canterbury",
+        "height": 249.4970781528795,
+        "attachmentError": 0,
+        "parts": 0,
+        "collected": true,
+        "active": true,
+        "targets": 42
+      },
+      {
+        "id": "halo-orbit",
+        "city": "Canterbury",
+        "height": 89.88215067102662,
+        "attachmentError": 0,
+        "parts": 0,
+        "collected": true,
+        "active": true,
+        "targets": 43
+      },
+      {
+        "id": "trick-staff",
+        "city": "Canterbury",
+        "height": 451.725523009469,
+        "attachmentError": 0,
+        "parts": 3,
+        "collected": true,
+        "active": true,
+        "targets": 47
+      },
+      {
+        "id": "trick-bowl",
+        "city": "Canterbury",
+        "height": 477.14022706636115,
+        "attachmentError": 0,
+        "parts": 0,
+        "collected": true,
+        "active": true,
+        "targets": 48
+      },
+      {
+        "id": "trick-book",
+        "city": "Canterbury",
+        "height": 90.23087177171769,
+        "attachmentError": 0,
+        "parts": 0,
+        "collected": true,
+        "active": true,
+        "targets": 49
+      },
+      {
+        "id": "royal",
+        "city": "London",
+        "height": 0,
+        "attachmentError": 0,
+        "parts": 0,
+        "collected": true,
+        "active": false,
+        "targets": 50
+      },
+      {
+        "id": "royal-courier",
+        "city": "London",
+        "height": 0,
+        "attachmentError": 0,
+        "parts": 0,
+        "collected": true,
+        "active": false,
+        "targets": 51
+      },
+      {
+        "id": "trick-press",
+        "city": "London",
+        "height": 391.1880822025399,
+        "attachmentError": 0,
+        "parts": 0,
+        "collected": true,
+        "active": true,
+        "targets": 52
+      },
+      {
+        "id": "trick-crowns",
+        "city": "London",
+        "height": 370.3767460363215,
+        "attachmentError": 0,
+        "parts": 0,
+        "collected": true,
+        "hits": 3,
+        "active": true,
+        "targets": 53
+      },
+      {
+        "id": "trick-seal",
+        "city": "London",
+        "height": 178.16342843970895,
+        "attachmentError": 0,
+        "parts": 0,
+        "collected": true,
+        "active": true,
+        "targets": 54
+      },
+      {
+        "id": "barrel-drift",
+        "city": "Dover",
+        "height": 72.83533295450621,
+        "attachmentError": 0,
+        "parts": 0,
+        "collected": true,
+        "active": true,
+        "targets": 55
+      },
+      {
+        "id": "barrel-siege",
+        "city": "Dover",
+        "height": 218.93859446320448,
+        "attachmentError": 0,
+        "parts": 0,
+        "collected": true,
+        "active": true,
+        "targets": 56
+      },
+      {
+        "id": "trick-mirror",
+        "city": "Dover",
+        "height": 412.43638294261063,
+        "attachmentError": 0,
+        "parts": 0,
+        "collected": true,
+        "active": true,
+        "targets": 57
+      },
+      {
+        "id": "trick-chest",
+        "city": "Dover",
+        "height": 213.809700320797,
+        "attachmentError": 0,
+        "parts": 0,
+        "collected": true,
+        "hits": 2,
+        "active": true,
+        "targets": 58
+      },
+      {
+        "id": "trick-spring",
+        "city": "Dover",
+        "height": 206.33996044393476,
+        "attachmentError": 0,
+        "parts": 0,
+        "collected": true,
+        "active": true,
+        "targets": 59
+      },
+      {
+        "id": "nimble",
+        "city": "Norwich",
+        "height": 484.7501513575825,
+        "attachmentError": 0,
+        "parts": 0,
+        "collected": true,
+        "active": true,
+        "targets": 60
+      },
+      {
+        "id": "sway",
+        "city": "Norwich",
+        "height": 249.04472241457216,
+        "attachmentError": 0,
+        "parts": 0,
+        "collected": true,
+        "active": true,
+        "targets": 61
+      },
+      {
+        "id": "trick-shuttle",
+        "city": "Norwich",
+        "height": 227.8390274167097,
+        "attachmentError": 0,
+        "parts": 0,
+        "collected": true,
+        "active": true,
+        "targets": 62
+      },
+      {
+        "id": "trick-spool",
+        "city": "Norwich",
+        "height": 470.5717422722564,
+        "attachmentError": 0,
+        "parts": 0,
+        "collected": true,
+        "active": true,
+        "targets": 65
+      },
+      {
+        "id": "trick-mustard",
+        "city": "Norwich",
+        "height": 284.4237014356918,
+        "attachmentError": 0,
+        "parts": 0,
+        "collected": true,
+        "active": true,
+        "targets": 66
+      },
+      {
+        "id": "needle",
+        "city": "Winchester",
+        "height": 104.26840349363522,
+        "attachmentError": 0,
+        "parts": 0,
+        "collected": true,
+        "active": true,
+        "targets": 67
+      },
+      {
+        "id": "trick-lance",
+        "city": "Winchester",
+        "height": 203.54450698742212,
+        "attachmentError": 0,
+        "parts": 0,
+        "collected": true,
+        "active": true,
+        "targets": 68
+      },
+      {
+        "id": "trick-shield",
+        "city": "Winchester",
+        "height": 91.3,
+        "attachmentError": 0,
+        "parts": 0,
+        "collected": true,
+        "active": true,
+        "targets": 69
+      },
+      {
+        "id": "trick-dummy",
+        "city": "Winchester",
+        "height": 92.86178050855251,
+        "attachmentError": 0,
+        "parts": 0,
+        "collected": true,
+        "active": true,
+        "targets": 70
+      },
+      {
+        "id": "barrel-large",
+        "city": "Colchester",
+        "height": 140.2080338966001,
+        "attachmentError": 0,
+        "parts": 0,
+        "collected": true,
+        "active": true,
+        "targets": 71
+      },
+      {
+        "id": "barrel-bob",
+        "city": "Colchester",
+        "height": 272.1378037816611,
+        "attachmentError": 0,
+        "parts": 0,
+        "collected": true,
+        "active": true,
+        "targets": 72
+      },
+      {
+        "id": "trick-coin",
+        "city": "Colchester",
+        "height": 276.35276849601547,
+        "attachmentError": 0,
+        "parts": 0,
+        "collected": true,
+        "active": true,
+        "targets": 73
+      },
+      {
+        "id": "trick-pots",
+        "city": "Colchester",
+        "height": 22,
+        "attachmentError": 0,
+        "parts": 0,
+        "collected": true,
+        "active": true,
+        "targets": 74
+      },
+      {
+        "id": "trick-sling",
+        "city": "Colchester",
+        "height": 136.63387832486865,
+        "attachmentError": 0,
+        "parts": 0,
+        "collected": true,
+        "active": true,
+        "targets": 75
+      },
+      {
+        "id": "trick-papers",
+        "city": "Oxford",
+        "height": 100.83282858848506,
+        "attachmentError": 0,
+        "parts": 0,
+        "collected": true,
+        "active": true,
+        "targets": 78
+      },
+      {
+        "id": "trick-pendulum",
+        "city": "Oxford",
+        "height": 246.87930370392155,
+        "attachmentError": 0,
+        "parts": 0,
+        "collected": true,
+        "active": true,
+        "targets": 79
+      },
+      {
+        "id": "trick-flask",
+        "city": "Oxford",
+        "height": 294.3877447792323,
+        "attachmentError": 0,
+        "parts": 0,
+        "collected": true,
+        "active": true,
+        "targets": 80
+      },
+      {
+        "id": "trick-crane",
+        "city": "Southampton",
+        "height": 81.88155463401783,
+        "attachmentError": 0,
+        "parts": 0,
+        "collected": true,
+        "active": true,
+        "targets": 81
+      },
+      {
+        "id": "trick-compass",
+        "city": "Southampton",
+        "height": 70.18,
+        "attachmentError": 0,
+        "parts": 0,
+        "collected": true,
+        "active": true,
+        "targets": 82
+      },
+      {
+        "id": "trick-sail",
+        "city": "Southampton",
+        "height": 70.18,
+        "attachmentError": 0,
+        "parts": 0,
+        "collected": true,
+        "active": true,
+        "targets": 83
+      },
+      {
+        "id": "sky-orbit",
+        "city": "Gloucester",
+        "height": 521.6024457412188,
+        "attachmentError": 0,
+        "parts": 0,
+        "collected": true,
+        "active": true,
+        "targets": 84
+      },
+      {
+        "id": "trick-bumper",
+        "city": "Gloucester",
+        "height": 454.51045246672095,
+        "attachmentError": 0,
+        "parts": 0,
+        "collected": true,
+        "active": true,
+        "targets": 85
+      },
+      {
+        "id": "trick-balloon",
+        "city": "Gloucester",
+        "height": 452.5949462598457,
+        "attachmentError": 0,
+        "parts": 0,
+        "collected": true,
+        "active": true,
+        "targets": 86
+      },
+      {
+        "id": "trick-jackpot",
+        "city": "Gloucester",
+        "height": 492.32856624394327,
+        "attachmentError": 0,
+        "parts": 0,
+        "collected": true,
+        "active": true,
+        "targets": 87
+      },
+      {
+        "id": "basket",
+        "caught": true,
+        "multiplier": 2,
+        "active": true
+      },
+      {
+        "id": "basket-runner",
+        "caught": true,
+        "multiplier": 3,
+        "active": true
+      },
+      {
+        "id": "basket-three",
+        "caught": true,
+        "multiplier": 3,
+        "active": true
+      },
+      {
+        "id": "basket-four",
+        "caught": true,
+        "multiplier": 4,
+        "active": true
+      },
+      {
+        "id": "basket-wide",
+        "caught": true,
+        "multiplier": 2,
+        "active": true
+      },
+      {
+        "id": "basket-captain",
+        "caught": true,
+        "multiplier": 4,
+        "active": true
+      },
+      {
+        "id": "bird-crow",
+        "kind": "crow",
+        "collected": true,
+        "falling": true
+      },
+      {
+        "id": "bird-dove",
+        "kind": "dove",
+        "collected": true,
+        "falling": true
+      },
+      {
+        "id": "bird-swallow",
+        "kind": "swallow",
+        "collected": true,
+        "falling": true
+      },
+      {
+        "id": "bird-magpie",
+        "kind": "magpie",
+        "collected": true,
+        "falling": true
+      },
+      {
+        "id": "bird-owl",
+        "kind": "owl",
+        "collected": true,
+        "falling": true
+      },
+      {
+        "id": "bird-phoenix",
+        "kind": "phoenix",
+        "collected": true,
+        "falling": true
+      },
+      {
+        "id": "sky-ufo",
+        "collected": true
+      },
+      {
+        "id": "sky-balloon",
+        "collected": true,
+        "falling": true
+      },
+      {
+        "id": "rings",
+        "spent": true,
+        "banner": "RING MASTER!"
+      },
+      {
+        "id": "island",
+        "success": true,
+        "banner": "HOLE IN ONE!"
+      }
+    ],
+    "errors": []
+  },
+  "challenges": {
+    "engineAssisted": true,
+    "method": "Actual shot phases, spawned physical collision fixtures and earned gameplay events; no achievement counter or claim-state edits",
+    "claimed": 100,
+    "reloadVerified": true,
+    "progress": [
+      {
+        "id": "first-show",
+        "metric": "chops",
+        "goal": 10,
+        "current": 1000,
+        "locked": false
+      },
+      {
+        "id": "clean-cut",
+        "metric": "perfects",
+        "goal": 10,
+        "current": 1000,
+        "locked": false
+      },
+      {
+        "id": "streak-five",
+        "metric": "bestCombo",
+        "goal": 5,
+        "current": 1024,
+        "locked": false
+      },
+      {
+        "id": "streak-twelve",
+        "metric": "bestCombo",
+        "goal": 12,
+        "current": 1024,
+        "locked": false
+      },
+      {
+        "id": "catch",
+        "metric": "catches",
+        "goal": 1,
+        "current": 106,
+        "locked": false
+      },
+      {
+        "id": "catch-ten",
+        "metric": "catches",
+        "goal": 10,
+        "current": 106,
+        "locked": false
+      },
+      {
+        "id": "hat-trick",
+        "metric": "bestChain",
+        "goal": 3,
+        "current": 9,
+        "locked": false
+      },
+      {
+        "id": "chain-five",
+        "metric": "bestChain",
+        "goal": 5,
+        "current": 9,
+        "locked": false
+      },
+      {
+        "id": "bank",
+        "metric": "bankShots",
+        "goal": 1,
+        "current": 100,
+        "locked": false
+      },
+      {
+        "id": "boom",
+        "metric": "barrels",
+        "goal": 5,
+        "current": 156,
+        "locked": false
+      },
+      {
+        "id": "weather",
+        "metric": "weatherHits",
+        "goal": 10,
+        "current": 1230,
+        "locked": false
+      },
+      {
+        "id": "collector",
+        "metric": "unique",
+        "goal": 8,
+        "current": 100,
+        "locked": false
+      },
+      {
+        "id": "tour-0-0",
+        "metric": "chops",
+        "goal": 25,
+        "current": 1000,
+        "locked": false
+      },
+      {
+        "id": "tour-0-1",
+        "metric": "chops",
+        "goal": 50,
+        "current": 1000,
+        "locked": false
+      },
+      {
+        "id": "tour-0-2",
+        "metric": "chops",
+        "goal": 100,
+        "current": 1000,
+        "locked": false
+      },
+      {
+        "id": "tour-0-3",
+        "metric": "chops",
+        "goal": 200,
+        "current": 1000,
+        "locked": false
+      },
+      {
+        "id": "tour-0-4",
+        "metric": "chops",
+        "goal": 350,
+        "current": 1000,
+        "locked": false
+      },
+      {
+        "id": "tour-0-5",
+        "metric": "chops",
+        "goal": 500,
+        "current": 1000,
+        "locked": false
+      },
+      {
+        "id": "tour-0-6",
+        "metric": "chops",
+        "goal": 750,
+        "current": 1000,
+        "locked": false
+      },
+      {
+        "id": "tour-0-7",
+        "metric": "chops",
+        "goal": 1000,
+        "current": 1000,
+        "locked": false
+      },
+      {
+        "id": "tour-1-0",
+        "metric": "perfects",
+        "goal": 15,
+        "current": 1000,
+        "locked": false
+      },
+      {
+        "id": "tour-1-1",
+        "metric": "perfects",
+        "goal": 25,
+        "current": 1000,
+        "locked": false
+      },
+      {
+        "id": "tour-1-2",
+        "metric": "perfects",
+        "goal": 40,
+        "current": 1000,
+        "locked": false
+      },
+      {
+        "id": "tour-1-3",
+        "metric": "perfects",
+        "goal": 60,
+        "current": 1000,
+        "locked": false
+      },
+      {
+        "id": "tour-1-4",
+        "metric": "perfects",
+        "goal": 90,
+        "current": 1000,
+        "locked": false
+      },
+      {
+        "id": "tour-1-5",
+        "metric": "perfects",
+        "goal": 130,
+        "current": 1000,
+        "locked": false
+      },
+      {
+        "id": "tour-1-6",
+        "metric": "perfects",
+        "goal": 180,
+        "current": 1000,
+        "locked": false
+      },
+      {
+        "id": "tour-1-7",
+        "metric": "perfects",
+        "goal": 250,
+        "current": 1000,
+        "locked": false
+      },
+      {
+        "id": "tour-2-0",
+        "metric": "bestScore",
+        "goal": 5000,
+        "current": 56447900,
+        "locked": false
+      },
+      {
+        "id": "tour-2-1",
+        "metric": "bestScore",
+        "goal": 10000,
+        "current": 56447900,
+        "locked": false
+      },
+      {
+        "id": "tour-2-2",
+        "metric": "bestScore",
+        "goal": 20000,
+        "current": 56447900,
+        "locked": false
+      },
+      {
+        "id": "tour-2-3",
+        "metric": "bestScore",
+        "goal": 40000,
+        "current": 56447900,
+        "locked": false
+      },
+      {
+        "id": "tour-2-4",
+        "metric": "bestScore",
+        "goal": 75000,
+        "current": 56447900,
+        "locked": false
+      },
+      {
+        "id": "tour-2-5",
+        "metric": "bestScore",
+        "goal": 120000,
+        "current": 56447900,
+        "locked": false
+      },
+      {
+        "id": "tour-2-6",
+        "metric": "bestScore",
+        "goal": 200000,
+        "current": 56447900,
+        "locked": false
+      },
+      {
+        "id": "tour-2-7",
+        "metric": "bestScore",
+        "goal": 350000,
+        "current": 56447900,
+        "locked": false
+      },
+      {
+        "id": "tour-3-0",
+        "metric": "bestCombo",
+        "goal": 3,
+        "current": 1024,
+        "locked": false
+      },
+      {
+        "id": "tour-3-1",
+        "metric": "bestCombo",
+        "goal": 4,
+        "current": 1024,
+        "locked": false
+      },
+      {
+        "id": "tour-3-2",
+        "metric": "bestCombo",
+        "goal": 6,
+        "current": 1024,
+        "locked": false
+      },
+      {
+        "id": "tour-3-3",
+        "metric": "bestCombo",
+        "goal": 8,
+        "current": 1024,
+        "locked": false
+      },
+      {
+        "id": "tour-3-4",
+        "metric": "bestCombo",
+        "goal": 10,
+        "current": 1024,
+        "locked": false
+      },
+      {
+        "id": "tour-3-5",
+        "metric": "bestCombo",
+        "goal": 12,
+        "current": 1024,
+        "locked": false
+      },
+      {
+        "id": "tour-3-6",
+        "metric": "bestCombo",
+        "goal": 16,
+        "current": 1024,
+        "locked": false
+      },
+      {
+        "id": "tour-3-7",
+        "metric": "bestCombo",
+        "goal": 20,
+        "current": 1024,
+        "locked": false
+      },
+      {
+        "id": "tour-4-0",
+        "metric": "bestChain",
+        "goal": 2,
+        "current": 9,
+        "locked": false
+      },
+      {
+        "id": "tour-4-1",
+        "metric": "bestChain",
+        "goal": 3,
+        "current": 9,
+        "locked": false
+      },
+      {
+        "id": "tour-4-2",
+        "metric": "bestChain",
+        "goal": 4,
+        "current": 9,
+        "locked": false
+      },
+      {
+        "id": "tour-4-3",
+        "metric": "bestChain",
+        "goal": 5,
+        "current": 9,
+        "locked": false
+      },
+      {
+        "id": "tour-4-4",
+        "metric": "bestChain",
+        "goal": 6,
+        "current": 9,
+        "locked": false
+      },
+      {
+        "id": "tour-4-5",
+        "metric": "bestChain",
+        "goal": 7,
+        "current": 9,
+        "locked": false
+      },
+      {
+        "id": "tour-4-6",
+        "metric": "bestChain",
+        "goal": 8,
+        "current": 9,
+        "locked": false
+      },
+      {
+        "id": "tour-4-7",
+        "metric": "bestChain",
+        "goal": 9,
+        "current": 9,
+        "locked": false
+      },
+      {
+        "id": "tour-5-0",
+        "metric": "catches",
+        "goal": 3,
+        "current": 106,
+        "locked": false
+      },
+      {
+        "id": "tour-5-1",
+        "metric": "catches",
+        "goal": 6,
+        "current": 106,
+        "locked": false
+      },
+      {
+        "id": "tour-5-2",
+        "metric": "catches",
+        "goal": 12,
+        "current": 106,
+        "locked": false
+      },
+      {
+        "id": "tour-5-3",
+        "metric": "catches",
+        "goal": 20,
+        "current": 106,
+        "locked": false
+      },
+      {
+        "id": "tour-5-4",
+        "metric": "catches",
+        "goal": 35,
+        "current": 106,
+        "locked": false
+      },
+      {
+        "id": "tour-5-5",
+        "metric": "catches",
+        "goal": 50,
+        "current": 106,
+        "locked": false
+      },
+      {
+        "id": "tour-5-6",
+        "metric": "catches",
+        "goal": 75,
+        "current": 106,
+        "locked": false
+      },
+      {
+        "id": "tour-5-7",
+        "metric": "catches",
+        "goal": 100,
+        "current": 106,
+        "locked": false
+      },
+      {
+        "id": "tour-6-0",
+        "metric": "bankShots",
+        "goal": 2,
+        "current": 100,
+        "locked": false
+      },
+      {
+        "id": "tour-6-1",
+        "metric": "bankShots",
+        "goal": 4,
+        "current": 100,
+        "locked": false
+      },
+      {
+        "id": "tour-6-2",
+        "metric": "bankShots",
+        "goal": 8,
+        "current": 100,
+        "locked": false
+      },
+      {
+        "id": "tour-6-3",
+        "metric": "bankShots",
+        "goal": 12,
+        "current": 100,
+        "locked": false
+      },
+      {
+        "id": "tour-6-4",
+        "metric": "bankShots",
+        "goal": 20,
+        "current": 100,
+        "locked": false
+      },
+      {
+        "id": "tour-6-5",
+        "metric": "bankShots",
+        "goal": 30,
+        "current": 100,
+        "locked": false
+      },
+      {
+        "id": "tour-6-6",
+        "metric": "bankShots",
+        "goal": 45,
+        "current": 100,
+        "locked": false
+      },
+      {
+        "id": "tour-6-7",
+        "metric": "bankShots",
+        "goal": 60,
+        "current": 100,
+        "locked": false
+      },
+      {
+        "id": "tour-7-0",
+        "metric": "barrels",
+        "goal": 3,
+        "current": 156,
+        "locked": false
+      },
+      {
+        "id": "tour-7-1",
+        "metric": "barrels",
+        "goal": 10,
+        "current": 156,
+        "locked": false
+      },
+      {
+        "id": "tour-7-2",
+        "metric": "barrels",
+        "goal": 20,
+        "current": 156,
+        "locked": false
+      },
+      {
+        "id": "tour-7-3",
+        "metric": "barrels",
+        "goal": 35,
+        "current": 156,
+        "locked": false
+      },
+      {
+        "id": "tour-7-4",
+        "metric": "barrels",
+        "goal": 50,
+        "current": 156,
+        "locked": false
+      },
+      {
+        "id": "tour-7-5",
+        "metric": "barrels",
+        "goal": 75,
+        "current": 156,
+        "locked": false
+      },
+      {
+        "id": "tour-7-6",
+        "metric": "barrels",
+        "goal": 100,
+        "current": 156,
+        "locked": false
+      },
+      {
+        "id": "tour-7-7",
+        "metric": "barrels",
+        "goal": 150,
+        "current": 156,
+        "locked": false
+      },
+      {
+        "id": "tour-8-0",
+        "metric": "weatherHits",
+        "goal": 20,
+        "current": 1230,
+        "locked": false
+      },
+      {
+        "id": "tour-8-1",
+        "metric": "weatherHits",
+        "goal": 35,
+        "current": 1230,
+        "locked": false
+      },
+      {
+        "id": "tour-8-2",
+        "metric": "weatherHits",
+        "goal": 60,
+        "current": 1230,
+        "locked": false
+      },
+      {
+        "id": "tour-8-3",
+        "metric": "weatherHits",
+        "goal": 90,
+        "current": 1230,
+        "locked": false
+      },
+      {
+        "id": "tour-8-4",
+        "metric": "weatherHits",
+        "goal": 130,
+        "current": 1230,
+        "locked": false
+      },
+      {
+        "id": "tour-8-5",
+        "metric": "weatherHits",
+        "goal": 180,
+        "current": 1230,
+        "locked": false
+      },
+      {
+        "id": "tour-8-6",
+        "metric": "weatherHits",
+        "goal": 250,
+        "current": 1230,
+        "locked": false
+      },
+      {
+        "id": "tour-8-7",
+        "metric": "weatherHits",
+        "goal": 350,
+        "current": 1230,
+        "locked": false
+      },
+      {
+        "id": "tour-9-0",
+        "metric": "unique",
+        "goal": 12,
+        "current": 100,
+        "locked": false
+      },
+      {
+        "id": "tour-9-1",
+        "metric": "unique",
+        "goal": 24,
+        "current": 100,
+        "locked": false
+      },
+      {
+        "id": "tour-9-2",
+        "metric": "unique",
+        "goal": 36,
+        "current": 100,
+        "locked": false
+      },
+      {
+        "id": "tour-9-3",
+        "metric": "unique",
+        "goal": 48,
+        "current": 100,
+        "locked": false
+      },
+      {
+        "id": "tour-9-4",
+        "metric": "unique",
+        "goal": 60,
+        "current": 100,
+        "locked": false
+      },
+      {
+        "id": "tour-9-5",
+        "metric": "unique",
+        "goal": 72,
+        "current": 100,
+        "locked": false
+      },
+      {
+        "id": "tour-9-6",
+        "metric": "unique",
+        "goal": 84,
+        "current": 100,
+        "locked": false
+      },
+      {
+        "id": "tour-9-7",
+        "metric": "unique",
+        "goal": 100,
+        "current": 100,
+        "locked": false
+      },
+      {
+        "id": "tour-10-0",
+        "metric": "targets",
+        "goal": 20,
+        "current": 1432,
+        "locked": false
+      },
+      {
+        "id": "tour-10-1",
+        "metric": "targets",
+        "goal": 50,
+        "current": 1432,
+        "locked": false
+      },
+      {
+        "id": "tour-10-2",
+        "metric": "targets",
+        "goal": 100,
+        "current": 1432,
+        "locked": false
+      },
+      {
+        "id": "tour-10-3",
+        "metric": "targets",
+        "goal": 180,
+        "current": 1432,
+        "locked": false
+      },
+      {
+        "id": "tour-10-4",
+        "metric": "targets",
+        "goal": 300,
+        "current": 1432,
+        "locked": false
+      },
+      {
+        "id": "tour-10-5",
+        "metric": "targets",
+        "goal": 450,
+        "current": 1432,
+        "locked": false
+      },
+      {
+        "id": "tour-10-6",
+        "metric": "targets",
+        "goal": 650,
+        "current": 1432,
+        "locked": false
+      },
+      {
+        "id": "tour-10-7",
+        "metric": "targets",
+        "goal": 1000,
+        "current": 1432,
+        "locked": false
+      }
+    ],
+    "errors": []
+  },
+  "purchases": {
+    "goldOrXpGrants": false,
+    "source": "Gold earned in the assisted physical challenge run; the event-test blade was reset to level 1 before buying",
+    "startingGold": 10953846,
+    "workshop": {
+      "weapon": 30,
+      "cart": 16,
+      "platform": 25
+    },
+    "workshopPurchaseCount": 68,
+    "marketPurchases": 73,
+    "cityKeys": 15,
+    "visitedCities": 15,
+    "reloaded": {
+      "weapon": 30,
+      "cart": 16,
+      "platform": 25,
+      "owned": 73,
+      "challenges": 100,
+      "cities": 15
+    },
+    "errors": []
+  },
+  "visuals": {
+    "cities": 15,
+    "zooms": 2,
+    "screenshots": [
+      "york-0.png",
+      "york-24.png",
+      "durham-0.png",
+      "durham-24.png",
+      "chester-0.png",
+      "chester-24.png",
+      "hull-0.png",
+      "hull-24.png",
+      "newcastle-0.png",
+      "newcastle-24.png",
+      "lincoln-0.png",
+      "lincoln-24.png",
+      "canterbury-0.png",
+      "canterbury-24.png",
+      "london-0.png",
+      "london-24.png",
+      "dover-0.png",
+      "dover-24.png",
+      "norwich-0.png",
+      "norwich-24.png",
+      "winchester-0.png",
+      "winchester-24.png",
+      "colchester-0.png",
+      "colchester-24.png",
+      "oxford-0.png",
+      "oxford-24.png",
+      "southampton-0.png",
+      "southampton-24.png",
+      "gloucester-0.png",
+      "gloucester-24.png"
+    ],
+    "errors": []
+  }
+}

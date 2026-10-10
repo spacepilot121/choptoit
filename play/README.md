@@ -1,5 +1,5 @@
 # Published game snapshots
 
-Current snapshot: [fedad776a0311c6f](./fedad776a0311c6f/index.html).
+Current snapshot: [f519469acdc0e29c](./f519469acdc0e29c/index.html).
 
-This contains the tested game and its assets under unique URLs to bypass old offline copies. Saved progress uses the same site storage as the main game. Regenerate from the checked release; do not edit snapshot files individually.
+Each snapshot contains the verified game and assets under unique URLs, bypassing stale offline copies. Saves use the same site storage as the main game. Create snapshots from checked releases; do not edit their files individually.
